@@ -1,0 +1,131 @@
+id: "lg09-005"
+title: "Iota Enums"
+concept: "basics"
+difficulty: 2
+description: |
+  Define a set of integer constants representing compass directions
+  using iota. The values should be:
+
+    North = 0, East = 1, South = 2, West = 3
+
+  Then write a function turnRight that takes a direction (int) and
+  returns the direction you face after turning 90 degrees clockwise.
+  Turning right from West wraps back to North.
+
+  Also write a function directionName that returns the string name
+  of a direction: "North", "East", "South", or "West". Return
+  "Unknown" for any other value.
+
+  For example:
+    turnRight(North) returns East (1)
+    turnRight(West)  returns North (0)
+    directionName(South) returns "South"
+template: |
+  package main
+
+  // TODO: define North, East, South, West using const + iota
+
+  // TODO: implement turnRight
+
+  // TODO: implement directionName
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestConstants(t *testing.T) {
+  	if North != 0 {
+  		t.Errorf("North: expected 0, got %d", North)
+  	}
+  	if East != 1 {
+  		t.Errorf("East: expected 1, got %d", East)
+  	}
+  	if South != 2 {
+  		t.Errorf("South: expected 2, got %d", South)
+  	}
+  	if West != 3 {
+  		t.Errorf("West: expected 3, got %d", West)
+  	}
+  }
+
+  func TestTurnRight(t *testing.T) {
+  	cases := []struct {
+  		input int
+  		want  int
+  	}{
+  		{North, East},
+  		{East, South},
+  		{South, West},
+  		{West, North},
+  	}
+  	for _, c := range cases {
+  		got := turnRight(c.input)
+  		if got != c.want {
+  			t.Errorf("turnRight(%d): expected %d, got %d", c.input, c.want, got)
+  		}
+  	}
+  }
+
+  func TestDirectionName(t *testing.T) {
+  	cases := []struct {
+  		input int
+  		want  string
+  	}{
+  		{North, "North"},
+  		{East, "East"},
+  		{South, "South"},
+  		{West, "West"},
+  		{99, "Unknown"},
+  		{-1, "Unknown"},
+  	}
+  	for _, c := range cases {
+  		got := directionName(c.input)
+  		if got != c.want {
+  			t.Errorf("directionName(%d): expected %q, got %q", c.input, c.want, got)
+  		}
+  	}
+  }
+hint: "Use const ( North = iota; East; South; West ) to auto-increment. Turning right is (dir + 1) % 4."
+solution: |
+  package main
+
+  const (
+  	North = iota
+  	East
+  	South
+  	West
+  )
+
+  func turnRight(dir int) int {
+  	return (dir + 1) % 4
+  }
+
+  func directionName(dir int) string {
+  	switch dir {
+  	case North:
+  		return "North"
+  	case East:
+  		return "East"
+  	case South:
+  		return "South"
+  	case West:
+  		return "West"
+  	default:
+  		return "Unknown"
+  	}
+  }
+explanation: |
+  The iota keyword auto-increments within a const block:
+    const (
+        North = iota  // 0
+        East          // 1
+        South         // 2
+        West          // 3
+    )
+
+  Each subsequent constant gets the next iota value automatically.
+  This is Go's way of creating enumerated constants without a
+  dedicated enum type. The modulo trick (dir + 1) % 4 handles
+  the wraparound from West (3) back to North (0). iota resets
+  to 0 in every new const block.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch9.html"

@@ -1,0 +1,71 @@
+id: "05-004"
+title: "Struct Embedding"
+concept: "structs"
+difficulty: 4
+description: |
+  Animal has a Name field and a Speak() method. Embed Animal in Dog,
+  add a Breed field, and give Dog its own Speak() that returns "Woof!".
+  The Dog's Name should be accessible directly as d.Name via embedding.
+template: |
+  package main
+
+  type Animal struct {
+  	Name string
+  }
+
+  func (a Animal) Speak() string {
+  	return a.Name + " speaks"
+  }
+
+  type Dog struct {
+  	// TODO
+  }
+
+  // TODO
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestDog(t *testing.T) {
+  	d := Dog{Animal: Animal{Name: "Rex"}, Breed: "Labrador"}
+  	if d.Name != "Rex" {
+  		t.Errorf("expected Name %q via embedding, got %q", "Rex", d.Name)
+  	}
+  	if d.Breed != "Labrador" {
+  		t.Errorf("expected Breed %q, got %q", "Labrador", d.Breed)
+  	}
+  	if got := d.Speak(); got != "Woof!" {
+  		t.Errorf("expected %q, got %q", "Woof!", got)
+  	}
+  }
+hint: "Embed by listing the type without a field name: type Dog struct { Animal; Breed string }"
+solution: |
+  package main
+
+  type Animal struct {
+  	Name string
+  }
+
+  func (a Animal) Speak() string {
+  	return a.Name + " speaks"
+  }
+
+  type Dog struct {
+  	Animal
+  	Breed string
+  }
+
+  func (d Dog) Speak() string {
+  	return "Woof!"
+  }
+explanation: |
+  Embedding promotes the embedded type's fields and methods to the outer struct.
+    type Dog struct {
+        Animal        // embedded — d.Name and d.Animal.Speak() are accessible
+        Breed string
+    }
+  If Dog defines its own Speak(), it shadows the embedded Animal.Speak():
+    func (d Dog) Speak() string { return "Woof!" }
+  This is Go's composition over inheritance — no class hierarchy needed.
+reference: "https://gobyexample.com/struct-embedding"

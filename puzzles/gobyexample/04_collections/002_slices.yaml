@@ -1,0 +1,44 @@
+id: "04-002"
+title: "Slices"
+concept: "collections"
+difficulty: 2
+description: |
+  Build a string slice containing "go", "is", and "fun" (in that order).
+  Return the slice along with its length and capacity.
+template: |
+  package main
+
+  func buildSlice() ([]string, int, int) {
+  	// TODO
+  }
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestBuildSlice(t *testing.T) {
+  	s, l, _ := buildSlice()
+  	if l != 3 {
+  		t.Errorf("expected length 3, got %d", l)
+  	}
+  	if s[0] != "go" || s[1] != "is" || s[2] != "fun" {
+  		t.Errorf("unexpected slice contents: %v", s)
+  	}
+  }
+hint: 'append grows a slice: s = append(s, "go")'
+solution: |
+  package main
+
+  func buildSlice() ([]string, int, int) {
+  	var s []string
+  	s = append(s, "go", "is", "fun")
+  	return s, len(s), cap(s)
+  }
+explanation: |
+  Slices are dynamically-sized views into arrays.
+    var s []string            // nil slice (length 0)
+    s = append(s, "go")      // append returns new slice
+    s = append(s, "is", "fun")
+  len(s) = 3. cap(s) may be >= 3 (Go over-allocates for efficiency).
+  Slices can also be created with make: make([]string, 0, 3)
+reference: "https://gobyexample.com/slices"

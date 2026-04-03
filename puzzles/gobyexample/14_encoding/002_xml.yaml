@@ -1,0 +1,123 @@
+id: "14-002"
+title: "XML"
+concept: "encoding"
+difficulty: 5
+description: |
+  Define a Config struct with XML tags for root element "config" and fields Host (string),
+  Port (int), and Debug (bool). Implement xmlToMap(xmlData string) map[string]string that
+  parses the XML into a Config struct, then extracts all fields into a flat map with
+  lowercase keys and string values (e.g., {"host": "localhost", "port": "8080", "debug": "true"}).
+template: |
+  package main
+
+  import (
+  	"encoding/xml"
+  	"fmt"
+  )
+
+  // TODO: define Config struct with appropriate XML tags
+
+  func xmlToMap(xmlData string) map[string]string {
+  	// TODO: parse XML into Config, then build a map[string]string
+  	// Keys: "host", "port", "debug"
+  	// Values: string representations of each field
+  	return nil
+  }
+test_code: |
+  package main
+
+  import (
+  	"testing"
+  )
+
+  func TestXmlToMapBasic(t *testing.T) {
+  	input := `<config><host>localhost</host><port>8080</port><debug>true</debug></config>`
+  	got := xmlToMap(input)
+
+  	checks := map[string]string{
+  		"host":  "localhost",
+  		"port":  "8080",
+  		"debug": "true",
+  	}
+  	for k, want := range checks {
+  		if got[k] != want {
+  			t.Errorf("key %q: expected %q, got %q", k, want, got[k])
+  		}
+  	}
+  }
+
+  func TestXmlToMapDifferentValues(t *testing.T) {
+  	input := `<config><host>example.com</host><port>443</port><debug>false</debug></config>`
+  	got := xmlToMap(input)
+
+  	if got["host"] != "example.com" {
+  		t.Errorf("host: expected example.com, got %s", got["host"])
+  	}
+  	if got["port"] != "443" {
+  		t.Errorf("port: expected 443, got %s", got["port"])
+  	}
+  	if got["debug"] != "false" {
+  		t.Errorf("debug: expected false, got %s", got["debug"])
+  	}
+  }
+
+  func TestXmlToMapSize(t *testing.T) {
+  	input := `<config><host>h</host><port>1</port><debug>true</debug></config>`
+  	got := xmlToMap(input)
+  	if len(got) != 3 {
+  		t.Errorf("expected 3 keys, got %d", len(got))
+  	}
+  }
+
+  func TestXmlToMapZeroValues(t *testing.T) {
+  	input := `<config><host></host><port>0</port><debug>false</debug></config>`
+  	got := xmlToMap(input)
+  	if got["host"] != "" {
+  		t.Errorf("host: expected empty, got %q", got["host"])
+  	}
+  	if got["port"] != "0" {
+  		t.Errorf("port: expected 0, got %s", got["port"])
+  	}
+  }
+hint: "Define the struct with xml tags like `xml:\"host\"`. After unmarshalling, use fmt.Sprintf to convert each field to a string and populate the map."
+solution: |
+  package main
+
+  import (
+  	"encoding/xml"
+  	"fmt"
+  )
+
+  type Config struct {
+  	XMLName xml.Name `xml:"config"`
+  	Host    string   `xml:"host"`
+  	Port    int      `xml:"port"`
+  	Debug   bool     `xml:"debug"`
+  }
+
+  func xmlToMap(xmlData string) map[string]string {
+  	var c Config
+  	xml.Unmarshal([]byte(xmlData), &c)
+
+  	return map[string]string{
+  		"host":  c.Host,
+  		"port":  fmt.Sprintf("%d", c.Port),
+  		"debug": fmt.Sprintf("%t", c.Debug),
+  	}
+  }
+explanation: |
+  XML struct tags mirror JSON tags:
+    type Config struct {
+        XMLName xml.Name `xml:"config"`  // root element name
+        Host    string   `xml:"host"`    // <host>...</host>
+        Port    int      `xml:"port"`
+        Debug   bool     `xml:"debug"`
+    }
+  xml.Unmarshal parses XML into the struct:
+    xml.Unmarshal([]byte(xmlData), &c)
+  Converting typed fields to strings for the map:
+    fmt.Sprintf("%d", c.Port)   // int to string
+    fmt.Sprintf("%t", c.Debug)  // bool to "true"/"false"
+  This pattern — parse into a struct, then transform — is common
+  when bridging XML data with key-value stores or APIs.
+reference: "https://gobyexample.com/xml"

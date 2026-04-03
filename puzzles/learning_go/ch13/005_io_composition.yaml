@@ -1,0 +1,123 @@
+id: "lg13-005"
+title: "io.TeeReader Checksum"
+concept: "io"
+difficulty: 6
+description: |
+  Implement checksumAndCollect(r io.Reader) (content string, checksum string, err error)
+  that reads all content from r and simultaneously computes a SHA-256 hex digest, using
+  io.TeeReader to avoid reading the data twice.
+
+  The function should:
+  1. Use io.TeeReader to fork the reader into a hash writer
+  2. Read the full content from the tee reader
+  3. Return both the content string and the hex-encoded SHA-256 hash
+
+  Example:
+    content, hash, _ := checksumAndCollect(strings.NewReader("hello"))
+    // content == "hello"
+    // hash == "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+template: |
+  package main
+
+  import (
+  	"crypto/sha256"
+  	"encoding/hex"
+  	"io"
+  )
+
+  func checksumAndCollect(r io.Reader) (content string, checksum string, err error) {
+  	// TODO: use io.TeeReader to read content and compute SHA-256 simultaneously
+  	_ = sha256.New()  // delete this line
+  	_ = hex.EncodeToString  // delete this line
+  	return "", "", nil
+  }
+test_code: |
+  package main
+
+  import (
+  	"strings"
+  	"testing"
+  )
+
+  func TestChecksumHello(t *testing.T) {
+  	content, hash, err := checksumAndCollect(strings.NewReader("hello"))
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if content != "hello" {
+  		t.Errorf("expected content 'hello', got '%s'", content)
+  	}
+  	want := "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+  	if hash != want {
+  		t.Errorf("expected hash %s, got %s", want, hash)
+  	}
+  }
+
+  func TestChecksumEmpty(t *testing.T) {
+  	content, hash, err := checksumAndCollect(strings.NewReader(""))
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if content != "" {
+  		t.Errorf("expected empty content, got '%s'", content)
+  	}
+  	// SHA-256 of empty string
+  	want := "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  	if hash != want {
+  		t.Errorf("expected hash %s, got %s", want, hash)
+  	}
+  }
+
+  func TestChecksumMultiline(t *testing.T) {
+  	input := "line one\nline two\nline three"
+  	content, _, err := checksumAndCollect(strings.NewReader(input))
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if content != input {
+  		t.Errorf("content mismatch: expected %q, got %q", input, content)
+  	}
+  }
+
+  func TestChecksumConsistency(t *testing.T) {
+  	input := "the quick brown fox"
+  	_, hash1, _ := checksumAndCollect(strings.NewReader(input))
+  	_, hash2, _ := checksumAndCollect(strings.NewReader(input))
+  	if hash1 != hash2 {
+  		t.Errorf("same input should give same hash: %s vs %s", hash1, hash2)
+  	}
+  }
+hint: "Create a sha256 hasher with sha256.New(). Wrap the input with io.TeeReader(r, hasher) so every byte read also goes to the hasher. Read all bytes with io.ReadAll from the tee reader, then get the hash with hex.EncodeToString(hasher.Sum(nil))."
+solution: |
+  package main
+
+  import (
+  	"crypto/sha256"
+  	"encoding/hex"
+  	"io"
+  )
+
+  func checksumAndCollect(r io.Reader) (content string, checksum string, err error) {
+  	h := sha256.New()
+  	tee := io.TeeReader(r, h)
+  	b, err := io.ReadAll(tee)
+  	if err != nil {
+  		return "", "", err
+  	}
+  	return string(b), hex.EncodeToString(h.Sum(nil)), nil
+  }
+explanation: |
+  io.TeeReader(r, w) returns a reader that writes to w everything that is
+  read from r. This lets you process data in a single pass for two purposes.
+
+  The pattern:
+    h := sha256.New()              // hash.Hash implements io.Writer
+    tee := io.TeeReader(r, h)     // fork: reads go to both consumer and hasher
+    data, _ := io.ReadAll(tee)    // read all content (also feeds the hasher)
+    digest := h.Sum(nil)          // finalize the hash
+
+  This is more efficient than reading the data once to collect it and then
+  hashing it separately, because it avoids a second pass over the data.
+  The io package's composition tools (TeeReader, MultiReader, Pipe) are
+  fundamental to writing efficient, streaming Go programs.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch13.html"

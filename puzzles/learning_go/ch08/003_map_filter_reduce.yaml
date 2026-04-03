@@ -1,0 +1,207 @@
+id: "lg08-003"
+title: "Map, Filter, Reduce"
+concept: "generics"
+difficulty: 6
+description: |
+  Implement three generic higher-order functions that work on slices of
+  any type.
+
+  Map[T, U any](s []T, f func(T) U) []U
+    Applies f to every element of s and returns a new slice of results.
+    Return an empty (non-nil) slice for empty input.
+
+  Filter[T any](s []T, f func(T) bool) []T
+    Returns a new slice containing only the elements for which f returns
+    true. Return nil for empty results (like append to a nil slice).
+
+  Reduce[T, U any](s []T, initial U, f func(U, T) U) U
+    Folds the slice into a single value, starting from initial. For each
+    element, the accumulator is updated: acc = f(acc, element).
+
+  Examples:
+    Map([]int{1,2,3}, func(n int) int { return n*2 })
+    => [2, 4, 6]
+
+    Map([]string{"go","rust"}, func(s string) int { return len(s) })
+    => [2, 4]
+
+    Filter([]int{1,2,3,4,5}, func(n int) bool { return n%2 == 0 })
+    => [2, 4]
+
+    Reduce([]int{1,2,3,4}, 0, func(acc, n int) int { return acc+n })
+    => 10
+template: |
+  package main
+
+  // TODO: implement Map[T, U any]
+
+  // TODO: implement Filter[T any]
+
+  // TODO: implement Reduce[T, U any]
+test_code: |
+  package main
+
+  import (
+  	"strconv"
+  	"strings"
+  	"testing"
+  )
+
+  func TestMapIntToInt(t *testing.T) {
+  	got := Map([]int{1, 2, 3}, func(n int) int { return n * 2 })
+  	expected := []int{2, 4, 6}
+  	if len(got) != len(expected) {
+  		t.Fatalf("expected %v, got %v", expected, got)
+  	}
+  	for i := range expected {
+  		if got[i] != expected[i] {
+  			t.Errorf("index %d: expected %d, got %d", i, expected[i], got[i])
+  		}
+  	}
+  }
+
+  func TestMapStringToInt(t *testing.T) {
+  	got := Map([]string{"go", "rust", "c"}, func(s string) int { return len(s) })
+  	expected := []int{2, 4, 1}
+  	for i := range expected {
+  		if got[i] != expected[i] {
+  			t.Errorf("index %d: expected %d, got %d", i, expected[i], got[i])
+  		}
+  	}
+  }
+
+  func TestMapIntToString(t *testing.T) {
+  	got := Map([]int{1, 2, 3}, func(n int) string { return strconv.Itoa(n) })
+  	expected := []string{"1", "2", "3"}
+  	for i := range expected {
+  		if got[i] != expected[i] {
+  			t.Errorf("index %d: expected %q, got %q", i, expected[i], got[i])
+  		}
+  	}
+  }
+
+  func TestMapEmpty(t *testing.T) {
+  	got := Map([]int{}, func(n int) int { return n })
+  	if got == nil {
+  		t.Error("expected non-nil empty slice")
+  	}
+  	if len(got) != 0 {
+  		t.Errorf("expected empty slice, got %v", got)
+  	}
+  }
+
+  func TestFilterEvens(t *testing.T) {
+  	got := Filter([]int{1, 2, 3, 4, 5, 6}, func(n int) bool { return n%2 == 0 })
+  	expected := []int{2, 4, 6}
+  	if len(got) != len(expected) {
+  		t.Fatalf("expected %v, got %v", expected, got)
+  	}
+  	for i := range expected {
+  		if got[i] != expected[i] {
+  			t.Errorf("index %d: expected %d, got %d", i, expected[i], got[i])
+  		}
+  	}
+  }
+
+  func TestFilterStrings(t *testing.T) {
+  	got := Filter([]string{"go", "python", "c", "rust"}, func(s string) bool {
+  		return len(s) <= 2
+  	})
+  	expected := []string{"go", "c"}
+  	for i := range expected {
+  		if got[i] != expected[i] {
+  			t.Errorf("index %d: expected %q, got %q", i, expected[i], got[i])
+  		}
+  	}
+  }
+
+  func TestFilterNoneMatch(t *testing.T) {
+  	got := Filter([]int{1, 3, 5}, func(n int) bool { return n%2 == 0 })
+  	if len(got) != 0 {
+  		t.Errorf("expected empty, got %v", got)
+  	}
+  }
+
+  func TestReduceSum(t *testing.T) {
+  	got := Reduce([]int{1, 2, 3, 4}, 0, func(acc, n int) int { return acc + n })
+  	if got != 10 {
+  		t.Errorf("expected 10, got %d", got)
+  	}
+  }
+
+  func TestReduceJoin(t *testing.T) {
+  	got := Reduce([]string{"a", "b", "c"}, "", func(acc, s string) string {
+  		if acc == "" {
+  			return s
+  		}
+  		return acc + "," + s
+  	})
+  	if got != "a,b,c" {
+  		t.Errorf("expected %q, got %q", "a,b,c", got)
+  	}
+  }
+
+  func TestReduceWordCount(t *testing.T) {
+  	words := []string{"hello world", "foo bar baz", "go"}
+  	got := Reduce(words, 0, func(acc int, s string) int {
+  		return acc + len(strings.Fields(s))
+  	})
+  	if got != 6 {
+  		t.Errorf("expected 6 words, got %d", got)
+  	}
+  }
+
+  func TestReduceEmpty(t *testing.T) {
+  	got := Reduce([]int{}, 42, func(acc, n int) int { return acc + n })
+  	if got != 42 {
+  		t.Errorf("expected initial value 42, got %d", got)
+  	}
+  }
+hint: "Map needs two type parameters [T, U any] because input and output types can differ. Filter uses append to build the result slice. Reduce carries an accumulator through the loop, starting from the initial value."
+solution: |
+  package main
+
+  func Map[T, U any](s []T, f func(T) U) []U {
+  	result := make([]U, len(s))
+  	for i, v := range s {
+  		result[i] = f(v)
+  	}
+  	return result
+  }
+
+  func Filter[T any](s []T, f func(T) bool) []T {
+  	var result []T
+  	for _, v := range s {
+  		if f(v) {
+  			result = append(result, v)
+  		}
+  	}
+  	return result
+  }
+
+  func Reduce[T, U any](s []T, initial U, f func(U, T) U) U {
+  	acc := initial
+  	for _, v := range s {
+  		acc = f(acc, v)
+  	}
+  	return acc
+  }
+explanation: |
+  These three functions demonstrate multi-type-parameter generics:
+
+  Map[T, U any] transforms a []T into a []U. The two type parameters
+  allow the input and output types to differ (e.g., []string to []int).
+  Go infers both T and U from the arguments -- no explicit type
+  parameters needed at the call site.
+
+  Filter[T any] uses a single type parameter since input and output
+  share the same element type. It builds the result with append, which
+  naturally handles the empty case (appending to nil returns a new slice).
+
+  Reduce[T, U any] folds a slice into a single value. T is the element
+  type, U is the accumulator type. This enables flexible aggregations
+  like summing ints, joining strings, or counting words.
+
+  These patterns are foundational in functional programming and are now
+  expressible in Go thanks to generics (Go 1.18+).
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch8.html"

@@ -1,0 +1,62 @@
+id: "04-004"
+title: "Range over Built-in Types"
+concept: "collections"
+difficulty: 2
+description: |
+  Write a function doubleEvens that takes a []int and returns a new
+  []int containing only the even numbers from the input, each doubled.
+  For example, given [1, 2, 3, 4, 5], return [4, 8].
+template: |
+  package main
+
+  // TODO: implement doubleEvens
+test_code: |
+  package main
+
+  import (
+  	"reflect"
+  	"testing"
+  )
+
+  func TestDoubleEvens(t *testing.T) {
+  	cases := []struct {
+  		input []int
+  		want  []int
+  	}{
+  		{[]int{1, 2, 3, 4, 5}, []int{4, 8}},
+  		{[]int{2, 4, 6}, []int{4, 8, 12}},
+  		{[]int{1, 3, 5}, nil},
+  		{[]int{}, nil},
+  		{[]int{0, 1, -2, 3, -4}, []int{0, -4, -8}},
+  	}
+  	for _, c := range cases {
+  		got := doubleEvens(c.input)
+  		if !reflect.DeepEqual(got, c.want) {
+  			t.Errorf("doubleEvens(%v): expected %v, got %v", c.input, c.want, got)
+  		}
+  	}
+  }
+hint: "Use range to iterate, the modulo operator to check for even numbers, and append to build the result slice."
+solution: |
+  package main
+
+  func doubleEvens(nums []int) []int {
+  	var result []int
+  	for _, n := range nums {
+  		if n%2 == 0 {
+  			result = append(result, n*2)
+  		}
+  	}
+  	return result
+  }
+explanation: |
+  range iterates over slices, yielding (index, value) on each step:
+    for _, n := range nums { ... }
+  Use _ to discard the index when you only need the value.
+  The append built-in grows a slice dynamically:
+    result = append(result, n*2)
+  Combining range with a conditional (if n%2 == 0) lets you filter
+  elements while transforming them — a common pattern in Go.
+  A nil slice and an empty slice both have length 0, but nil is the
+  zero value returned when no elements are appended.
+reference: "https://gobyexample.com/range-over-built-in-types"

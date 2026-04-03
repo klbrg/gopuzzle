@@ -1,0 +1,104 @@
+id: "16-001"
+title: "Reading Files"
+concept: "io"
+difficulty: 4
+description: |
+  Write readFile(path string) (string, error) that reads the entire contents of a file.
+  Write countLines(path string) (int, error) that counts the number of lines in a file.
+template: |
+  package main
+
+  import (
+  	"bufio"
+  	"os"
+  	"strings"
+  )
+
+  func readFile(path string) (string, error) {
+  	// TODO
+  }
+
+  func countLines(path string) (int, error) {
+  	// TODO
+  }
+test_code: |
+  package main
+
+  import (
+  	"os"
+  	"testing"
+  )
+
+  func TestReadFile(t *testing.T) {
+  	f, _ := os.CreateTemp("", "test")
+  	f.WriteString("hello\nworld\n")
+  	f.Close()
+  	defer os.Remove(f.Name())
+
+  	content, err := readFile(f.Name())
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if content != "hello\nworld\n" {
+  		t.Errorf("unexpected content: %q", content)
+  	}
+  }
+
+  func TestCountLines(t *testing.T) {
+  	f, _ := os.CreateTemp("", "test")
+  	f.WriteString("line1\nline2\nline3\n")
+  	f.Close()
+  	defer os.Remove(f.Name())
+
+  	n, err := countLines(f.Name())
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if n != 3 {
+  		t.Errorf("expected 3 lines, got %d", n)
+  	}
+  }
+hint: "os.ReadFile reads all at once; bufio.Scanner iterates line by line."
+solution: |
+  package main
+
+  import (
+  	"bufio"
+  	"os"
+  )
+
+  func readFile(path string) (string, error) {
+  	data, err := os.ReadFile(path)
+  	if err != nil {
+  		return "", err
+  	}
+  	return string(data), nil
+  }
+
+  func countLines(path string) (int, error) {
+  	f, err := os.Open(path)
+  	if err != nil {
+  		return 0, err
+  	}
+  	defer f.Close()
+  	scanner := bufio.NewScanner(f)
+  	count := 0
+  	for scanner.Scan() {
+  		count++
+  	}
+  	return count, scanner.Err()
+  }
+explanation: |
+  os.ReadFile reads an entire file into a []byte:
+    data, err := os.ReadFile(path)
+    return string(data), err
+  For line-by-line reading, use bufio.Scanner:
+    f, err := os.Open(path)
+    if err != nil { return 0, err }
+    defer f.Close()
+    scanner := bufio.NewScanner(f)
+    count := 0
+    for scanner.Scan() { count++ }
+    return count, scanner.Err()
+  Always defer f.Close() immediately after a successful Open.
+reference: "https://gobyexample.com/reading-files"

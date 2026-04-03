@@ -1,0 +1,110 @@
+id: "12-007"
+title: "Rate Limiting"
+concept: "concurrency"
+difficulty: 7
+description: |
+  Implement throttle(maxPerSecond int, f func(int) int) func(int) int that returns a
+  throttled version of f. The returned function ensures at most maxPerSecond calls to f
+  per second by blocking callers until a token is available. Use a time-based ticker to
+  replenish tokens.
+template: |
+  package main
+
+  import "time"
+
+  func throttle(maxPerSecond int, f func(int) int) func(int) int {
+  	// TODO: return a wrapper that rate-limits calls to f
+  	// At most maxPerSecond calls per second
+  	return nil
+  }
+test_code: |
+  package main
+
+  import (
+  	"testing"
+  	"time"
+  )
+
+  func TestThrottleResults(t *testing.T) {
+  	double := func(n int) int { return n * 2 }
+  	throttled := throttle(100, double)
+
+  	if got := throttled(5); got != 10 {
+  		t.Errorf("expected 10, got %d", got)
+  	}
+  	if got := throttled(7); got != 14 {
+  		t.Errorf("expected 14, got %d", got)
+  	}
+  }
+
+  func TestThrottleRate(t *testing.T) {
+  	identity := func(n int) int { return n }
+  	throttled := throttle(10, identity) // 10 per second = 1 per 100ms
+
+  	start := time.Now()
+  	for i := 0; i < 5; i++ {
+  		throttled(i)
+  	}
+  	elapsed := time.Since(start)
+
+  	// 5 calls at 10/sec should take ~400ms (first call immediate with burst of 1, then 4 waits)
+  	if elapsed < 350*time.Millisecond {
+  		t.Errorf("calls too fast: %v for 5 calls at 10/sec", elapsed)
+  	}
+  	if elapsed > 800*time.Millisecond {
+  		t.Errorf("calls too slow: %v for 5 calls at 10/sec", elapsed)
+  	}
+  }
+
+  func TestThrottleHighRate(t *testing.T) {
+  	counter := 0
+  	f := func(n int) int {
+  		counter++
+  		return n
+  	}
+  	throttled := throttle(1000, f) // very high rate — should not slow down noticeably
+
+  	start := time.Now()
+  	for i := 0; i < 10; i++ {
+  		throttled(i)
+  	}
+  	elapsed := time.Since(start)
+
+  	if counter != 10 {
+  		t.Errorf("expected 10 calls, got %d", counter)
+  	}
+  	if elapsed > 200*time.Millisecond {
+  		t.Errorf("high-rate throttle too slow: %v", elapsed)
+  	}
+  }
+hint: "Create a ticker with interval time.Second/maxPerSecond. The returned function waits for a tick before calling f. time.NewTicker provides a steady stream of tokens."
+solution: |
+  package main
+
+  import "time"
+
+  func throttle(maxPerSecond int, f func(int) int) func(int) int {
+  	interval := time.Second / time.Duration(maxPerSecond)
+  	ticker := time.NewTicker(interval)
+
+  	return func(n int) int {
+  		<-ticker.C
+  		return f(n)
+  	}
+  }
+explanation: |
+  A ticker delivers values at a fixed interval:
+    interval := time.Second / time.Duration(maxPerSecond)
+    ticker := time.NewTicker(interval)
+  The throttled function blocks on the ticker before calling f:
+    return func(n int) int {
+        <-ticker.C    // wait for next token
+        return f(n)
+    }
+  This guarantees at most maxPerSecond calls per second.
+  Unlike a token-bucket approach (which allows bursts), a ticker
+  enforces a steady rate. For burst allowance, combine with a
+  buffered channel pre-filled with tokens.
+  Note: the ticker goroutine runs indefinitely. In production,
+  pass a context for cancellation.
+reference: "https://gobyexample.com/rate-limiting"

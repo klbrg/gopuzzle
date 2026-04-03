@@ -1,0 +1,131 @@
+id: "12-008"
+title: "Stateful Goroutines"
+concept: "concurrency"
+difficulty: 7
+description: |
+  A single goroutine owns the counter state and handles Inc and Get requests sent via
+  channels. Complete the run() method that processes operations from opsCh.
+template: |
+  package main
+
+  type opType int
+  const (
+  	opInc opType = iota
+  	opGet
+  )
+
+  type op struct {
+  	kind   opType
+  	result chan int
+  }
+
+  type CounterService struct {
+  	opsCh chan op
+  }
+
+  func NewCounterService() *CounterService {
+  	cs := &CounterService{opsCh: make(chan op, 100)}
+  	go cs.run()
+  	return cs
+  }
+
+  func (cs *CounterService) run() {
+  	// TODO
+  }
+
+  func (cs *CounterService) Inc() {
+  	r := make(chan int, 1)
+  	cs.opsCh <- op{kind: opInc, result: r}
+  	<-r
+  }
+
+  func (cs *CounterService) Get() int {
+  	r := make(chan int, 1)
+  	cs.opsCh <- op{kind: opGet, result: r}
+  	return <-r
+  }
+test_code: |
+  package main
+
+  import (
+  	"sync"
+  	"testing"
+  )
+
+  func TestCounterService(t *testing.T) {
+  	cs := NewCounterService()
+  	var wg sync.WaitGroup
+  	for i := 0; i < 100; i++ {
+  		wg.Add(1)
+  		go func() { defer wg.Done(); cs.Inc() }()
+  	}
+  	wg.Wait()
+  	if got := cs.Get(); got != 100 {
+  		t.Errorf("expected 100, got %d", got)
+  	}
+  }
+hint: "Confine mutable state to one goroutine; use a channel loop to receive and dispatch operations."
+solution: |
+  package main
+
+  type opType int
+
+  const (
+  	opInc opType = iota
+  	opGet
+  )
+
+  type op struct {
+  	kind   opType
+  	result chan int
+  }
+
+  type CounterService struct {
+  	opsCh chan op
+  }
+
+  func NewCounterService() *CounterService {
+  	cs := &CounterService{opsCh: make(chan op, 100)}
+  	go cs.run()
+  	return cs
+  }
+
+  func (cs *CounterService) run() {
+  	count := 0
+  	for o := range cs.opsCh {
+  		switch o.kind {
+  		case opInc:
+  			count++
+  			o.result <- 0
+  		case opGet:
+  			o.result <- count
+  		}
+  	}
+  }
+
+  func (cs *CounterService) Inc() {
+  	r := make(chan int, 1)
+  	cs.opsCh <- op{kind: opInc, result: r}
+  	<-r
+  }
+
+  func (cs *CounterService) Get() int {
+  	r := make(chan int, 1)
+  	cs.opsCh <- op{kind: opGet, result: r}
+  	return <-r
+  }
+explanation: |
+  The "stateful goroutine" pattern confines mutable state to a single goroutine.
+  Other goroutines send requests via channels and receive responses:
+    func (cs *CounterService) run() {
+        count := 0
+        for o := range cs.opsCh {
+            switch o.kind {
+            case opInc: count++; o.result <- 0
+            case opGet: o.result <- count
+            }
+        }
+    }
+  No mutex needed — only one goroutine touches count. This is sometimes cleaner
+  than mutex-based designs for complex state machines.
+reference: "https://gobyexample.com/stateful-goroutines"

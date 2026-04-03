@@ -1,0 +1,93 @@
+id: "11-003"
+title: "Channel Synchronization"
+concept: "channels"
+difficulty: 6
+description: |
+  Implement parallel(funcs ...func()) that runs every function concurrently in its
+  own goroutine and blocks until ALL of them have finished. Use channels for
+  synchronization — do not use sync.WaitGroup.
+template: |
+  package main
+
+  func parallel(funcs ...func()) {
+  	// TODO: launch each function in a goroutine
+  	// Wait for all to complete using a channel
+  }
+test_code: |
+  package main
+
+  import (
+  	"sync/atomic"
+  	"testing"
+  	"time"
+  )
+
+  func TestParallelRunsAll(t *testing.T) {
+  	var count int64
+  	parallel(
+  		func() { atomic.AddInt64(&count, 1) },
+  		func() { atomic.AddInt64(&count, 10) },
+  		func() { atomic.AddInt64(&count, 100) },
+  	)
+  	if atomic.LoadInt64(&count) != 111 {
+  		t.Errorf("expected 111, got %d", count)
+  	}
+  }
+
+  func TestParallelWaitsForAll(t *testing.T) {
+  	start := time.Now()
+  	parallel(
+  		func() { time.Sleep(50 * time.Millisecond) },
+  		func() { time.Sleep(50 * time.Millisecond) },
+  		func() { time.Sleep(50 * time.Millisecond) },
+  	)
+  	elapsed := time.Since(start)
+  	if elapsed >= 140*time.Millisecond {
+  		t.Errorf("functions ran sequentially (%v), expected concurrent", elapsed)
+  	}
+  }
+
+  func TestParallelEmpty(t *testing.T) {
+  	parallel() // should not block or panic
+  }
+
+  func TestParallelSingle(t *testing.T) {
+  	var ran bool
+  	parallel(func() { ran = true })
+  	if !ran {
+  		t.Error("single function was not executed")
+  	}
+  }
+hint: "Create a channel, launch each function in a goroutine that sends to the channel when done, then receive from the channel len(funcs) times."
+solution: |
+  package main
+
+  func parallel(funcs ...func()) {
+  	done := make(chan struct{}, len(funcs))
+  	for _, fn := range funcs {
+  		go func() {
+  			fn()
+  			done <- struct{}{}
+  		}()
+  	}
+  	for range funcs {
+  		<-done
+  	}
+  }
+explanation: |
+  Each goroutine signals completion by sending to a shared channel:
+    done := make(chan struct{}, len(funcs))
+    for _, fn := range funcs {
+        go func() {
+            fn()
+            done <- struct{}{}
+        }()
+    }
+  The caller waits by receiving once per function:
+    for range funcs {
+        <-done
+    }
+  Using struct{} instead of bool signals intent: we only care about
+  the event, not the value. The buffered channel prevents goroutines
+  from blocking if the receiver hasn't started reading yet.
+reference: "https://gobyexample.com/channel-synchronization"

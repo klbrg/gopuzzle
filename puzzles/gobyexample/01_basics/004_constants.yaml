@@ -1,0 +1,55 @@
+id: "01-004"
+title: "Constants"
+concept: "basics"
+difficulty: 1
+description: |
+  Define a constant for the number of centimeters per inch (2.54).
+  Then write a function inchesToCm that converts a value in inches
+  to centimeters using that constant.
+template: |
+  package main
+
+  // TODO: define constant and implement inchesToCm
+test_code: |
+  package main
+
+  import (
+  	"math"
+  	"testing"
+  )
+
+  func TestInchesToCm(t *testing.T) {
+  	cases := []struct {
+  		inches float64
+  		want   float64
+  	}{
+  		{1.0, 2.54},
+  		{10.0, 25.4},
+  		{0.0, 0.0},
+  		{12.0, 30.48},
+  	}
+  	for _, c := range cases {
+  		got := inchesToCm(c.inches)
+  		if math.Abs(got-c.want) > 0.001 {
+  			t.Errorf("inchesToCm(%.1f): expected %.2f, got %.2f", c.inches, c.want, got)
+  		}
+  	}
+  }
+hint: "Declare a constant with const at the package level, then multiply inside your function."
+solution: |
+  package main
+
+  const cmPerInch = 2.54
+
+  func inchesToCm(inches float64) float64 {
+  	return inches * cmPerInch
+  }
+explanation: |
+  Constants are declared with const and cannot be reassigned:
+    const cmPerInch = 2.54
+  This is an untyped constant — Go infers its type from context.
+  You can also declare typed constants:
+    const cmPerInch float64 = 2.54
+  Constants are evaluated at compile time and are ideal for values
+  that never change, like conversion factors or configuration.
+reference: "https://gobyexample.com/constants"

@@ -1,0 +1,200 @@
+id: "lg09-004"
+title: "Panic and Recover"
+concept: "errors"
+difficulty: 6
+description: |
+  Go uses panic for truly unrecoverable situations and recover to catch
+  panics at function boundaries. Normal error handling uses return values,
+  but sometimes you need to catch panics from third-party code or convert
+  them to errors.
+
+  Write a function SafeDivide(a, b int) (result int, err error) that
+  divides a by b. If b is zero, Go will panic with an integer divide by
+  zero error. Use defer/recover to catch this panic and return it as an
+  error instead. On success, return the result with nil error.
+
+  Write a function SafeCall(f func()) (err error) that calls f and
+  recovers from any panic it might cause, returning the panic value as
+  an error. If f does not panic, return nil. Convert the panic value to
+  an error using fmt.Errorf.
+
+  Write a function MustParse(s string) int that parses a string as an
+  integer using strconv.Atoi. If parsing fails, panic with the error.
+  This is the "Must" pattern used in Go for initialization-time calls
+  that should never fail.
+
+  Examples:
+    SafeDivide(10, 2)  => (5, nil)
+    SafeDivide(10, 0)  => (0, error)
+
+    SafeCall(func() { panic("boom") })  => error("boom")
+    SafeCall(func() { /* ok */ })        => nil
+
+    MustParse("42")    => 42
+    MustParse("bad")   => panics
+template: |
+  package main
+
+  // TODO: implement SafeDivide (use defer/recover)
+
+  // TODO: implement SafeCall (use defer/recover)
+
+  // TODO: implement MustParse (panics on error)
+test_code: |
+  package main
+
+  import (
+  	"strings"
+  	"testing"
+  )
+
+  func TestSafeDivideOK(t *testing.T) {
+  	result, err := SafeDivide(10, 2)
+  	if err != nil {
+  		t.Fatalf("expected nil error, got %v", err)
+  	}
+  	if result != 5 {
+  		t.Errorf("expected 5, got %d", result)
+  	}
+  }
+
+  func TestSafeDivideByZero(t *testing.T) {
+  	result, err := SafeDivide(10, 0)
+  	if err == nil {
+  		t.Fatal("expected error for division by zero")
+  	}
+  	if result != 0 {
+  		t.Errorf("expected result 0 on error, got %d", result)
+  	}
+  }
+
+  func TestSafeDivideNegative(t *testing.T) {
+  	result, err := SafeDivide(-10, 2)
+  	if err != nil {
+  		t.Fatalf("expected nil error, got %v", err)
+  	}
+  	if result != -5 {
+  		t.Errorf("expected -5, got %d", result)
+  	}
+  }
+
+  func TestSafeCallNoPanic(t *testing.T) {
+  	err := SafeCall(func() {
+  		_ = 1 + 1
+  	})
+  	if err != nil {
+  		t.Errorf("expected nil, got %v", err)
+  	}
+  }
+
+  func TestSafeCallWithStringPanic(t *testing.T) {
+  	err := SafeCall(func() {
+  		panic("something went wrong")
+  	})
+  	if err == nil {
+  		t.Fatal("expected error from panic")
+  	}
+  	if !strings.Contains(err.Error(), "something went wrong") {
+  		t.Errorf("expected panic message in error: %v", err)
+  	}
+  }
+
+  func TestSafeCallWithErrorPanic(t *testing.T) {
+  	err := SafeCall(func() {
+  		panic(42)
+  	})
+  	if err == nil {
+  		t.Fatal("expected error from panic")
+  	}
+  }
+
+  func TestMustParseValid(t *testing.T) {
+  	got := MustParse("42")
+  	if got != 42 {
+  		t.Errorf("expected 42, got %d", got)
+  	}
+  }
+
+  func TestMustParseNegative(t *testing.T) {
+  	got := MustParse("-7")
+  	if got != -7 {
+  		t.Errorf("expected -7, got %d", got)
+  	}
+  }
+
+  func TestMustParsePanics(t *testing.T) {
+  	defer func() {
+  		r := recover()
+  		if r == nil {
+  			t.Fatal("expected MustParse to panic on invalid input")
+  		}
+  	}()
+  	MustParse("not-a-number")
+  }
+
+  func TestMustParseEmptyPanics(t *testing.T) {
+  	defer func() {
+  		r := recover()
+  		if r == nil {
+  			t.Fatal("expected MustParse to panic on empty string")
+  		}
+  	}()
+  	MustParse("")
+  }
+hint: "Use defer func() { if r := recover(); r != nil { ... } }() at the top of SafeDivide and SafeCall. In the deferred function, use named return values to set err. recover() returns the panic value as any."
+solution: |
+  package main
+
+  import (
+  	"fmt"
+  	"strconv"
+  )
+
+  func SafeDivide(a, b int) (result int, err error) {
+  	defer func() {
+  		if r := recover(); r != nil {
+  			err = fmt.Errorf("panic: %v", r)
+  		}
+  	}()
+  	return a / b, nil
+  }
+
+  func SafeCall(f func()) (err error) {
+  	defer func() {
+  		if r := recover(); r != nil {
+  			err = fmt.Errorf("%v", r)
+  		}
+  	}()
+  	f()
+  	return nil
+  }
+
+  func MustParse(s string) int {
+  	v, err := strconv.Atoi(s)
+  	if err != nil {
+  		panic(err)
+  	}
+  	return v
+  }
+explanation: |
+  Panic and recover are Go's mechanism for handling truly exceptional
+  situations. They are NOT a substitute for normal error handling.
+
+  The recover pattern always involves three things:
+  1. A deferred function (defer func() { ... }())
+  2. A call to recover() inside the deferred function
+  3. Named return values so the deferred function can set the error
+
+  recover() returns nil if no panic is in progress. If a panic occurred,
+  it returns the value passed to panic() and stops the panic from
+  propagating.
+
+  The "Must" pattern (MustParse, template.Must, regexp.MustCompile) is
+  idiomatic Go for initialization-time calls where failure means the
+  program is misconfigured. These functions panic instead of returning
+  errors because the caller cannot meaningfully handle the error.
+
+  Key rule: do not use panic/recover for normal control flow. Use error
+  returns instead. Reserve panic for programming errors, impossible
+  states, and the Must pattern.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch9.html"

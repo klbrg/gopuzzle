@@ -1,0 +1,82 @@
+id: "lg04-001"
+title: "Labeled Break"
+concept: "control-flow"
+difficulty: 3
+description: |
+  Write a function findDuplicate that takes a []int and returns the first
+  value that appears more than once, along with the two indices where it
+  appears. If no duplicate exists, return (0, -1, -1).
+
+  Use nested loops: for each element, scan all later elements to find a match.
+  When found, break out of both loops immediately.
+
+  For example:
+    findDuplicate([]int{3, 7, 5, 7, 9}) returns (7, 1, 3)
+    findDuplicate([]int{1, 2, 3})        returns (0, -1, -1)
+template: |
+  package main
+
+  func findDuplicate(nums []int) (int, int, int) {
+  	// TODO: use a labeled loop and break to exit both loops
+  }
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestFindDuplicate(t *testing.T) {
+  	cases := []struct {
+  		input    []int
+  		wantVal  int
+  		wantI    int
+  		wantJ    int
+  	}{
+  		{[]int{3, 7, 5, 7, 9}, 7, 1, 3},
+  		{[]int{1, 2, 3, 4, 5}, 0, -1, -1},
+  		{[]int{1, 1}, 1, 0, 1},
+  		{[]int{5, 3, 8, 3, 5}, 5, 0, 4},
+  		{[]int{42}, 0, -1, -1},
+  		{[]int{}, 0, -1, -1},
+  		{[]int{10, 20, 30, 10, 20}, 10, 0, 3},
+  	}
+  	for _, c := range cases {
+  		val, i, j := findDuplicate(c.input)
+  		if val != c.wantVal || i != c.wantI || j != c.wantJ {
+  			t.Errorf("findDuplicate(%v): expected (%d, %d, %d), got (%d, %d, %d)",
+  				c.input, c.wantVal, c.wantI, c.wantJ, val, i, j)
+  		}
+  	}
+  }
+hint: "Define a label before the outer for loop (e.g., outer:). Use break outer to exit both loops when you find a match."
+solution: |
+  package main
+
+  func findDuplicate(nums []int) (int, int, int) {
+  	val, idxI, idxJ := 0, -1, -1
+  outer:
+  	for i := 0; i < len(nums); i++ {
+  		for j := i + 1; j < len(nums); j++ {
+  			if nums[i] == nums[j] {
+  				val, idxI, idxJ = nums[i], i, j
+  				break outer
+  			}
+  		}
+  	}
+  	return val, idxI, idxJ
+  }
+explanation: |
+  A labeled break exits to the named loop, not just the innermost one:
+    outer:
+      for i := 0; i < len(nums); i++ {
+          for j := i + 1; j < len(nums); j++ {
+              if nums[i] == nums[j] {
+                  break outer  // exits BOTH loops
+              }
+          }
+      }
+  Without the label, break would only exit the inner loop, and the
+  outer loop would keep running. Labels are also useful with continue
+  to skip to the next iteration of an outer loop. An alternative is
+  to use return directly, but labels are valuable when you need to
+  do work after the loops.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch4.html"

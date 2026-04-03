@@ -1,0 +1,55 @@
+id: "09-003"
+title: "String Formatting"
+concept: "strings"
+difficulty: 2
+description: |
+  Given a name (string), score (float64), and rank (int), return a formatted string like:
+  "Player: Alice, Score: 98.50, Rank: #1"
+  The score must be formatted to exactly 2 decimal places.
+template: |
+  package main
+
+  import "fmt"
+
+  func report(name string, score float64, rank int) string {
+  	// TODO
+  }
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestReport(t *testing.T) {
+  	got := report("Alice", 98.5, 1)
+  	want := "Player: Alice, Score: 98.50, Rank: #1"
+  	if got != want {
+  		t.Errorf("expected %q, got %q", want, got)
+  	}
+  	got2 := report("Bob", 72.333, 5)
+  	want2 := "Player: Bob, Score: 72.33, Rank: #5"
+  	if got2 != want2 {
+  		t.Errorf("expected %q, got %q", want2, got2)
+  	}
+  }
+hint: "fmt.Sprintf formats into a string; %.2f gives exactly two decimal places."
+solution: |
+  package main
+
+  import "fmt"
+
+  func report(name string, score float64, rank int) string {
+  	return fmt.Sprintf("Player: %s, Score: %.2f, Rank: #%d", name, score, rank)
+  }
+explanation: |
+  fmt.Sprintf formats without printing — it returns the string.
+  Key format verbs:
+    %s   string
+    %d   integer (decimal)
+    %f   float (default precision)
+    %.2f float with 2 decimal places
+    %v   any value (default format)
+    %T   type of value
+    %q   quoted string
+    %05d zero-padded integer (e.g., 00042)
+  Use fmt.Fprintf to write to an io.Writer, fmt.Sprintf to get a string.
+reference: "https://gobyexample.com/string-formatting"

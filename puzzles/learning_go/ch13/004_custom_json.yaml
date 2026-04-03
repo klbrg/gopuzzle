@@ -1,0 +1,180 @@
+id: "lg13-004"
+title: "Custom JSON Marshaling"
+concept: "encoding"
+difficulty: 7
+description: |
+  Implement a Duration type that wraps time.Duration and marshals/unmarshals as a
+  human-readable string (e.g., "5s", "2m30s", "1h") in JSON instead of nanoseconds.
+
+  1. type Duration struct { time.Duration }
+  2. MarshalJSON() — outputs the duration as a quoted string using .String()
+  3. UnmarshalJSON() — parses a quoted duration string using time.ParseDuration
+
+  Then implement a Task struct that uses it:
+
+    type Task struct {
+        Name    string   `json:"name"`
+        Timeout Duration `json:"timeout"`
+    }
+
+  Example:
+    t := Task{Name: "build", Timeout: Duration{5 * time.Second}}
+    json.Marshal(t) => {"name":"build","timeout":"5s"}
+    json.Unmarshal({"name":"test","timeout":"2m30s"}, &t) => t.Timeout == 2m30s
+template: |
+  package main
+
+  import (
+  	"encoding/json"
+  	"time"
+  )
+
+  type Duration struct {
+  	time.Duration
+  }
+
+  // TODO: implement MarshalJSON on Duration
+  // TODO: implement UnmarshalJSON on *Duration
+
+  type Task struct {
+  	Name    string   `json:"name"`
+  	Timeout Duration `json:"timeout"`
+  }
+
+  // These are here to avoid "imported and not used" errors
+  var _ = json.Marshal
+  var _ = time.Second
+test_code: |
+  package main
+
+  import (
+  	"encoding/json"
+  	"testing"
+  	"time"
+  )
+
+  func TestMarshalDuration(t *testing.T) {
+  	task := Task{Name: "build", Timeout: Duration{5 * time.Second}}
+  	b, err := json.Marshal(task)
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	got := string(b)
+  	want := `{"name":"build","timeout":"5s"}`
+  	if got != want {
+  		t.Errorf("expected %s, got %s", want, got)
+  	}
+  }
+
+  func TestUnmarshalDuration(t *testing.T) {
+  	input := `{"name":"test","timeout":"2m30s"}`
+  	var task Task
+  	err := json.Unmarshal([]byte(input), &task)
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if task.Name != "test" {
+  		t.Errorf("expected name=test, got %s", task.Name)
+  	}
+  	want := 2*time.Minute + 30*time.Second
+  	if task.Timeout.Duration != want {
+  		t.Errorf("expected timeout=%v, got %v", want, task.Timeout.Duration)
+  	}
+  }
+
+  func TestRoundTrip(t *testing.T) {
+  	original := Task{Name: "deploy", Timeout: Duration{1 * time.Hour}}
+  	b, err := json.Marshal(original)
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	var decoded Task
+  	err = json.Unmarshal(b, &decoded)
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if decoded.Name != original.Name || decoded.Timeout.Duration != original.Timeout.Duration {
+  		t.Errorf("round-trip failed: %+v != %+v", decoded, original)
+  	}
+  }
+
+  func TestUnmarshalInvalid(t *testing.T) {
+  	input := `{"name":"bad","timeout":"not-a-duration"}`
+  	var task Task
+  	err := json.Unmarshal([]byte(input), &task)
+  	if err == nil {
+  		t.Error("expected error for invalid duration string")
+  	}
+  }
+
+  func TestMarshalZeroDuration(t *testing.T) {
+  	task := Task{Name: "zero", Timeout: Duration{0}}
+  	b, err := json.Marshal(task)
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	got := string(b)
+  	want := `{"name":"zero","timeout":"0s"}`
+  	if got != want {
+  		t.Errorf("expected %s, got %s", want, got)
+  	}
+  }
+hint: "MarshalJSON should return []byte(`\"` + d.Duration.String() + `\"`), nil. UnmarshalJSON should trim quotes, call time.ParseDuration, and set d.Duration."
+solution: |
+  package main
+
+  import (
+  	"encoding/json"
+  	"fmt"
+  	"time"
+  )
+
+  type Duration struct {
+  	time.Duration
+  }
+
+  func (d Duration) MarshalJSON() ([]byte, error) {
+  	return []byte(fmt.Sprintf("%q", d.Duration.String())), nil
+  }
+
+  func (d *Duration) UnmarshalJSON(b []byte) error {
+  	var s string
+  	if err := json.Unmarshal(b, &s); err != nil {
+  		return err
+  	}
+  	dur, err := time.ParseDuration(s)
+  	if err != nil {
+  		return err
+  	}
+  	d.Duration = dur
+  	return nil
+  }
+
+  type Task struct {
+  	Name    string   `json:"name"`
+  	Timeout Duration `json:"timeout"`
+  }
+
+  var _ = json.Marshal
+  var _ = time.Second
+explanation: |
+  Custom JSON marshaling in Go is done by implementing the json.Marshaler and
+  json.Unmarshaler interfaces:
+
+    type Marshaler interface {
+        MarshalJSON() ([]byte, error)
+    }
+    type Unmarshaler interface {
+        UnmarshalJSON([]byte) error
+    }
+
+  MarshalJSON must return valid JSON bytes. For a string value, that means
+  including the surrounding quotes. Using fmt.Sprintf("%q", ...) handles this
+  and also escapes special characters.
+
+  UnmarshalJSON receives raw JSON bytes. A clean approach is to unmarshal into
+  a string first with json.Unmarshal(b, &s), then parse the string.
+
+  This pattern is common for types with non-standard JSON representations:
+  durations, custom date formats, enums as strings, etc.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch13.html"

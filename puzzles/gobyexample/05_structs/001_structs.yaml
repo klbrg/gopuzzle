@@ -1,0 +1,85 @@
+id: "05-001"
+title: "Structs"
+concept: "structs"
+difficulty: 2
+description: |
+  Define a Book struct with Title (string), Author (string), and Pages (int) fields.
+  Write a constructor newBook that creates one. Add a ReadingTime() method that
+  estimates reading time in minutes (Pages / 30, integer division).
+template: |
+  package main
+
+  // TODO: define a Book struct
+
+  // TODO: write newBook constructor
+
+  // TODO: add a ReadingTime method
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestNewBook(t *testing.T) {
+  	b := newBook("Go in Action", "William Kennedy", 300)
+  	if b.Title != "Go in Action" {
+  		t.Errorf("expected Title %q, got %q", "Go in Action", b.Title)
+  	}
+  	if b.Author != "William Kennedy" {
+  		t.Errorf("expected Author %q, got %q", "William Kennedy", b.Author)
+  	}
+  	if b.Pages != 300 {
+  		t.Errorf("expected Pages 300, got %d", b.Pages)
+  	}
+  }
+
+  func TestReadingTime(t *testing.T) {
+  	tests := []struct {
+  		pages int
+  		want  int
+  	}{
+  		{300, 10},
+  		{30, 1},
+  		{0, 0},
+  		{29, 0},
+  		{61, 2},
+  	}
+  	for _, tc := range tests {
+  		b := newBook("Test", "Author", tc.pages)
+  		got := b.ReadingTime()
+  		if got != tc.want {
+  			t.Errorf("ReadingTime() for %d pages: expected %d, got %d", tc.pages, tc.want, got)
+  		}
+  	}
+  }
+hint: "Define the struct with three fields, then attach ReadingTime using a value receiver: func (b Book) ReadingTime() int"
+solution: |
+  package main
+
+  type Book struct {
+  	Title  string
+  	Author string
+  	Pages  int
+  }
+
+  func newBook(title, author string, pages int) Book {
+  	return Book{Title: title, Author: author, Pages: pages}
+  }
+
+  func (b Book) ReadingTime() int {
+  	return b.Pages / 30
+  }
+explanation: |
+  Structs group related fields together:
+    type Book struct {
+        Title  string
+        Author string
+        Pages  int
+    }
+  A constructor is just a regular function that returns the struct:
+    func newBook(title, author string, pages int) Book {
+        return Book{Title: title, Author: author, Pages: pages}
+    }
+  Methods are functions with a receiver. A value receiver (b Book) gets a copy:
+    func (b Book) ReadingTime() int { return b.Pages / 30 }
+  Integer division truncates — 29/30 gives 0, which is fine here.
+reference: "https://gobyexample.com/structs"

@@ -1,0 +1,136 @@
+id: "lg14-002"
+title: "Context Timeout"
+concept: "advanced"
+difficulty: 7
+description: |
+  Write doWithTimeout(ctx context.Context, timeout time.Duration, work func() (string, error)) (string, error)
+  that runs the work function in a goroutine and returns its result. If the work does not
+  complete before the timeout OR the parent context is cancelled, return "", ctx.Err()
+  (the context error).
+
+  The function must respect both its own timeout AND cancellation from the parent context.
+
+  Example:
+    result, err := doWithTimeout(ctx, 100*time.Millisecond, func() (string, error) {
+        time.Sleep(10*time.Millisecond)
+        return "done", nil
+    })
+    // result="done", err=nil
+template: |
+  package main
+
+  import (
+  	"context"
+  	"time"
+  )
+
+  func doWithTimeout(ctx context.Context, timeout time.Duration, work func() (string, error)) (string, error) {
+  	// TODO: run work with a timeout derived from ctx
+  	return "", nil
+  }
+test_code: |
+  package main
+
+  import (
+  	"context"
+  	"errors"
+  	"testing"
+  	"time"
+  )
+
+  func TestDoWithTimeoutSuccess(t *testing.T) {
+  	ctx := context.Background()
+  	result, err := doWithTimeout(ctx, 1*time.Second, func() (string, error) {
+  		return "hello", nil
+  	})
+  	if err != nil {
+  		t.Fatalf("unexpected error: %v", err)
+  	}
+  	if result != "hello" {
+  		t.Errorf("expected hello, got %q", result)
+  	}
+  }
+
+  func TestDoWithTimeoutExpires(t *testing.T) {
+  	ctx := context.Background()
+  	_, err := doWithTimeout(ctx, 50*time.Millisecond, func() (string, error) {
+  		time.Sleep(500 * time.Millisecond)
+  		return "late", nil
+  	})
+  	if err == nil {
+  		t.Fatal("expected timeout error")
+  	}
+  	if !errors.Is(err, context.DeadlineExceeded) {
+  		t.Errorf("expected DeadlineExceeded, got %v", err)
+  	}
+  }
+
+  func TestDoWithTimeoutParentCancel(t *testing.T) {
+  	ctx, cancel := context.WithCancel(context.Background())
+  	go func() {
+  		time.Sleep(30 * time.Millisecond)
+  		cancel()
+  	}()
+  	_, err := doWithTimeout(ctx, 5*time.Second, func() (string, error) {
+  		time.Sleep(1 * time.Second)
+  		return "late", nil
+  	})
+  	if err == nil {
+  		t.Fatal("expected cancellation error")
+  	}
+  }
+
+  func TestDoWithTimeoutWorkError(t *testing.T) {
+  	ctx := context.Background()
+  	_, err := doWithTimeout(ctx, 1*time.Second, func() (string, error) {
+  		return "", errors.New("work failed")
+  	})
+  	if err == nil || err.Error() != "work failed" {
+  		t.Errorf("expected 'work failed', got %v", err)
+  	}
+  }
+hint: "Use context.WithTimeout to create a child context. Run work in a goroutine that sends the result to a channel. Select on the channel and ctx.Done()."
+solution: |
+  package main
+
+  import (
+  	"context"
+  	"time"
+  )
+
+  func doWithTimeout(ctx context.Context, timeout time.Duration, work func() (string, error)) (string, error) {
+  	ctx, cancel := context.WithTimeout(ctx, timeout)
+  	defer cancel()
+
+  	type result struct {
+  		val string
+  		err error
+  	}
+  	ch := make(chan result, 1)
+  	go func() {
+  		v, err := work()
+  		ch <- result{v, err}
+  	}()
+
+  	select {
+  	case <-ctx.Done():
+  		return "", ctx.Err()
+  	case r := <-ch:
+  		return r.val, r.err
+  	}
+  }
+explanation: |
+  context.WithTimeout creates a child context that auto-cancels after a duration:
+    ctx, cancel := context.WithTimeout(parent, timeout)
+    defer cancel()
+  The child inherits the parent's cancellation — if the parent is cancelled,
+  the child is too. Use select to race between work completion and context done:
+    select {
+    case <-ctx.Done():
+        return "", ctx.Err()  // DeadlineExceeded or Canceled
+    case r := <-ch:
+        return r.val, r.err
+    }
+  Use a buffered channel (size 1) so the goroutine does not leak if the context
+  expires before work finishes — it can still send without blocking.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch14.html"

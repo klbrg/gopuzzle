@@ -1,0 +1,168 @@
+id: "lg15-002"
+title: "Test Double with Interface"
+concept: "testing"
+difficulty: 6
+description: |
+  Implement a UserService that depends on a UserStore interface for data access.
+  The puzzle demonstrates how interfaces enable test doubles (stubs/fakes).
+
+  1. Define a UserStore interface:
+     - GetUser(id string) (string, error) — returns user name or error
+
+  2. Implement UserService:
+     - NewUserService(store UserStore) *UserService
+     - (s *UserService) Greet(id string) (string, error) — returns "Hello, <name>!"
+       or wraps the store error with "user not found: <original error>"
+
+  The test code provides a fakeStore implementation. Your job is to write the
+  production code that works with any UserStore.
+
+  Example:
+    store has "u1" -> "Alice"
+    svc := NewUserService(store)
+    svc.Greet("u1") => "Hello, Alice!", nil
+    svc.Greet("u99") => "", error("user not found: ...")
+template: |
+  package main
+
+  import "fmt"
+
+  type UserStore interface {
+  	// TODO: define GetUser method
+  }
+
+  type UserService struct {
+  	// TODO: store field
+  }
+
+  func NewUserService(store UserStore) *UserService {
+  	// TODO
+  	return nil
+  }
+
+  func (s *UserService) Greet(id string) (string, error) {
+  	// TODO: get user from store, return greeting or wrapped error
+  	_ = fmt.Sprintf // delete this line
+  	return "", nil
+  }
+test_code: |
+  package main
+
+  import (
+  	"errors"
+  	"strings"
+  	"testing"
+  )
+
+  type fakeStore struct {
+  	users map[string]string
+  }
+
+  func (f *fakeStore) GetUser(id string) (string, error) {
+  	name, ok := f.users[id]
+  	if !ok {
+  		return "", errors.New("no such user")
+  	}
+  	return name, nil
+  }
+
+  func TestGreetFound(t *testing.T) {
+  	store := &fakeStore{users: map[string]string{"u1": "Alice", "u2": "Bob"}}
+  	svc := NewUserService(store)
+  	got, err := svc.Greet("u1")
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if got != "Hello, Alice!" {
+  		t.Errorf("expected 'Hello, Alice!', got '%s'", got)
+  	}
+  }
+
+  func TestGreetNotFound(t *testing.T) {
+  	store := &fakeStore{users: map[string]string{}}
+  	svc := NewUserService(store)
+  	_, err := svc.Greet("u99")
+  	if err == nil {
+  		t.Fatal("expected error for missing user")
+  	}
+  	if !strings.Contains(err.Error(), "user not found") {
+  		t.Errorf("error should contain 'user not found', got: %s", err.Error())
+  	}
+  }
+
+  func TestGreetMultipleUsers(t *testing.T) {
+  	store := &fakeStore{users: map[string]string{"a": "Xena", "b": "Yuki"}}
+  	svc := NewUserService(store)
+  	tests := []struct {
+  		id   string
+  		want string
+  	}{
+  		{"a", "Hello, Xena!"},
+  		{"b", "Hello, Yuki!"},
+  	}
+  	for _, tt := range tests {
+  		t.Run(tt.id, func(t *testing.T) {
+  			got, err := svc.Greet(tt.id)
+  			if err != nil {
+  				t.Fatal(err)
+  			}
+  			if got != tt.want {
+  				t.Errorf("expected %q, got %q", tt.want, got)
+  			}
+  		})
+  	}
+  }
+
+  func TestGreetDifferentStores(t *testing.T) {
+  	store1 := &fakeStore{users: map[string]string{"u1": "Alice"}}
+  	store2 := &fakeStore{users: map[string]string{"u1": "Bob"}}
+  	svc1 := NewUserService(store1)
+  	svc2 := NewUserService(store2)
+  	g1, _ := svc1.Greet("u1")
+  	g2, _ := svc2.Greet("u1")
+  	if g1 == g2 {
+  		t.Error("different stores should give different results")
+  	}
+  }
+hint: "Define GetUser(id string) (string, error) in the interface. UserService stores a UserStore field. Greet calls store.GetUser and formats the result or wraps the error with fmt.Errorf."
+solution: |
+  package main
+
+  import "fmt"
+
+  type UserStore interface {
+  	GetUser(id string) (string, error)
+  }
+
+  type UserService struct {
+  	store UserStore
+  }
+
+  func NewUserService(store UserStore) *UserService {
+  	return &UserService{store: store}
+  }
+
+  func (s *UserService) Greet(id string) (string, error) {
+  	name, err := s.store.GetUser(id)
+  	if err != nil {
+  		return "", fmt.Errorf("user not found: %w", err)
+  	}
+  	return fmt.Sprintf("Hello, %s!", name), nil
+  }
+explanation: |
+  Go's implicit interface satisfaction makes test doubles easy:
+
+  1. Define a small interface for the dependency (UserStore)
+  2. Production code depends on the interface, not a concrete type
+  3. Tests provide a fake implementation that satisfies the interface
+
+  The test's fakeStore uses a simple map -- no database, no network. This makes
+  tests fast, deterministic, and isolated.
+
+  Error wrapping with fmt.Errorf("...: %w", err) preserves the original error
+  for inspection with errors.Is/errors.As while adding context.
+
+  This pattern is central to testable Go code: accept interfaces, return structs.
+  Keep interfaces small (often 1-2 methods) and define them where they are used,
+  not where they are implemented.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch15.html"

@@ -1,0 +1,125 @@
+id: "lg13-002"
+title: "JSON Streaming"
+concept: "encoding"
+difficulty: 6
+description: |
+  Write decodeAll(jsonLines string) ([]map[string]any, error) that reads multiple
+  JSON objects from a single string (one per line or concatenated) using a streaming
+  decoder. Return a slice of all decoded objects, or an error if any object is invalid.
+
+  Example input:
+    {"name":"Alice","age":30}
+    {"name":"Bob","age":25}
+  Result: []map[string]any{{"name":"Alice","age":30}, {"name":"Bob","age":25}}
+template: |
+  package main
+
+  import "encoding/json"
+
+  func decodeAll(jsonLines string) ([]map[string]any, error) {
+  	// TODO: use json.NewDecoder to stream-decode all objects
+  	return nil, nil
+  }
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestDecodeAllMultiple(t *testing.T) {
+  	input := `{"name":"Alice","age":30}
+  {"name":"Bob","age":25}`
+  	got, err := decodeAll(input)
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if len(got) != 2 {
+  		t.Fatalf("expected 2 objects, got %d", len(got))
+  	}
+  	if got[0]["name"] != "Alice" || got[1]["name"] != "Bob" {
+  		t.Errorf("unexpected names: %v", got)
+  	}
+  	if got[0]["age"] != float64(30) || got[1]["age"] != float64(25) {
+  		t.Errorf("unexpected ages: %v", got)
+  	}
+  }
+
+  func TestDecodeAllSingle(t *testing.T) {
+  	got, err := decodeAll(`{"x":1}`)
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if len(got) != 1 || got[0]["x"] != float64(1) {
+  		t.Errorf("unexpected result: %v", got)
+  	}
+  }
+
+  func TestDecodeAllEmpty(t *testing.T) {
+  	got, err := decodeAll("")
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if len(got) != 0 {
+  		t.Errorf("expected empty slice, got %v", got)
+  	}
+  }
+
+  func TestDecodeAllInvalid(t *testing.T) {
+  	_, err := decodeAll(`{"valid":1}
+  {invalid}`)
+  	if err == nil {
+  		t.Error("expected error for invalid JSON")
+  	}
+  }
+
+  func TestDecodeAllConcatenated(t *testing.T) {
+  	got, err := decodeAll(`{"a":1}{"b":2}{"c":3}`)
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if len(got) != 3 {
+  		t.Fatalf("expected 3 objects, got %d", len(got))
+  	}
+  }
+hint: "json.NewDecoder reads from an io.Reader. Call dec.Decode in a loop until it returns io.EOF. Use dec.More() or check for io.EOF to know when to stop."
+solution: |
+  package main
+
+  import (
+  	"encoding/json"
+  	"errors"
+  	"io"
+  	"strings"
+  )
+
+  func decodeAll(jsonLines string) ([]map[string]any, error) {
+  	dec := json.NewDecoder(strings.NewReader(jsonLines))
+  	var results []map[string]any
+  	for {
+  		var obj map[string]any
+  		err := dec.Decode(&obj)
+  		if errors.Is(err, io.EOF) {
+  			break
+  		}
+  		if err != nil {
+  			return nil, err
+  		}
+  		results = append(results, obj)
+  	}
+  	return results, nil
+  }
+explanation: |
+  json.NewDecoder streams JSON from an io.Reader, decoding one value at a time:
+    dec := json.NewDecoder(strings.NewReader(data))
+    for {
+        var obj map[string]any
+        err := dec.Decode(&obj)
+        if errors.Is(err, io.EOF) { break }
+        if err != nil { return nil, err }
+        results = append(results, obj)
+    }
+  Unlike json.Unmarshal (which needs the full input at once), NewDecoder handles:
+  - Multiple JSON values concatenated or separated by whitespace
+  - Large streams without loading everything into memory
+  - Line-delimited JSON (NDJSON), a common log and API format
+  Numbers decode as float64 in map[string]any — this is standard Go JSON behavior.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch13.html"

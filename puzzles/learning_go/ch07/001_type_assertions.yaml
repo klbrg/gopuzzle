@@ -1,0 +1,130 @@
+id: "lg07-001"
+title: "Type Assertions"
+concept: "interfaces"
+difficulty: 5
+description: |
+  Write a function describeValue(v any) string that uses a type switch to
+  return a description of the value:
+    - int:    "int: <value>"
+    - string: "string: <value>"
+    - bool:   "bool: <value>"
+    - anything else: "unknown: <value>"
+
+  Write a function extractInt(v any) (int, bool) that uses a comma-ok type
+  assertion to safely extract an int from an any value. Return (0, false)
+  if v is not an int.
+
+  Examples:
+    describeValue(42)      => "int: 42"
+    describeValue("hello") => "string: hello"
+    describeValue(true)    => "bool: true"
+    describeValue(3.14)    => "unknown: 3.14"
+    extractInt(42)         => (42, true)
+    extractInt("hello")    => (0, false)
+template: |
+  package main
+
+  // TODO: implement describeValue using a type switch
+
+  // TODO: implement extractInt using a comma-ok type assertion
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestDescribeValueInt(t *testing.T) {
+  	got := describeValue(42)
+  	if got != "int: 42" {
+  		t.Errorf("expected %q, got %q", "int: 42", got)
+  	}
+  }
+
+  func TestDescribeValueString(t *testing.T) {
+  	got := describeValue("hello")
+  	if got != "string: hello" {
+  		t.Errorf("expected %q, got %q", "string: hello", got)
+  	}
+  }
+
+  func TestDescribeValueBool(t *testing.T) {
+  	got := describeValue(true)
+  	if got != "bool: true" {
+  		t.Errorf("expected %q, got %q", "bool: true", got)
+  	}
+  }
+
+  func TestDescribeValueUnknown(t *testing.T) {
+  	got := describeValue(3.14)
+  	if got != "unknown: 3.14" {
+  		t.Errorf("expected %q, got %q", "unknown: 3.14", got)
+  	}
+  }
+
+  func TestDescribeValueNil(t *testing.T) {
+  	got := describeValue(nil)
+  	if got != "unknown: <nil>" {
+  		t.Errorf("expected %q, got %q", "unknown: <nil>", got)
+  	}
+  }
+
+  func TestExtractIntSuccess(t *testing.T) {
+  	val, ok := extractInt(42)
+  	if !ok || val != 42 {
+  		t.Errorf("expected (42, true), got (%d, %t)", val, ok)
+  	}
+  }
+
+  func TestExtractIntFail(t *testing.T) {
+  	val, ok := extractInt("hello")
+  	if ok || val != 0 {
+  		t.Errorf("expected (0, false), got (%d, %t)", val, ok)
+  	}
+  }
+
+  func TestExtractIntFromNil(t *testing.T) {
+  	val, ok := extractInt(nil)
+  	if ok || val != 0 {
+  		t.Errorf("expected (0, false), got (%d, %t)", val, ok)
+  	}
+  }
+hint: "A type switch uses switch v := val.(type) { case int: ... }. A comma-ok assertion uses val, ok := v.(int) without panicking if the type is wrong."
+solution: |
+  package main
+
+  import "fmt"
+
+  func describeValue(v any) string {
+  	switch val := v.(type) {
+  	case int:
+  		return fmt.Sprintf("int: %d", val)
+  	case string:
+  		return fmt.Sprintf("string: %s", val)
+  	case bool:
+  		return fmt.Sprintf("bool: %t", val)
+  	default:
+  		return fmt.Sprintf("unknown: %v", val)
+  	}
+  }
+
+  func extractInt(v any) (int, bool) {
+  	val, ok := v.(int)
+  	return val, ok
+  }
+explanation: |
+  Type switches let you branch on the concrete type inside an interface:
+    switch val := v.(type) {
+    case int:
+        // val is an int here
+    case string:
+        // val is a string here
+    default:
+        // val is the original any
+    }
+  The variable val is automatically typed to the matched case.
+
+  Comma-ok type assertions safely check a single type without panicking:
+    val, ok := v.(int)
+  If v holds an int, ok is true and val has the value.
+  If not, ok is false and val is the zero value (0 for int).
+  Without the comma-ok form, a failed assertion panics at runtime.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch7.html"

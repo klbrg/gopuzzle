@@ -1,0 +1,87 @@
+id: "lg04-004"
+title: "If with Short Statement"
+concept: "control-flow"
+difficulty: 2
+description: |
+  Write a function safeDivide that takes two integers (a, b) and returns
+  a string describing the result. Use if statements with short variable
+  declarations (the "if init; condition" form):
+
+  - First check if b is zero. If so, return "error: division by zero".
+  - Otherwise, compute both the quotient (a/b) and remainder (a%b).
+  - If the remainder is zero, return "X divides evenly into Y"
+    (where X is b and Y is a).
+  - Otherwise, return "A / B = Q remainder R".
+
+  Use the if-init form to declare variables scoped to the if block.
+
+  For example:
+    safeDivide(10, 3)  returns "10 / 3 = 3 remainder 1"
+    safeDivide(10, 2)  returns "2 divides evenly into 10"
+    safeDivide(10, 0)  returns "error: division by zero"
+template: |
+  package main
+
+  import "fmt"
+
+  func safeDivide(a, b int) string {
+  	// TODO: use if with short statement form
+  }
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestSafeDivide(t *testing.T) {
+  	cases := []struct {
+  		a, b int
+  		want string
+  	}{
+  		{10, 3, "10 / 3 = 3 remainder 1"},
+  		{10, 2, "2 divides evenly into 10"},
+  		{10, 0, "error: division by zero"},
+  		{7, 7, "7 divides evenly into 7"},
+  		{100, 9, "100 / 9 = 11 remainder 1"},
+  		{0, 5, "5 divides evenly into 0"},
+  		{-10, 3, "-10 / 3 = -3 remainder -1"},
+  	}
+  	for _, c := range cases {
+  		got := safeDivide(c.a, c.b)
+  		if got != c.want {
+  			t.Errorf("safeDivide(%d, %d): expected %q, got %q",
+  				c.a, c.b, c.want, got)
+  		}
+  	}
+  }
+hint: "Use the form: if q, r := a/b, a%b; r == 0 { ... } else { ... }. Variables declared in the if init statement are available in both the if and else blocks."
+solution: |
+  package main
+
+  import "fmt"
+
+  func safeDivide(a, b int) string {
+  	if b == 0 {
+  		return "error: division by zero"
+  	}
+  	if q, r := a/b, a%b; r == 0 {
+  		return fmt.Sprintf("%d divides evenly into %d", b, a)
+  	} else {
+  		return fmt.Sprintf("%d / %d = %d remainder %d", a, b, q, r)
+  	}
+  }
+explanation: |
+  Go's if statement supports a short variable declaration before the
+  condition, separated by a semicolon:
+    if q, r := a/b, a%b; r == 0 { ... }
+
+  Variables declared this way (q and r) are scoped to the entire
+  if-else chain, including the else block. This is useful for
+  keeping variables close to where they are used and preventing
+  them from leaking into the surrounding scope.
+
+  This pattern is especially common with error checking:
+    if err := doSomething(); err != nil { ... }
+
+  The short statement form keeps the code compact and makes the
+  variable's intended scope clear.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch4.html"

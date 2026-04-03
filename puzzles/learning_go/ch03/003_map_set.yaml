@@ -1,0 +1,90 @@
+id: "lg03-003"
+title: "Maps as Sets"
+concept: "collections"
+difficulty: 2
+description: |
+  Write a function unique that takes a []string and returns a []string
+  containing only the unique values, in the order they first appear.
+
+  For example:
+    unique([]string{"go", "java", "go", "rust", "java"})
+    returns ["go", "java", "rust"]
+
+  Use a map[string]bool as a set to track which values you have seen.
+template: |
+  package main
+
+  func unique(items []string) []string {
+  	// TODO: use a map as a set to deduplicate
+  }
+test_code: |
+  package main
+
+  import (
+  	"reflect"
+  	"testing"
+  )
+
+  func TestUnique(t *testing.T) {
+  	cases := []struct {
+  		input []string
+  		want  []string
+  	}{
+  		{
+  			[]string{"go", "java", "go", "rust", "java"},
+  			[]string{"go", "java", "rust"},
+  		},
+  		{
+  			[]string{"a", "b", "c"},
+  			[]string{"a", "b", "c"},
+  		},
+  		{
+  			[]string{"x", "x", "x"},
+  			[]string{"x"},
+  		},
+  		{
+  			[]string{},
+  			[]string{},
+  		},
+  		{
+  			[]string{"one"},
+  			[]string{"one"},
+  		},
+  		{
+  			[]string{"b", "a", "b", "a", "c", "a"},
+  			[]string{"b", "a", "c"},
+  		},
+  	}
+  	for _, c := range cases {
+  		got := unique(c.input)
+  		if !reflect.DeepEqual(got, c.want) {
+  			t.Errorf("unique(%v): expected %v, got %v", c.input, c.want, got)
+  		}
+  	}
+  }
+hint: "Check the map before appending: if !seen[item] { append and mark as seen }."
+solution: |
+  package main
+
+  func unique(items []string) []string {
+  	seen := map[string]bool{}
+  	result := []string{}
+  	for _, item := range items {
+  		if !seen[item] {
+  			seen[item] = true
+  			result = append(result, item)
+  		}
+  	}
+  	return result
+  }
+explanation: |
+  Go has no built-in set type, but map[T]bool is the idiomatic substitute.
+  Reading a missing key returns the zero value (false for bool), so:
+    if !seen[item] {  // false means "not seen yet"
+        seen[item] = true
+        result = append(result, item)
+    }
+  This pattern preserves insertion order because we append to a slice
+  as we encounter each new item. The map provides O(1) lookups to
+  check for duplicates. This is a very common Go idiom for deduplication.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch3.html"

@@ -1,0 +1,123 @@
+id: "12-003"
+title: "Worker Pools"
+concept: "concurrency"
+difficulty: 7
+description: |
+  Implement processWithLimit(items []int, maxWorkers int, f func(int) int) []int that
+  applies f to every item concurrently, using at most maxWorkers goroutines at a time.
+  Return results in the same order as the input items. Use a semaphore channel to limit
+  concurrency.
+template: |
+  package main
+
+  import "sync"
+
+  func processWithLimit(items []int, maxWorkers int, f func(int) int) []int {
+  	// TODO: process items concurrently with at most maxWorkers goroutines
+  	// Return results in original order
+  	return nil
+  }
+test_code: |
+  package main
+
+  import (
+  	"reflect"
+  	"sync/atomic"
+  	"testing"
+  	"time"
+  )
+
+  func TestProcessWithLimitResults(t *testing.T) {
+  	items := []int{1, 2, 3, 4, 5, 6, 7, 8}
+  	got := processWithLimit(items, 3, func(n int) int { return n * n })
+  	want := []int{1, 4, 9, 16, 25, 36, 49, 64}
+  	if !reflect.DeepEqual(got, want) {
+  		t.Errorf("expected %v, got %v", want, got)
+  	}
+  }
+
+  func TestProcessWithLimitOrder(t *testing.T) {
+  	items := []int{10, 20, 30, 40, 50}
+  	got := processWithLimit(items, 2, func(n int) int { return n + 1 })
+  	want := []int{11, 21, 31, 41, 51}
+  	if !reflect.DeepEqual(got, want) {
+  		t.Errorf("results out of order: expected %v, got %v", want, got)
+  	}
+  }
+
+  func TestProcessWithLimitConcurrency(t *testing.T) {
+  	var concurrent int64
+  	var maxConcurrent int64
+
+  	items := []int{1, 2, 3, 4, 5, 6}
+  	processWithLimit(items, 2, func(n int) int {
+  		cur := atomic.AddInt64(&concurrent, 1)
+  		for {
+  			old := atomic.LoadInt64(&maxConcurrent)
+  			if cur <= old || atomic.CompareAndSwapInt64(&maxConcurrent, old, cur) {
+  				break
+  			}
+  		}
+  		time.Sleep(30 * time.Millisecond)
+  		atomic.AddInt64(&concurrent, -1)
+  		return n
+  	})
+
+  	if mc := atomic.LoadInt64(&maxConcurrent); mc > 2 {
+  		t.Errorf("max concurrent workers exceeded limit: %d > 2", mc)
+  	}
+  }
+
+  func TestProcessWithLimitEmpty(t *testing.T) {
+  	got := processWithLimit(nil, 3, func(n int) int { return n })
+  	if len(got) != 0 {
+  		t.Errorf("expected empty result, got %v", got)
+  	}
+  }
+
+  func TestProcessWithLimitSingle(t *testing.T) {
+  	got := processWithLimit([]int{42}, 5, func(n int) int { return n * 2 })
+  	want := []int{84}
+  	if !reflect.DeepEqual(got, want) {
+  		t.Errorf("expected %v, got %v", want, got)
+  	}
+  }
+hint: "Use a buffered channel of size maxWorkers as a semaphore: send before starting work, receive when done. Pre-allocate the results slice so each goroutine writes to its own index."
+solution: |
+  package main
+
+  import "sync"
+
+  func processWithLimit(items []int, maxWorkers int, f func(int) int) []int {
+  	results := make([]int, len(items))
+  	sem := make(chan struct{}, maxWorkers)
+  	var wg sync.WaitGroup
+
+  	for i, item := range items {
+  		wg.Add(1)
+  		sem <- struct{}{} // acquire semaphore slot
+  		go func() {
+  			defer wg.Done()
+  			results[i] = f(item)
+  			<-sem // release semaphore slot
+  		}()
+  	}
+
+  	wg.Wait()
+  	return results
+  }
+explanation: |
+  A semaphore channel limits concurrent goroutines:
+    sem := make(chan struct{}, maxWorkers)
+  Sending to sem blocks when maxWorkers goroutines are active:
+    sem <- struct{}{}   // acquire — blocks if full
+    go func() {
+        defer wg.Done()
+        results[i] = f(item)
+        <-sem           // release
+    }()
+  Pre-allocating results[i] preserves input order without sorting —
+  each goroutine writes to its own index, so no mutex is needed.
+  sync.WaitGroup tracks completion. This pattern is simpler than a
+  classic worker pool when you need ordered results.
+reference: "https://gobyexample.com/worker-pools"

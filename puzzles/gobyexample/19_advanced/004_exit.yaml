@@ -1,0 +1,67 @@
+id: "19-004"
+title: "Exit"
+concept: "advanced"
+difficulty: 3
+description: |
+  Return conventional exit codes and demonstrate pre-exit cleanup.
+template: |
+  package main
+
+  func exitCode(success bool) int {
+  	// TODO
+  }
+
+  // safeCleanup demonstrates what should run before calling os.Exit
+  func safeCleanup(steps []string) []string {
+  	// TODO
+  }
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestExitCode(t *testing.T) {
+  	if exitCode(true) != 0 {
+  		t.Error("success should return 0")
+  	}
+  	if exitCode(false) != 1 {
+  		t.Error("failure should return 1")
+  	}
+  }
+
+  func TestSafeCleanup(t *testing.T) {
+  	result := safeCleanup([]string{"init", "work"})
+  	if len(result) != 3 || result[2] != "cleanup" {
+  		t.Errorf("expected cleanup appended, got %v", result)
+  	}
+  }
+hint: "Convention: 0 means success. Deferred functions don't run on os.Exit."
+solution: |
+  package main
+
+  func exitCode(success bool) int {
+  	if success {
+  		return 0
+  	}
+  	return 1
+  }
+
+  func safeCleanup(steps []string) []string {
+  	return append(steps, "cleanup")
+  }
+explanation: |
+  os.Exit(code) terminates the program immediately with an exit code.
+    os.Exit(0)  // success
+    os.Exit(1)  // failure (any non-zero = error)
+  IMPORTANT: deferred functions do NOT run when os.Exit is called.
+  This is unlike panics (where defers do run).
+  Best practice before os.Exit: run cleanup explicitly, not with defer.
+    func main() {
+        cleanup := setupResources()
+        result, err := run()
+        cleanup()           // explicit, not deferred
+        if err != nil {
+            os.Exit(1)
+        }
+    }
+reference: "https://gobyexample.com/exit"

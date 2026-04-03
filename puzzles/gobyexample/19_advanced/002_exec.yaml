@@ -1,0 +1,112 @@
+id: "19-002"
+title: "Spawning Processes"
+concept: "advanced"
+difficulty: 6
+description: |
+  Write runWithInput(name string, input string, args ...string) (string, error) that
+  runs an external command, pipes the given input string to its stdin, and returns
+  the contents of stdout as a string.
+
+  If the command exits with a non-zero status, return the error from Run.
+template: |
+  package main
+
+  import (
+  	"bytes"
+  	"os/exec"
+  	"strings"
+  )
+
+  func runWithInput(name string, input string, args ...string) (string, error) {
+  	// TODO: create a command with exec.Command, set its Stdin
+  	// to read from the input string, capture stdout, and run it.
+  }
+test_code: |
+  package main
+
+  import (
+  	"strings"
+  	"testing"
+  )
+
+  func TestRunWithInputCat(t *testing.T) {
+  	// "cat" reads stdin and writes it to stdout
+  	got, err := runWithInput("cat", "hello from stdin")
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if got != "hello from stdin" {
+  		t.Errorf("expected %q, got %q", "hello from stdin", got)
+  	}
+  }
+
+  func TestRunWithInputGrep(t *testing.T) {
+  	input := "apple\nbanana\napricot\ncherry"
+  	got, err := runWithInput("grep", input, "ap")
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	lines := strings.TrimSpace(got)
+  	if lines != "apple\napricot" {
+  		t.Errorf("expected 'apple\\napricot', got %q", lines)
+  	}
+  }
+
+  func TestRunWithInputMultiline(t *testing.T) {
+  	input := "line3\nline1\nline2"
+  	got, err := runWithInput("sort", input)
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if strings.TrimSpace(got) != "line1\nline2\nline3" {
+  		t.Errorf("expected sorted output, got %q", got)
+  	}
+  }
+
+  func TestRunWithInputEmptyInput(t *testing.T) {
+  	got, err := runWithInput("cat", "")
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if got != "" {
+  		t.Errorf("expected empty output, got %q", got)
+  	}
+  }
+
+  func TestRunWithInputFailure(t *testing.T) {
+  	_, err := runWithInput("false", "")
+  	if err == nil {
+  		t.Error("expected error from 'false' command")
+  	}
+  }
+hint: "Set cmd.Stdin to strings.NewReader(input) and cmd.Stdout to a bytes.Buffer. Call cmd.Run() and return the buffer contents."
+solution: |
+  package main
+
+  import (
+  	"bytes"
+  	"os/exec"
+  	"strings"
+  )
+
+  func runWithInput(name string, input string, args ...string) (string, error) {
+  	cmd := exec.Command(name, args...)
+  	cmd.Stdin = strings.NewReader(input)
+  	var out bytes.Buffer
+  	cmd.Stdout = &out
+  	err := cmd.Run()
+  	return out.String(), err
+  }
+explanation: |
+  os/exec runs external programs. To pipe data to a command's stdin:
+    cmd := exec.Command(name, args...)
+    cmd.Stdin = strings.NewReader(input)   // any io.Reader works
+    cmd.Stdout = &outBuf                    // capture stdout
+    err := cmd.Run()
+  strings.NewReader wraps a string as an io.Reader, which is exactly
+  what cmd.Stdin expects. This avoids needing cmd.StdinPipe() for
+  simple cases where the input is already in memory.
+  For bidirectional streaming, use cmd.StdinPipe/StdoutPipe instead.
+  cmd.Run() blocks until the command exits and returns an *exec.ExitError
+  for non-zero exit codes.
+reference: "https://gobyexample.com/spawning-processes"

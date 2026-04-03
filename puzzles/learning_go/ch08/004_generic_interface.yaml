@@ -1,0 +1,201 @@
+id: "lg08-004"
+title: "Generic Interface Constraint"
+concept: "generics"
+difficulty: 7
+description: |
+  Go allows combining method requirements and type terms in a single
+  interface constraint. This means you can require that a type both has
+  a specific method AND has a specific underlying type.
+
+  Define an interface constraint Stringish that requires:
+    - The underlying type is ~string
+    - The type implements a method Sanitize() string
+
+  Define a type SafeHTML string with a Sanitize() string method that
+  strips all '<' and '>' characters from itself, returning the cleaned
+  string.
+
+  Define a type Username string with a Sanitize() string method that
+  lowercases itself and removes leading/trailing whitespace, returning
+  the cleaned string.
+
+  Write a generic function SanitizeAll[T Stringish](items []T) []T that
+  calls Sanitize() on each element and returns the cleaned slice.
+
+  Write a generic function Contains[T Stringish](items []T, substr string) bool
+  that checks if any item (after sanitizing) contains the given substring.
+
+  Examples:
+    h := SafeHTML("<b>hello</b>")
+    h.Sanitize() => "bhello/b"
+
+    u := Username("  ALICE  ")
+    u.Sanitize() => "alice"
+
+    items := []SafeHTML{"<b>hi</b>", "safe"}
+    SanitizeAll(items) => [SafeHTML("bhi/b"), SafeHTML("safe")]
+template: |
+  package main
+
+  // TODO: define Stringish interface constraint
+
+  // TODO: define SafeHTML type and Sanitize method
+
+  // TODO: define Username type and Sanitize method
+
+  // TODO: implement SanitizeAll[T Stringish]
+
+  // TODO: implement Contains[T Stringish]
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestSafeHTMLSanitize(t *testing.T) {
+  	h := SafeHTML("<b>hello</b>")
+  	got := h.Sanitize()
+  	if got != "bhello/b" {
+  		t.Errorf("expected %q, got %q", "bhello/b", string(got))
+  	}
+  }
+
+  func TestSafeHTMLNoTags(t *testing.T) {
+  	h := SafeHTML("clean text")
+  	got := h.Sanitize()
+  	if got != "clean text" {
+  		t.Errorf("expected %q, got %q", "clean text", string(got))
+  	}
+  }
+
+  func TestUsernameSanitize(t *testing.T) {
+  	u := Username("  ALICE  ")
+  	got := u.Sanitize()
+  	if got != "alice" {
+  		t.Errorf("expected %q, got %q", "alice", string(got))
+  	}
+  }
+
+  func TestUsernameAlreadyClean(t *testing.T) {
+  	u := Username("bob")
+  	got := u.Sanitize()
+  	if got != "bob" {
+  		t.Errorf("expected %q, got %q", "bob", string(got))
+  	}
+  }
+
+  func TestSanitizeAllHTML(t *testing.T) {
+  	items := []SafeHTML{"<b>hi</b>", "<i>go</i>", "safe"}
+  	got := SanitizeAll(items)
+  	expected := []SafeHTML{"bhi/b", "igo/i", "safe"}
+  	if len(got) != len(expected) {
+  		t.Fatalf("expected %d items, got %d", len(expected), len(got))
+  	}
+  	for i := range expected {
+  		if got[i] != expected[i] {
+  			t.Errorf("index %d: expected %q, got %q", i, string(expected[i]), string(got[i]))
+  		}
+  	}
+  }
+
+  func TestSanitizeAllUsernames(t *testing.T) {
+  	items := []Username{"  ALICE  ", "BOB", " charlie "}
+  	got := SanitizeAll(items)
+  	expected := []Username{"alice", "bob", "charlie"}
+  	for i := range expected {
+  		if got[i] != expected[i] {
+  			t.Errorf("index %d: expected %q, got %q", i, string(expected[i]), string(got[i]))
+  		}
+  	}
+  }
+
+  func TestContainsHTML(t *testing.T) {
+  	items := []SafeHTML{"<b>hello</b>", "<i>world</i>"}
+  	if !Contains(items, "hello") {
+  		t.Error("expected to find 'hello' after sanitizing")
+  	}
+  	if Contains(items, "<b>") {
+  		t.Error("should not find '<b>' after sanitizing")
+  	}
+  }
+
+  func TestContainsUsername(t *testing.T) {
+  	items := []Username{"  ALICE  ", "  BOB  "}
+  	if !Contains(items, "alice") {
+  		t.Error("expected to find 'alice' after sanitizing")
+  	}
+  	if Contains(items, "ALICE") {
+  		t.Error("should not find 'ALICE' after sanitizing (lowercased)")
+  	}
+  }
+
+  func TestContainsEmpty(t *testing.T) {
+  	items := []SafeHTML{}
+  	if Contains(items, "anything") {
+  		t.Error("expected false for empty slice")
+  	}
+  }
+hint: "The constraint combines ~string and a Sanitize() string method. Convert the string result back to T. Use strings.NewReplacer or strings.ReplaceAll for SafeHTML and strings.ToLower + strings.TrimSpace for Username."
+solution: |
+  package main
+
+  import "strings"
+
+  type Stringish interface {
+  	~string
+  	Sanitize() string
+  }
+
+  type SafeHTML string
+
+  func (h SafeHTML) Sanitize() string {
+  	s := strings.ReplaceAll(string(h), "<", "")
+  	s = strings.ReplaceAll(s, ">", "")
+  	return s
+  }
+
+  type Username string
+
+  func (u Username) Sanitize() string {
+  	return strings.ToLower(strings.TrimSpace(string(u)))
+  }
+
+  func SanitizeAll[T Stringish](items []T) []T {
+  	result := make([]T, len(items))
+  	for i, item := range items {
+  		result[i] = T(item.Sanitize())
+  	}
+  	return result
+  }
+
+  func Contains[T Stringish](items []T, substr string) bool {
+  	for _, item := range items {
+  		if strings.Contains(item.Sanitize(), substr) {
+  			return true
+  		}
+  	}
+  	return false
+  }
+explanation: |
+  This puzzle demonstrates combining type terms and method requirements
+  in a single interface constraint:
+
+    type Stringish interface {
+        ~string
+        Sanitize() string
+    }
+
+  The ~string term means the type must have string as its underlying
+  type. The Sanitize() method requires the type to implement sanitization
+  logic. Together, they ensure the type is string-like AND has custom
+  cleanup behavior.
+
+  Because T has underlying type ~string, you can convert between T and
+  string freely: string(item) to get a plain string, and T(s) to convert
+  back. This is what makes SanitizeAll work -- it calls Sanitize() to get
+  a clean string, then converts back to T.
+
+  This pattern is useful for domain types (SafeHTML, Username, Email)
+  that are strings with validation/sanitization rules. The generic
+  constraint ensures your utility functions work with all such types
+  while preserving type safety.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch8.html"

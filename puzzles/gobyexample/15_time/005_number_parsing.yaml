@@ -1,0 +1,161 @@
+id: "15-005"
+title: "Number Parsing"
+concept: "time"
+difficulty: 3
+description: |
+  Write parseConfig(raw map[string]string) (host string, port int, debug bool, err error)
+  that extracts typed configuration values from a string map.
+
+  Rules:
+    - "host" defaults to "localhost" if missing or empty.
+    - "port" must be parsed as an integer; defaults to 8080 if missing or empty.
+    - "debug" must be parsed as a boolean; defaults to false if missing or empty.
+    - Return an error if "port" or "debug" are present but contain invalid values.
+template: |
+  package main
+
+  import "strconv"
+
+  func parseConfig(raw map[string]string) (host string, port int, debug bool, err error) {
+  	// TODO: read "host", "port", and "debug" from raw.
+  	// Apply defaults for missing/empty keys.
+  	// Parse port as int and debug as bool using strconv.
+  	// Return an error for invalid port or debug values.
+  }
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestParseConfigFull(t *testing.T) {
+  	raw := map[string]string{
+  		"host":  "example.com",
+  		"port":  "9090",
+  		"debug": "true",
+  	}
+  	host, port, debug, err := parseConfig(raw)
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if host != "example.com" {
+  		t.Errorf("host: expected %q, got %q", "example.com", host)
+  	}
+  	if port != 9090 {
+  		t.Errorf("port: expected 9090, got %d", port)
+  	}
+  	if !debug {
+  		t.Error("debug: expected true")
+  	}
+  }
+
+  func TestParseConfigDefaults(t *testing.T) {
+  	host, port, debug, err := parseConfig(map[string]string{})
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if host != "localhost" {
+  		t.Errorf("host: expected %q, got %q", "localhost", host)
+  	}
+  	if port != 8080 {
+  		t.Errorf("port: expected 8080, got %d", port)
+  	}
+  	if debug {
+  		t.Error("debug: expected false")
+  	}
+  }
+
+  func TestParseConfigEmptyValues(t *testing.T) {
+  	raw := map[string]string{"host": "", "port": "", "debug": ""}
+  	host, port, debug, err := parseConfig(raw)
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if host != "localhost" {
+  		t.Errorf("host: expected %q, got %q", "localhost", host)
+  	}
+  	if port != 8080 {
+  		t.Errorf("port: expected 8080, got %d", port)
+  	}
+  	if debug {
+  		t.Error("debug: expected false")
+  	}
+  }
+
+  func TestParseConfigBadPort(t *testing.T) {
+  	raw := map[string]string{"port": "abc"}
+  	_, _, _, err := parseConfig(raw)
+  	if err == nil {
+  		t.Error("expected error for invalid port")
+  	}
+  }
+
+  func TestParseConfigBadDebug(t *testing.T) {
+  	raw := map[string]string{"debug": "yes-please"}
+  	_, _, _, err := parseConfig(raw)
+  	if err == nil {
+  		t.Error("expected error for invalid debug")
+  	}
+  }
+
+  func TestParseConfigPartial(t *testing.T) {
+  	raw := map[string]string{"host": "api.test", "debug": "false"}
+  	host, port, debug, err := parseConfig(raw)
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if host != "api.test" {
+  		t.Errorf("host: expected %q, got %q", "api.test", host)
+  	}
+  	if port != 8080 {
+  		t.Errorf("port: expected 8080, got %d", port)
+  	}
+  	if debug {
+  		t.Error("debug: expected false")
+  	}
+  }
+hint: "Use strconv.Atoi for port and strconv.ParseBool for debug. Check if the key exists and is non-empty before parsing."
+solution: |
+  package main
+
+  import (
+  	"fmt"
+  	"strconv"
+  )
+
+  func parseConfig(raw map[string]string) (host string, port int, debug bool, err error) {
+  	host = "localhost"
+  	port = 8080
+  	debug = false
+
+  	if v := raw["host"]; v != "" {
+  		host = v
+  	}
+
+  	if v := raw["port"]; v != "" {
+  		p, e := strconv.Atoi(v)
+  		if e != nil {
+  			return "", 0, false, fmt.Errorf("invalid port %q: %w", v, e)
+  		}
+  		port = p
+  	}
+
+  	if v := raw["debug"]; v != "" {
+  		d, e := strconv.ParseBool(v)
+  		if e != nil {
+  			return "", 0, false, fmt.Errorf("invalid debug %q: %w", v, e)
+  		}
+  		debug = d
+  	}
+
+  	return host, port, debug, nil
+  }
+explanation: |
+  strconv converts between strings and basic types:
+    strconv.Atoi("42")              // int, error
+    strconv.ParseFloat("3.14", 64)  // float64, error
+    strconv.ParseBool("true")       // bool, error — accepts 1, t, T, TRUE, true, etc.
+    strconv.Itoa(42)                // "42"
+  Combining multiple parse calls with error handling is a common pattern
+  in configuration loading. The zero-value of a map lookup (empty string)
+  is a convenient sentinel for "key not provided".
+reference: "https://gobyexample.com/number-parsing"

@@ -1,0 +1,112 @@
+id: "15-006"
+title: "URL Parsing"
+concept: "time"
+difficulty: 4
+description: |
+  Write buildURL(scheme, host, path string, params map[string]string) string that
+  constructs a complete URL from its parts.
+
+  The function should set the scheme, host, and path on a url.URL, encode the params
+  map as query parameters using url.Values, and return the final URL string.
+  If params is nil or empty, the URL should have no query string.
+template: |
+  package main
+
+  import "net/url"
+
+  func buildURL(scheme, host, path string, params map[string]string) string {
+  	// TODO: construct a url.URL with the given parts,
+  	// encode params as query parameters, and return the string.
+  }
+test_code: |
+  package main
+
+  import (
+  	"net/url"
+  	"testing"
+  )
+
+  func TestBuildURLWithParams(t *testing.T) {
+  	got := buildURL("https", "example.com", "/search", map[string]string{
+  		"q":    "golang",
+  		"page": "1",
+  	})
+  	u, err := url.Parse(got)
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if u.Scheme != "https" {
+  		t.Errorf("scheme: expected %q, got %q", "https", u.Scheme)
+  	}
+  	if u.Host != "example.com" {
+  		t.Errorf("host: expected %q, got %q", "example.com", u.Host)
+  	}
+  	if u.Path != "/search" {
+  		t.Errorf("path: expected %q, got %q", "/search", u.Path)
+  	}
+  	if u.Query().Get("q") != "golang" {
+  		t.Errorf("q param: expected %q, got %q", "golang", u.Query().Get("q"))
+  	}
+  	if u.Query().Get("page") != "1" {
+  		t.Errorf("page param: expected %q, got %q", "1", u.Query().Get("page"))
+  	}
+  }
+
+  func TestBuildURLNoParams(t *testing.T) {
+  	got := buildURL("http", "localhost:8080", "/api/v1", nil)
+  	if got != "http://localhost:8080/api/v1" {
+  		t.Errorf("expected %q, got %q", "http://localhost:8080/api/v1", got)
+  	}
+  }
+
+  func TestBuildURLEmptyPath(t *testing.T) {
+  	got := buildURL("https", "example.com", "", nil)
+  	if got != "https://example.com" {
+  		t.Errorf("expected %q, got %q", "https://example.com", got)
+  	}
+  }
+
+  func TestBuildURLSpecialChars(t *testing.T) {
+  	got := buildURL("https", "example.com", "/search", map[string]string{
+  		"q": "hello world",
+  	})
+  	u, err := url.Parse(got)
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if u.Query().Get("q") != "hello world" {
+  		t.Errorf("expected %q, got %q", "hello world", u.Query().Get("q"))
+  	}
+  }
+hint: "Build a url.URL struct literal with Scheme, Host, and Path fields. Use url.Values to encode query params and assign the result to RawQuery."
+solution: |
+  package main
+
+  import "net/url"
+
+  func buildURL(scheme, host, path string, params map[string]string) string {
+  	u := url.URL{
+  		Scheme: scheme,
+  		Host:   host,
+  		Path:   path,
+  	}
+  	if len(params) > 0 {
+  		q := url.Values{}
+  		for k, v := range params {
+  			q.Set(k, v)
+  		}
+  		u.RawQuery = q.Encode()
+  	}
+  	return u.String()
+  }
+explanation: |
+  net/url provides both parsing and building of URLs:
+    u := url.URL{Scheme: "https", Host: "example.com", Path: "/search"}
+  Query parameters are built with url.Values (a map[string][]string):
+    q := url.Values{}
+    q.Set("key", "value")       // single value
+    q.Add("key", "value2")      // append additional value
+    u.RawQuery = q.Encode()     // "key=value&key=value2"
+  url.Values.Encode() handles special character escaping automatically.
+  u.String() produces the final URL string from all components.
+reference: "https://gobyexample.com/url-parsing"

@@ -1,0 +1,127 @@
+id: "07-002"
+title: "Custom Errors"
+concept: "errors"
+difficulty: 5
+description: |
+  Implement a MultiError type (slice of errors) that collects multiple errors.
+  Its Error() method joins all error messages with "; ".
+  Write validateUser(name, email string) that checks: name must not be empty,
+  email must contain "@". If any checks fail, return a *MultiError with all
+  failures. If all pass, return nil.
+template: |
+  package main
+
+  // TODO: define MultiError type
+
+  // TODO: implement Error() on *MultiError
+
+  // TODO: write validateUser
+test_code: |
+  package main
+
+  import (
+  	"errors"
+  	"strings"
+  	"testing"
+  )
+
+  func TestValidateUserValid(t *testing.T) {
+  	if err := validateUser("Alice", "alice@example.com"); err != nil {
+  		t.Errorf("expected nil for valid input, got %v", err)
+  	}
+  }
+
+  func TestValidateUserEmptyName(t *testing.T) {
+  	err := validateUser("", "alice@example.com")
+  	if err == nil {
+  		t.Fatal("expected error for empty name")
+  	}
+  	if !strings.Contains(err.Error(), "name") {
+  		t.Errorf("error should mention name: %v", err)
+  	}
+  }
+
+  func TestValidateUserBadEmail(t *testing.T) {
+  	err := validateUser("Alice", "invalid")
+  	if err == nil {
+  		t.Fatal("expected error for bad email")
+  	}
+  	if !strings.Contains(err.Error(), "email") {
+  		t.Errorf("error should mention email: %v", err)
+  	}
+  }
+
+  func TestValidateUserBothInvalid(t *testing.T) {
+  	err := validateUser("", "invalid")
+  	if err == nil {
+  		t.Fatal("expected error for both invalid")
+  	}
+  	msg := err.Error()
+  	if !strings.Contains(msg, "name") || !strings.Contains(msg, "email") {
+  		t.Errorf("error should mention both name and email: %v", err)
+  	}
+  	if !strings.Contains(msg, "; ") {
+  		t.Errorf("multiple errors should be joined with '; ': %v", err)
+  	}
+  }
+
+  func TestValidateUserIsMultiError(t *testing.T) {
+  	err := validateUser("", "bad")
+  	var me *MultiError
+  	if !errors.As(err, &me) {
+  		t.Fatalf("expected *MultiError, got %T", err)
+  	}
+  	if len(me.Errors) != 2 {
+  		t.Errorf("expected 2 errors, got %d", len(me.Errors))
+  	}
+  }
+hint: "MultiError can be a struct with an Errors []error field. Use strings.Join or a loop to build the Error() message. Only return the MultiError if there are errors to report."
+solution: |
+  package main
+
+  import (
+  	"errors"
+  	"strings"
+  )
+
+  type MultiError struct {
+  	Errors []error
+  }
+
+  func (m *MultiError) Error() string {
+  	msgs := make([]string, len(m.Errors))
+  	for i, e := range m.Errors {
+  		msgs[i] = e.Error()
+  	}
+  	return strings.Join(msgs, "; ")
+  }
+
+  func validateUser(name, email string) error {
+  	var errs []error
+  	if name == "" {
+  		errs = append(errs, errors.New("name must not be empty"))
+  	}
+  	if !strings.Contains(email, "@") {
+  		errs = append(errs, errors.New("email must contain @"))
+  	}
+  	if len(errs) > 0 {
+  		return &MultiError{Errors: errs}
+  	}
+  	return nil
+  }
+explanation: |
+  MultiError collects several errors into one:
+    type MultiError struct {
+        Errors []error
+    }
+  Its Error() method satisfies the error interface by joining messages:
+    func (m *MultiError) Error() string {
+        msgs := make([]string, len(m.Errors))
+        for i, e := range m.Errors { msgs[i] = e.Error() }
+        return strings.Join(msgs, "; ")
+    }
+  The pointer receiver (*MultiError) is required so nil can represent "no error".
+  validateUser collects all failures before returning, giving the caller complete
+  feedback rather than stopping at the first problem. This pattern is common in
+  form validation, config parsing, and batch processing.
+reference: "https://gobyexample.com/custom-errors"

@@ -1,0 +1,136 @@
+id: "lg08-001"
+title: "Generic Type Constraints"
+concept: "generics"
+difficulty: 6
+description: |
+  Define a type constraint Number that accepts any integer or float type
+  (use the ~ operator for underlying types):
+    ~int | ~int8 | ~int16 | ~int32 | ~int64 |
+    ~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 |
+    ~float32 | ~float64
+
+  Write a generic function Sum[T Number](values []T) T that returns the
+  sum of all values in the slice. Return the zero value for an empty slice.
+
+  Write a generic function Clamp[T Number](val, low, high T) T that
+  constrains val to the range [low, high]. If val < low, return low.
+  If val > high, return high. Otherwise return val.
+
+  Examples:
+    Sum([]int{1, 2, 3})             => 6
+    Sum([]float64{1.5, 2.5})        => 4.0
+    Clamp(5, 1, 10)                 => 5
+    Clamp(-3, 0, 100)               => 0
+    Clamp(200, 0, 100)              => 100
+template: |
+  package main
+
+  // TODO: define Number type constraint
+
+  // TODO: implement Sum[T Number]
+
+  // TODO: implement Clamp[T Number]
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestSumInts(t *testing.T) {
+  	got := Sum([]int{1, 2, 3, 4})
+  	if got != 10 {
+  		t.Errorf("expected 10, got %d", got)
+  	}
+  }
+
+  func TestSumFloats(t *testing.T) {
+  	got := Sum([]float64{1.5, 2.5, 3.0})
+  	if got != 7.0 {
+  		t.Errorf("expected 7.0, got %f", got)
+  	}
+  }
+
+  func TestSumEmpty(t *testing.T) {
+  	got := Sum([]int{})
+  	if got != 0 {
+  		t.Errorf("expected 0, got %d", got)
+  	}
+  }
+
+  type Score int
+
+  func TestSumCustomType(t *testing.T) {
+  	got := Sum([]Score{10, 20, 30})
+  	if got != 60 {
+  		t.Errorf("expected 60, got %d", got)
+  	}
+  }
+
+  func TestClampMiddle(t *testing.T) {
+  	got := Clamp(5, 1, 10)
+  	if got != 5 {
+  		t.Errorf("expected 5, got %d", got)
+  	}
+  }
+
+  func TestClampLow(t *testing.T) {
+  	got := Clamp(-3, 0, 100)
+  	if got != 0 {
+  		t.Errorf("expected 0, got %d", got)
+  	}
+  }
+
+  func TestClampHigh(t *testing.T) {
+  	got := Clamp(200, 0, 100)
+  	if got != 100 {
+  		t.Errorf("expected 100, got %d", got)
+  	}
+  }
+
+  func TestClampFloat(t *testing.T) {
+  	got := Clamp(1.5, 0.0, 1.0)
+  	if got != 1.0 {
+  		t.Errorf("expected 1.0, got %f", got)
+  	}
+  }
+hint: "The ~ operator in a type constraint matches both the named type and any type with that underlying type. type Number interface { ~int | ~float64 | ... } enables +, <, > operators on the constrained type."
+solution: |
+  package main
+
+  type Number interface {
+  	~int | ~int8 | ~int16 | ~int32 | ~int64 |
+  		~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 |
+  		~float32 | ~float64
+  }
+
+  func Sum[T Number](values []T) T {
+  	var total T
+  	for _, v := range values {
+  		total += v
+  	}
+  	return total
+  }
+
+  func Clamp[T Number](val, low, high T) T {
+  	if val < low {
+  		return low
+  	}
+  	if val > high {
+  		return high
+  	}
+  	return val
+  }
+explanation: |
+  Type constraints define which types a generic function accepts:
+    type Number interface {
+        ~int | ~int8 | ... | ~float64
+    }
+  The ~ prefix means "any type whose underlying type is", so custom types
+  like "type Score int" also satisfy the constraint.
+
+  This constraint enables arithmetic and comparison operators (+, <, >) that
+  would not be available with just "any". Without a constraint, the compiler
+  cannot know whether + or < is valid for type T.
+
+  Sum uses var total T which initializes to the zero value (0 for numbers).
+  Clamp uses < and > comparisons, which require an ordered type constraint.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch8.html"

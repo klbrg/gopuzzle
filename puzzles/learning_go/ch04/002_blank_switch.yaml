@@ -1,0 +1,93 @@
+id: "lg04-002"
+title: "Blank Switch"
+concept: "control-flow"
+difficulty: 2
+description: |
+  Write a function classify that takes an integer and returns a string
+  describing it using these rules (checked in order):
+
+  - If the number is negative, return "negative"
+  - If the number is zero, return "zero"
+  - If the number is between 1 and 10 (inclusive), return "small"
+  - If the number is between 11 and 100 (inclusive), return "medium"
+  - Otherwise, return "large"
+
+  Use a blank switch (a switch statement with no value after the
+  switch keyword) where each case has a boolean expression.
+
+  For example:
+    classify(-5)  returns "negative"
+    classify(0)   returns "zero"
+    classify(7)   returns "small"
+    classify(50)  returns "medium"
+    classify(999) returns "large"
+template: |
+  package main
+
+  func classify(n int) string {
+  	// TODO: use a blank switch to classify n
+  }
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestClassify(t *testing.T) {
+  	cases := []struct {
+  		input int
+  		want  string
+  	}{
+  		{-100, "negative"},
+  		{-1, "negative"},
+  		{0, "zero"},
+  		{1, "small"},
+  		{5, "small"},
+  		{10, "small"},
+  		{11, "medium"},
+  		{50, "medium"},
+  		{100, "medium"},
+  		{101, "large"},
+  		{999, "large"},
+  	}
+  	for _, c := range cases {
+  		got := classify(c.input)
+  		if got != c.want {
+  			t.Errorf("classify(%d): expected %q, got %q", c.input, c.want, got)
+  		}
+  	}
+  }
+hint: "Write switch { followed by case expressions like case n < 0:. No value goes after the switch keyword."
+solution: |
+  package main
+
+  func classify(n int) string {
+  	switch {
+  	case n < 0:
+  		return "negative"
+  	case n == 0:
+  		return "zero"
+  	case n <= 10:
+  		return "small"
+  	case n <= 100:
+  		return "medium"
+  	default:
+  		return "large"
+  	}
+  }
+explanation: |
+  A blank switch (switch with no value) evaluates each case as a
+  boolean expression, executing the first one that is true:
+    switch {
+    case n < 0:
+        return "negative"
+    case n == 0:
+        return "zero"
+    ...
+    }
+
+  This is equivalent to an if-else chain but can be cleaner when
+  you have many conditions. Unlike a regular switch (which compares
+  a value against constants), a blank switch lets each case test
+  a completely different condition. Cases are evaluated top to
+  bottom, so order matters when ranges overlap.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch4.html"

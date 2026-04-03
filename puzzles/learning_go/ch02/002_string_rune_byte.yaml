@@ -1,0 +1,119 @@
+id: "lg02-002"
+title: "Strings, Runes, and Bytes"
+concept: "basics"
+difficulty: 2
+description: |
+  Write three functions that examine a string:
+
+  1. byteCount(s string) int - returns the number of bytes in s
+     (use len).
+  2. runeCount(s string) int - returns the number of runes (characters)
+     in s. You may use a for-range loop to count runes, or convert to
+     []rune and take its length.
+  3. firstRune(s string) rune - returns the first rune of s.
+     If s is empty, return 0.
+
+  Note: For ASCII strings, byte count equals rune count. For strings
+  with multi-byte characters (like emoji or accented letters), they differ.
+
+  For example:
+    byteCount("Hello")  returns 5
+    runeCount("Hello")  returns 5
+    byteCount("cafe\u0301")  returns 6   (e + combining accent = 2 bytes for accent)
+    runeCount("cafe\u0301")  returns 5   (c, a, f, e, combining accent)
+    firstRune("Go")     returns 'G' (71)
+template: |
+  package main
+
+  // TODO: implement byteCount, runeCount, firstRune
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestByteCount(t *testing.T) {
+  	cases := []struct {
+  		input string
+  		want  int
+  	}{
+  		{"Hello", 5},
+  		{"", 0},
+  		{"Go", 2},
+  		{"cafe\u0301", 6},
+  	}
+  	for _, c := range cases {
+  		got := byteCount(c.input)
+  		if got != c.want {
+  			t.Errorf("byteCount(%q): expected %d, got %d", c.input, c.want, got)
+  		}
+  	}
+  }
+
+  func TestRuneCount(t *testing.T) {
+  	cases := []struct {
+  		input string
+  		want  int
+  	}{
+  		{"Hello", 5},
+  		{"", 0},
+  		{"Go", 2},
+  		{"cafe\u0301", 5},
+  	}
+  	for _, c := range cases {
+  		got := runeCount(c.input)
+  		if got != c.want {
+  			t.Errorf("runeCount(%q): expected %d, got %d", c.input, c.want, got)
+  		}
+  	}
+  }
+
+  func TestFirstRune(t *testing.T) {
+  	cases := []struct {
+  		input string
+  		want  rune
+  	}{
+  		{"Go", 'G'},
+  		{"hello", 'h'},
+  		{"", 0},
+  	}
+  	for _, c := range cases {
+  		got := firstRune(c.input)
+  		if got != c.want {
+  			t.Errorf("firstRune(%q): expected %c (%d), got %c (%d)",
+  				c.input, c.want, c.want, got, got)
+  		}
+  	}
+  }
+hint: "len(s) gives bytes. []rune(s) converts to a rune slice whose len gives character count. For firstRune, convert to []rune or use a for-range loop and return the first value."
+solution: |
+  package main
+
+  func byteCount(s string) int {
+  	return len(s)
+  }
+
+  func runeCount(s string) int {
+  	return len([]rune(s))
+  }
+
+  func firstRune(s string) rune {
+  	for _, r := range s {
+  		return r
+  	}
+  	return 0
+  }
+explanation: |
+  In Go, strings are sequences of bytes, not characters. The len
+  function returns the byte length. Multi-byte UTF-8 characters
+  (like accented letters or emoji) use more than one byte.
+
+  To count actual characters (runes), convert to []rune:
+    len([]rune(s))  // number of Unicode code points
+
+  The for-range loop over a string iterates by rune, not by byte.
+  This makes it the idiomatic way to process characters. The loop
+  variable gives you (byte_index, rune) pairs. Using this to grab
+  just the first rune is a clean trick for firstRune.
+
+  Key distinction: byte = uint8, rune = int32 (Unicode code point).
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch2.html"

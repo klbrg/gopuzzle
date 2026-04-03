@@ -1,0 +1,114 @@
+id: "15-002"
+title: "Epoch"
+concept: "time"
+difficulty: 3
+description: |
+  Write ageInDays(birthUnix int64) int that takes a birth date as a Unix timestamp
+  (seconds since epoch) and returns how many complete days old the person is right now.
+
+  Write daysBetween(unix1, unix2 int64) int that returns the absolute number of
+  complete days between two Unix timestamps (order should not matter).
+template: |
+  package main
+
+  import "time"
+
+  func ageInDays(birthUnix int64) int {
+  	// TODO: convert birthUnix to a time.Time, compute duration to now,
+  	// and return the number of complete days.
+  }
+
+  func daysBetween(unix1, unix2 int64) int {
+  	// TODO: return the absolute number of complete days between two timestamps.
+  }
+test_code: |
+  package main
+
+  import (
+  	"testing"
+  	"time"
+  )
+
+  func TestAgeInDays(t *testing.T) {
+  	// A timestamp exactly 10 days ago
+  	tenDaysAgo := time.Now().AddDate(0, 0, -10).Unix()
+  	got := ageInDays(tenDaysAgo)
+  	if got != 10 {
+  		t.Errorf("10 days ago: expected 10, got %d", got)
+  	}
+
+  	// A timestamp from today should be 0 complete days
+  	justNow := time.Now().Unix()
+  	got2 := ageInDays(justNow)
+  	if got2 != 0 {
+  		t.Errorf("just now: expected 0, got %d", got2)
+  	}
+
+  	// 365 days ago
+  	yearAgo := time.Now().AddDate(0, 0, -365).Unix()
+  	got3 := ageInDays(yearAgo)
+  	if got3 != 365 {
+  		t.Errorf("365 days ago: expected 365, got %d", got3)
+  	}
+  }
+
+  func TestDaysBetween(t *testing.T) {
+  	t1 := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).Unix()
+  	t2 := time.Date(2024, 1, 11, 0, 0, 0, 0, time.UTC).Unix()
+
+  	got := daysBetween(t1, t2)
+  	if got != 10 {
+  		t.Errorf("expected 10, got %d", got)
+  	}
+
+  	// Order should not matter
+  	got2 := daysBetween(t2, t1)
+  	if got2 != 10 {
+  		t.Errorf("reversed: expected 10, got %d", got2)
+  	}
+
+  	// Same timestamp
+  	got3 := daysBetween(t1, t1)
+  	if got3 != 0 {
+  		t.Errorf("same time: expected 0, got %d", got3)
+  	}
+
+  	// Partial day should not count
+  	t3 := t1 + 3600*23 // 23 hours later
+  	got4 := daysBetween(t1, t3)
+  	if got4 != 0 {
+  		t.Errorf("23 hours: expected 0, got %d", got4)
+  	}
+  }
+hint: "Convert Unix timestamps with time.Unix(sec, 0). Use time.Since or Sub to get a Duration, then divide by 24*time.Hour for complete days."
+solution: |
+  package main
+
+  import "time"
+
+  func ageInDays(birthUnix int64) int {
+  	birth := time.Unix(birthUnix, 0)
+  	dur := time.Since(birth)
+  	return int(dur.Hours() / 24)
+  }
+
+  func daysBetween(unix1, unix2 int64) int {
+  	t1 := time.Unix(unix1, 0)
+  	t2 := time.Unix(unix2, 0)
+  	dur := t1.Sub(t2)
+  	if dur < 0 {
+  		dur = -dur
+  	}
+  	return int(dur.Hours() / 24)
+  }
+explanation: |
+  Unix epoch = January 1, 1970 00:00:00 UTC.
+    time.Unix(sec, 0)   // convert seconds to time.Time
+    t.Unix()             // convert time.Time back to seconds
+  Duration arithmetic:
+    time.Since(t)        // shorthand for time.Now().Sub(t)
+    t1.Sub(t2)           // returns a time.Duration
+    dur.Hours() / 24     // complete days from a duration
+  Integer division truncates, giving "complete" days only.
+  For absolute value, negate if negative — there is no math.Abs for Duration.
+reference: "https://gobyexample.com/epoch"

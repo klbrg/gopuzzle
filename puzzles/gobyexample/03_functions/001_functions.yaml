@@ -1,0 +1,62 @@
+id: "03-001"
+title: "Functions"
+concept: "functions"
+difficulty: 1
+description: |
+  Write a calculator function calc that takes two integers and an
+  operator string ("+", "-", or "*") and returns the result of
+  applying that operator.
+template: |
+  package main
+
+  // TODO: implement calc
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestCalc(t *testing.T) {
+  	cases := []struct {
+  		a    int
+  		b    int
+  		op   string
+  		want int
+  	}{
+  		{3, 4, "+", 7},
+  		{10, 3, "-", 7},
+  		{5, 6, "*", 30},
+  		{0, 100, "+", 100},
+  		{-2, 3, "*", -6},
+  		{1, 1, "-", 0},
+  	}
+  	for _, c := range cases {
+  		got := calc(c.a, c.b, c.op)
+  		if got != c.want {
+  			t.Errorf("calc(%d, %d, %q): expected %d, got %d",
+  				c.a, c.b, c.op, c.want, got)
+  		}
+  	}
+  }
+hint: "Use an if/else chain or switch on the operator string to decide which arithmetic to perform."
+solution: |
+  package main
+
+  func calc(a, b int, op string) int {
+  	switch op {
+  	case "+":
+  		return a + b
+  	case "-":
+  		return a - b
+  	case "*":
+  		return a * b
+  	}
+  	return 0
+  }
+explanation: |
+  Functions in Go have a name, parameters with types, and a return type:
+    func calc(a, b int, op string) int { ... }
+  Parameters of the same type can be grouped: a, b int.
+  Combining functions with control flow (switch or if/else) lets you
+  build flexible logic. The switch statement matches op against each
+  case and executes the matching branch.
+reference: "https://gobyexample.com/functions"

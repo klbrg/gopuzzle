@@ -1,0 +1,63 @@
+id: "17-003"
+title: "Command-Line Flags"
+concept: "cli"
+difficulty: 4
+description: |
+  Parse flags from a []string using the flag package.
+  Support: -verbose (bool, default false), -count (int, default 1), -name (string, default "world").
+  Return the parsed values and any error.
+template: |
+  package main
+
+  import "flag"
+
+  func parseFlags(args []string) (verbose bool, count int, name string, err error) {
+  	// TODO
+  }
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestParseFlags(t *testing.T) {
+  	v, c, n, err := parseFlags([]string{"-verbose", "-count=3", "-name=Go"})
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if !v || c != 3 || n != "Go" {
+  		t.Errorf("unexpected: verbose=%v count=%d name=%q", v, c, n)
+  	}
+
+  	v2, c2, n2, err2 := parseFlags([]string{})
+  	if err2 != nil {
+  		t.Fatal(err2)
+  	}
+  	if v2 || c2 != 1 || n2 != "world" {
+  		t.Errorf("defaults: verbose=%v count=%d name=%q", v2, c2, n2)
+  	}
+  }
+hint: "flag.NewFlagSet isolates parsing from the global flag set; flag values are pointers."
+solution: |
+  package main
+
+  import "flag"
+
+  func parseFlags(args []string) (verbose bool, count int, name string, err error) {
+  	fs := flag.NewFlagSet("app", flag.ContinueOnError)
+  	v := fs.Bool("verbose", false, "enable verbose mode")
+  	c := fs.Int("count", 1, "number of times")
+  	n := fs.String("name", "world", "target name")
+  	err = fs.Parse(args)
+  	return *v, *c, *n, err
+  }
+explanation: |
+  flag.NewFlagSet creates an isolated flag set (vs the global flag package):
+    fs := flag.NewFlagSet("app", flag.ContinueOnError)
+    verbose := fs.Bool("verbose", false, "enable verbose mode")
+    count := fs.Int("count", 1, "number of times")
+    name := fs.String("name", "world", "target name")
+    err := fs.Parse(args)
+  Flag values are pointers — dereference with *verbose.
+  flag.ContinueOnError returns an error instead of calling os.Exit on bad flags.
+  In main(), use the global flag.Bool/Int/String + flag.Parse() instead.
+reference: "https://gobyexample.com/command-line-flags"

@@ -1,0 +1,208 @@
+id: "lg15-003"
+title: "Comparison Test Helper"
+concept: "testing"
+difficulty: 6
+description: |
+  Implement an Equal function that deeply compares two values and a StringSet type,
+  then write tests using a helper function pattern.
+
+  1. StringSet — an ordered set of unique strings:
+     - NewStringSet(vals ...string) StringSet
+     - (s StringSet) Contains(v string) bool
+     - (s StringSet) Len() int
+     - (s StringSet) Slice() []string — returns sorted unique values
+
+  2. Equal(a, b StringSet) bool — returns true if both sets contain the same elements.
+
+  Duplicates in the input should be removed. Order does not matter for equality.
+
+  Example:
+    a := NewStringSet("b", "a", "a")
+    b := NewStringSet("a", "b")
+    Equal(a, b)       // true
+    a.Slice()         // ["a", "b"]
+    a.Contains("a")   // true
+    a.Len()           // 2
+template: |
+  package main
+
+  import "sort"
+
+  type StringSet struct {
+  	// TODO: internal storage
+  }
+
+  func NewStringSet(vals ...string) StringSet {
+  	// TODO: create set, deduplicate
+  	_ = sort.Strings // delete this line
+  	return StringSet{}
+  }
+
+  func (s StringSet) Contains(v string) bool {
+  	// TODO
+  	return false
+  }
+
+  func (s StringSet) Len() int {
+  	// TODO
+  	return 0
+  }
+
+  func (s StringSet) Slice() []string {
+  	// TODO: return sorted unique values
+  	return nil
+  }
+
+  func Equal(a, b StringSet) bool {
+  	// TODO: compare two sets
+  	return false
+  }
+test_code: |
+  package main
+
+  import (
+  	"strings"
+  	"testing"
+  )
+
+  func assertSetEqual(t *testing.T, got, want StringSet) {
+  	t.Helper()
+  	if !Equal(got, want) {
+  		t.Errorf("sets not equal:\n  got:  %v\n  want: %v", got.Slice(), want.Slice())
+  	}
+  }
+
+  func TestNewStringSetDedup(t *testing.T) {
+  	s := NewStringSet("a", "b", "a", "c", "b")
+  	if s.Len() != 3 {
+  		t.Errorf("expected 3 unique elements, got %d", s.Len())
+  	}
+  }
+
+  func TestStringSetContains(t *testing.T) {
+  	s := NewStringSet("x", "y", "z")
+  	tests := []struct {
+  		val  string
+  		want bool
+  	}{
+  		{"x", true},
+  		{"y", true},
+  		{"z", true},
+  		{"w", false},
+  		{"", false},
+  	}
+  	for _, tt := range tests {
+  		t.Run(tt.val, func(t *testing.T) {
+  			if got := s.Contains(tt.val); got != tt.want {
+  				t.Errorf("Contains(%q) = %v, want %v", tt.val, got, tt.want)
+  			}
+  		})
+  	}
+  }
+
+  func TestStringSetSliceSorted(t *testing.T) {
+  	s := NewStringSet("c", "a", "b")
+  	got := strings.Join(s.Slice(), ",")
+  	want := "a,b,c"
+  	if got != want {
+  		t.Errorf("expected %q, got %q", want, got)
+  	}
+  }
+
+  func TestEqualSameSets(t *testing.T) {
+  	a := NewStringSet("b", "a")
+  	b := NewStringSet("a", "b")
+  	assertSetEqual(t, a, b)
+  }
+
+  func TestEqualDifferentSets(t *testing.T) {
+  	a := NewStringSet("a", "b")
+  	b := NewStringSet("a", "c")
+  	if Equal(a, b) {
+  		t.Error("expected sets to be different")
+  	}
+  }
+
+  func TestEqualDifferentLengths(t *testing.T) {
+  	a := NewStringSet("a")
+  	b := NewStringSet("a", "b")
+  	if Equal(a, b) {
+  		t.Error("expected sets of different lengths to be unequal")
+  	}
+  }
+
+  func TestEqualEmpty(t *testing.T) {
+  	a := NewStringSet()
+  	b := NewStringSet()
+  	assertSetEqual(t, a, b)
+  }
+
+  func TestEqualWithDuplicateInput(t *testing.T) {
+  	a := NewStringSet("a", "a", "b")
+  	b := NewStringSet("b", "a")
+  	assertSetEqual(t, a, b)
+  }
+hint: "Use a map[string]struct{} internally for O(1) Contains. For Slice(), collect keys and sort them. Equal checks same length then same elements."
+solution: |
+  package main
+
+  import "sort"
+
+  type StringSet struct {
+  	m map[string]struct{}
+  }
+
+  func NewStringSet(vals ...string) StringSet {
+  	m := make(map[string]struct{}, len(vals))
+  	for _, v := range vals {
+  		m[v] = struct{}{}
+  	}
+  	return StringSet{m: m}
+  }
+
+  func (s StringSet) Contains(v string) bool {
+  	_, ok := s.m[v]
+  	return ok
+  }
+
+  func (s StringSet) Len() int {
+  	return len(s.m)
+  }
+
+  func (s StringSet) Slice() []string {
+  	result := make([]string, 0, len(s.m))
+  	for k := range s.m {
+  		result = append(result, k)
+  	}
+  	sort.Strings(result)
+  	return result
+  }
+
+  func Equal(a, b StringSet) bool {
+  	if a.Len() != b.Len() {
+  		return false
+  	}
+  	for k := range a.m {
+  		if !b.Contains(k) {
+  			return false
+  		}
+  	}
+  	return true
+  }
+explanation: |
+  This puzzle demonstrates two testing patterns from ch15:
+
+  1. **Test helper with t.Helper()**: The assertSetEqual function calls t.Helper()
+     so that when it reports failures, the line number points to the caller, not
+     the helper function itself. This makes test output more useful.
+
+  2. **Table-driven subtests**: The Contains test uses t.Run with a table of cases,
+     making it easy to add new test values.
+
+  The StringSet itself uses the standard Go set idiom: map[string]struct{}.
+  The empty struct takes zero bytes, making it more memory-efficient than
+  map[string]bool.
+
+  Equal compares sets by checking length first (fast reject) then verifying
+  every element of a exists in b. Since lengths match, this is sufficient.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch15.html"

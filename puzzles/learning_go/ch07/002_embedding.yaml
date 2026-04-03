@@ -1,0 +1,113 @@
+id: "lg07-002"
+title: "Struct Embedding"
+concept: "interfaces"
+difficulty: 5
+description: |
+  Define a base struct Animal with fields Name (string) and Sound (string),
+  and a method Speak() string that returns "<Name> says <Sound>".
+
+  Define a Dog struct that embeds Animal and adds a field Tricks ([]string).
+  Add a method TrickList() string on Dog that returns the tricks joined with
+  ", " or "no tricks" if the slice is empty.
+
+  Dog should be usable as an Animal through embedding -- its Speak method
+  comes from the embedded Animal.
+
+  Examples:
+    d := Dog{Animal: Animal{Name: "Rex", Sound: "Woof"}, Tricks: []string{"sit", "shake"}}
+    d.Speak()     => "Rex says Woof"
+    d.TrickList() => "sit, shake"
+    Dog{Animal: Animal{Name: "Pup", Sound: "Yip"}}.TrickList() => "no tricks"
+template: |
+  package main
+
+  // TODO: define Animal struct with Name, Sound and Speak() method
+
+  // TODO: define Dog struct embedding Animal, with Tricks field and TrickList() method
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestAnimalSpeak(t *testing.T) {
+  	a := Animal{Name: "Cat", Sound: "Meow"}
+  	got := a.Speak()
+  	if got != "Cat says Meow" {
+  		t.Errorf("expected %q, got %q", "Cat says Meow", got)
+  	}
+  }
+
+  func TestDogSpeak(t *testing.T) {
+  	d := Dog{Animal: Animal{Name: "Rex", Sound: "Woof"}, Tricks: []string{"sit"}}
+  	got := d.Speak()
+  	if got != "Rex says Woof" {
+  		t.Errorf("expected %q, got %q", "Rex says Woof", got)
+  	}
+  }
+
+  func TestDogTrickList(t *testing.T) {
+  	d := Dog{Animal: Animal{Name: "Rex", Sound: "Woof"}, Tricks: []string{"sit", "shake"}}
+  	got := d.TrickList()
+  	if got != "sit, shake" {
+  		t.Errorf("expected %q, got %q", "sit, shake", got)
+  	}
+  }
+
+  func TestDogNoTricks(t *testing.T) {
+  	d := Dog{Animal: Animal{Name: "Pup", Sound: "Yip"}}
+  	got := d.TrickList()
+  	if got != "no tricks" {
+  		t.Errorf("expected %q, got %q", "no tricks", got)
+  	}
+  }
+
+  func TestDogEmptyTricks(t *testing.T) {
+  	d := Dog{Animal: Animal{Name: "Pup", Sound: "Yip"}, Tricks: []string{}}
+  	got := d.TrickList()
+  	if got != "no tricks" {
+  		t.Errorf("expected %q, got %q", "no tricks", got)
+  	}
+  }
+hint: "Embedding is done by listing a type without a field name: type Dog struct { Animal; Tricks []string }. The embedded type's methods are promoted to the outer struct."
+solution: |
+  package main
+
+  import "strings"
+
+  type Animal struct {
+  	Name  string
+  	Sound string
+  }
+
+  func (a Animal) Speak() string {
+  	return a.Name + " says " + a.Sound
+  }
+
+  type Dog struct {
+  	Animal
+  	Tricks []string
+  }
+
+  func (d Dog) TrickList() string {
+  	if len(d.Tricks) == 0 {
+  		return "no tricks"
+  	}
+  	return strings.Join(d.Tricks, ", ")
+  }
+explanation: |
+  Struct embedding promotes the embedded type's fields and methods:
+    type Dog struct {
+        Animal            // embedded -- no field name
+        Tricks []string
+    }
+  Dog automatically gets Animal's Speak() method. You can call d.Speak()
+  directly, or access d.Name and d.Sound -- they are promoted from Animal.
+
+  Embedding is not inheritance. Dog is NOT an Animal. You cannot assign a
+  Dog to a variable of type Animal:
+    var a Animal = d  // compile error
+    var a Animal = d.Animal  // this works
+
+  However, if an interface requires Speak(), Dog satisfies it through its
+  embedded Animal. This is Go's composition-over-inheritance approach.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch7.html"

@@ -1,0 +1,82 @@
+id: "05-003"
+title: "Enums (iota)"
+concept: "structs"
+difficulty: 3
+description: |
+  Define a Direction type and four constants North, East, South, West.
+  Implement opposite(d Direction) Direction that returns North↔South and East↔West.
+template: |
+  package main
+
+  type Direction int
+
+  const (
+  	// TODO
+  )
+
+  func opposite(d Direction) Direction {
+  	// TODO
+  }
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestOpposite(t *testing.T) {
+  	if opposite(North) != South {
+  		t.Errorf("opposite(North) should be South")
+  	}
+  	if opposite(South) != North {
+  		t.Errorf("opposite(South) should be North")
+  	}
+  	if opposite(East) != West {
+  		t.Errorf("opposite(East) should be West")
+  	}
+  	if opposite(West) != East {
+  		t.Errorf("opposite(West) should be East")
+  	}
+  }
+hint: "iota generates sequential values in a const block starting from 0."
+solution: |
+  package main
+
+  type Direction int
+
+  const (
+  	North Direction = iota
+  	East
+  	South
+  	West
+  )
+
+  func opposite(d Direction) Direction {
+  	switch d {
+  	case North:
+  		return South
+  	case South:
+  		return North
+  	case East:
+  		return West
+  	case West:
+  		return East
+  	default:
+  		return d
+  	}
+  }
+explanation: |
+  iota generates sequential integer values in const blocks:
+    const (
+        North Direction = iota  // 0
+        East                    // 1
+        South                   // 2
+        West                    // 3
+    )
+  For opposite:
+    switch d {
+    case North: return South
+    case South: return North
+    case East:  return West
+    case West:  return East
+    }
+  This is Go's idiomatic way to create enum-like values.
+reference: "https://gobyexample.com/enums"

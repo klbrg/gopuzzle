@@ -1,0 +1,65 @@
+id: "09-001"
+title: "Strings and Runes"
+concept: "strings"
+difficulty: 3
+description: |
+  Write countRunes(s string) int that returns the number of Unicode characters in s.
+  Write firstRune(s string) rune that returns the first character of s.
+  Note: len(s) counts bytes, not characters.
+template: |
+  package main
+
+  func countRunes(s string) int {
+  	// TODO
+  }
+
+  func firstRune(s string) rune {
+  	// TODO
+  }
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestCountRunes(t *testing.T) {
+  	if got := countRunes("hello"); got != 5 {
+  		t.Errorf("hello: expected 5, got %d", got)
+  	}
+  	if got := countRunes("héllo"); got != 5 {
+  		t.Errorf("héllo: expected 5, got %d", got)
+  	}
+  }
+
+  func TestFirstRune(t *testing.T) {
+  	if got := firstRune("hello"); got != 'h' {
+  		t.Errorf("expected 'h', got %c", got)
+  	}
+  	if got := firstRune("élan"); got != 'é' {
+  		t.Errorf("expected 'é', got %c", got)
+  	}
+  }
+hint: "Ranging over a string yields runes (Unicode code points), not bytes."
+solution: |
+  package main
+
+  import "unicode/utf8"
+
+  func countRunes(s string) int {
+  	return utf8.RuneCountInString(s)
+  }
+
+  func firstRune(s string) rune {
+  	for _, r := range s {
+  		return r
+  	}
+  	return 0
+  }
+explanation: |
+  Go strings are UTF-8 byte sequences. rune is an alias for int32 (Unicode code point).
+  Ranging over a string yields runes (not bytes):
+    for _, r := range s { }   // r is a rune
+  Count runes: len([]rune(s)) or use unicode/utf8.RuneCountInString(s)
+  First rune via range:
+    for _, r := range s { return r }
+  Byte-level access: s[i] gives a byte; rune-level: []rune(s)[i] gives a rune.
+reference: "https://gobyexample.com/strings-and-runes"

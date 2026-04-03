@@ -1,0 +1,145 @@
+id: "12-001"
+title: "Timers"
+concept: "concurrency"
+difficulty: 7
+description: |
+  Implement debounce(interval time.Duration, f func()) func() that returns a debounced
+  function. Each call to the returned function resets the timer. The wrapped function f
+  is only called once the caller stops invoking the debounced function for at least
+  interval duration. If the debounced function is called again before interval elapses,
+  the previous pending call is cancelled and the timer restarts.
+template: |
+  package main
+
+  import (
+  	"sync"
+  	"time"
+  )
+
+  func debounce(interval time.Duration, f func()) func() {
+  	// TODO: return a function that delays calling f
+  	// Each call resets the delay timer
+  	// f only fires after the caller is quiet for interval
+  	return nil
+  }
+test_code: |
+  package main
+
+  import (
+  	"sync/atomic"
+  	"testing"
+  	"time"
+  )
+
+  func TestDebounceFiresOnce(t *testing.T) {
+  	var count int64
+  	d := debounce(50*time.Millisecond, func() {
+  		atomic.AddInt64(&count, 1)
+  	})
+
+  	// Rapid calls — should only trigger f once
+  	for i := 0; i < 5; i++ {
+  		d()
+  		time.Sleep(10 * time.Millisecond)
+  	}
+  	// Wait for debounce to fire
+  	time.Sleep(100 * time.Millisecond)
+
+  	if c := atomic.LoadInt64(&count); c != 1 {
+  		t.Errorf("expected f to fire once, fired %d times", c)
+  	}
+  }
+
+  func TestDebounceSingleCall(t *testing.T) {
+  	var count int64
+  	d := debounce(30*time.Millisecond, func() {
+  		atomic.AddInt64(&count, 1)
+  	})
+
+  	d()
+  	time.Sleep(80 * time.Millisecond)
+
+  	if c := atomic.LoadInt64(&count); c != 1 {
+  		t.Errorf("expected f to fire once, fired %d times", c)
+  	}
+  }
+
+  func TestDebounceResets(t *testing.T) {
+  	var count int64
+  	d := debounce(40*time.Millisecond, func() {
+  		atomic.AddInt64(&count, 1)
+  	})
+
+  	d()
+  	time.Sleep(20 * time.Millisecond)
+  	d() // reset — should NOT have fired yet
+  	time.Sleep(20 * time.Millisecond)
+
+  	if c := atomic.LoadInt64(&count); c != 0 {
+  		t.Errorf("expected f not to have fired yet, fired %d times", c)
+  	}
+
+  	time.Sleep(60 * time.Millisecond) // wait for final fire
+  	if c := atomic.LoadInt64(&count); c != 1 {
+  		t.Errorf("expected f to fire once after quiet period, fired %d times", c)
+  	}
+  }
+
+  func TestDebounceMultipleBursts(t *testing.T) {
+  	var count int64
+  	d := debounce(30*time.Millisecond, func() {
+  		atomic.AddInt64(&count, 1)
+  	})
+
+  	// First burst
+  	d()
+  	d()
+  	d()
+  	time.Sleep(80 * time.Millisecond)
+
+  	// Second burst
+  	d()
+  	d()
+  	time.Sleep(80 * time.Millisecond)
+
+  	if c := atomic.LoadInt64(&count); c != 2 {
+  		t.Errorf("expected 2 fires (one per burst), got %d", c)
+  	}
+  }
+hint: "Use a *time.Timer with time.AfterFunc. On each call, stop the existing timer (if any) and create a new one. Protect the timer variable with a sync.Mutex."
+solution: |
+  package main
+
+  import (
+  	"sync"
+  	"time"
+  )
+
+  func debounce(interval time.Duration, f func()) func() {
+  	var mu sync.Mutex
+  	var timer *time.Timer
+
+  	return func() {
+  		mu.Lock()
+  		defer mu.Unlock()
+  		if timer != nil {
+  			timer.Stop()
+  		}
+  		timer = time.AfterFunc(interval, f)
+  	}
+  }
+explanation: |
+  Debouncing delays execution until a quiet period elapses.
+  time.AfterFunc(interval, f) starts a timer that calls f in a new
+  goroutine after interval:
+    timer = time.AfterFunc(interval, f)
+  On each call, stop the previous timer and start a new one:
+    mu.Lock()
+    defer mu.Unlock()
+    if timer != nil { timer.Stop() }
+    timer = time.AfterFunc(interval, f)
+  A mutex protects the timer variable from concurrent access.
+  timer.Stop() returns true if it stopped the timer before it fired.
+  This pattern is useful for search-as-you-type, window resize
+  handlers, and auto-save features.
+reference: "https://gobyexample.com/timers"

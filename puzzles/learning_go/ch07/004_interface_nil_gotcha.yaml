@@ -1,0 +1,210 @@
+id: "lg07-004"
+title: "Interface Nil Gotcha"
+concept: "interfaces"
+difficulty: 6
+description: |
+  In Go, an interface value has two components: a type and a value. An
+  interface is only nil when BOTH the type and value are nil. A common
+  gotcha: if you assign a nil pointer of a concrete type to an interface
+  variable, the interface is NOT nil (it has a type but no value).
+
+  Write a function IsNilInterface(v any) bool that returns true only when
+  the interface itself is nil (both type and value are nil). A simple
+  v == nil check is sufficient for this.
+
+  Write a function SafeString(v fmt.Stringer) string that safely calls
+  v.String(). If v is nil (the interface), return "<nil>". If v is
+  non-nil but holds a nil pointer, detect this using reflection and
+  return "<nil pointer>" instead of panicking. Otherwise return v.String().
+
+  Write a function WrapError(msg string, err error) error that returns
+  nil if err is truly nil (interface nil). If err is non-nil, return
+  fmt.Errorf("%s: %w", msg, err). This avoids the classic bug where
+  returning a typed nil *MyError from a function makes the error interface
+  non-nil.
+
+  Examples:
+    IsNilInterface(nil)        => true
+    IsNilInterface((*int)(nil)) => false  // typed nil, interface is not nil
+
+    SafeString(nil)                        => "<nil>"
+    SafeString((*myStringer)(nil))         => "<nil pointer>"
+    SafeString(myStringer{name: "hello"})  => "hello"
+template: |
+  package main
+
+  import (
+  	"fmt"
+  	"reflect"
+  )
+
+  // TODO: implement IsNilInterface
+
+  // TODO: implement SafeString
+
+  // TODO: implement WrapError
+test_code: |
+  package main
+
+  import (
+  	"errors"
+  	"fmt"
+  	"testing"
+  )
+
+  type myStringer struct {
+  	name string
+  }
+
+  func (m myStringer) String() string {
+  	return m.name
+  }
+
+  type ptrStringer struct {
+  	name string
+  }
+
+  func (p *ptrStringer) String() string {
+  	return p.name
+  }
+
+  func TestIsNilInterfaceTrue(t *testing.T) {
+  	if !IsNilInterface(nil) {
+  		t.Error("expected true for nil")
+  	}
+  }
+
+  func TestIsNilInterfaceTypedNil(t *testing.T) {
+  	var p *int
+  	if IsNilInterface(p) {
+  		t.Error("expected false for typed nil (*int)(nil)")
+  	}
+  }
+
+  func TestIsNilInterfaceValue(t *testing.T) {
+  	if IsNilInterface(42) {
+  		t.Error("expected false for 42")
+  	}
+  }
+
+  func TestSafeStringNilInterface(t *testing.T) {
+  	got := SafeString(nil)
+  	if got != "<nil>" {
+  		t.Errorf("expected %q, got %q", "<nil>", got)
+  	}
+  }
+
+  func TestSafeStringNilPointer(t *testing.T) {
+  	var p *ptrStringer
+  	got := SafeString(p)
+  	if got != "<nil pointer>" {
+  		t.Errorf("expected %q, got %q", "<nil pointer>", got)
+  	}
+  }
+
+  func TestSafeStringValid(t *testing.T) {
+  	got := SafeString(myStringer{name: "hello"})
+  	if got != "hello" {
+  		t.Errorf("expected %q, got %q", "hello", got)
+  	}
+  }
+
+  func TestSafeStringValidPointer(t *testing.T) {
+  	got := SafeString(&ptrStringer{name: "world"})
+  	if got != "world" {
+  		t.Errorf("expected %q, got %q", "world", got)
+  	}
+  }
+
+  type myError struct {
+  	code int
+  }
+
+  func (e *myError) Error() string {
+  	return fmt.Sprintf("error code %d", e.code)
+  }
+
+  func TestWrapErrorNilInterface(t *testing.T) {
+  	got := WrapError("context", nil)
+  	if got != nil {
+  		t.Errorf("expected nil, got %v", got)
+  	}
+  }
+
+  func TestWrapErrorNonNil(t *testing.T) {
+  	orig := errors.New("boom")
+  	got := WrapError("context", orig)
+  	if got == nil {
+  		t.Fatal("expected non-nil error")
+  	}
+  	if got.Error() != "context: boom" {
+  		t.Errorf("expected %q, got %q", "context: boom", got.Error())
+  	}
+  }
+
+  func TestWrapErrorTypedNil(t *testing.T) {
+  	var e *myError
+  	got := WrapError("context", e)
+  	if got == nil {
+  		t.Error("expected non-nil error for typed-nil *myError, but got nil")
+  	}
+  }
+
+  func TestWrapErrorPreservesChain(t *testing.T) {
+  	orig := errors.New("root")
+  	got := WrapError("layer", orig)
+  	if !errors.Is(got, orig) {
+  		t.Error("expected wrapped error to match original via errors.Is")
+  	}
+  }
+hint: "An interface is nil only when both its type and value are nil. Use reflect.ValueOf(v).IsNil() to check if an interface holds a nil pointer, but first check v == nil for a true nil interface and reflect.ValueOf(v).Kind() to see if it's a pointer."
+solution: |
+  package main
+
+  import (
+  	"fmt"
+  	"reflect"
+  )
+
+  func IsNilInterface(v any) bool {
+  	return v == nil
+  }
+
+  func SafeString(v fmt.Stringer) string {
+  	if v == nil {
+  		return "<nil>"
+  	}
+  	rv := reflect.ValueOf(v)
+  	if rv.Kind() == reflect.Ptr && rv.IsNil() {
+  		return "<nil pointer>"
+  	}
+  	return v.String()
+  }
+
+  func WrapError(msg string, err error) error {
+  	if err == nil {
+  		return nil
+  	}
+  	return fmt.Errorf("%s: %w", msg, err)
+  }
+explanation: |
+  Go interfaces store both a type and a value. An interface is only == nil
+  when both components are nil. This creates a common gotcha:
+
+    var p *myError        // p is nil
+    var err error = p     // err is NOT nil! (type=*myError, value=nil)
+    fmt.Println(err == nil)  // false
+
+  This bites people when functions return typed nil pointers as error
+  interfaces. The fix: always return a plain nil for the error interface,
+  never a typed nil pointer.
+
+  SafeString uses reflect to detect the "typed nil" case: the interface
+  is non-nil (has a type), but the underlying pointer is nil. Without
+  this check, calling v.String() on a nil pointer receiver would panic
+  in most implementations.
+
+  WrapError demonstrates the practical pattern: always check err == nil
+  before wrapping, so you do not accidentally return a non-nil interface
+  wrapping a nil error.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch7.html"

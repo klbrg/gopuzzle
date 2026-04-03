@@ -1,0 +1,75 @@
+id: "13-002"
+title: "Sorting by Functions"
+concept: "sorting"
+difficulty: 4
+description: |
+  Sort a []Person by age ascending. When ages are equal, sort by name alphabetically.
+  Person has Name string and Age int fields.
+template: |
+  package main
+
+  import (
+  	"cmp"
+  	"slices"
+  )
+
+  type Person struct {
+  	Name string
+  	Age  int
+  }
+
+  func sortPeople(people []Person) {
+  	// TODO
+  }
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestSortPeople(t *testing.T) {
+  	people := []Person{
+  		{"Charlie", 30},
+  		{"Alice", 25},
+  		{"Bob", 30},
+  		{"Dave", 20},
+  	}
+  	sortPeople(people)
+  	if people[0].Name != "Dave" || people[1].Name != "Alice" ||
+  		people[2].Name != "Bob" || people[3].Name != "Charlie" {
+  		t.Errorf("unexpected order: %v", people)
+  	}
+  }
+hint: "slices.SortFunc takes a comparison function returning negative, zero, or positive."
+solution: |
+  package main
+
+  import (
+  	"cmp"
+  	"slices"
+  )
+
+  type Person struct {
+  	Name string
+  	Age  int
+  }
+
+  func sortPeople(people []Person) {
+  	slices.SortFunc(people, func(a, b Person) int {
+  		return cmp.Or(
+  			cmp.Compare(a.Age, b.Age),
+  			cmp.Compare(a.Name, b.Name),
+  		)
+  	})
+  }
+explanation: |
+  slices.SortFunc takes a comparator returning negative, zero, or positive:
+    slices.SortFunc(people, func(a, b Person) int {
+        return cmp.Or(
+            cmp.Compare(a.Age, b.Age),   // primary: age
+            cmp.Compare(a.Name, b.Name), // secondary: name
+        )
+    })
+  cmp.Or returns the first non-zero value (Go 1.22+).
+  cmp.Compare returns -1, 0, or 1 for any ordered type.
+  Before cmp package, use: if a.Age != b.Age { return a.Age - b.Age }
+reference: "https://gobyexample.com/sorting-by-functions"

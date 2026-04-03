@@ -1,0 +1,85 @@
+id: "lg02-001"
+title: "Zero Values and Declarations"
+concept: "basics"
+difficulty: 1
+description: |
+  Write a function zeroCheck that takes four parameters and returns
+  whether each one equals its type's zero value:
+
+    func zeroCheck(i int, f float64, s string, b bool) (bool, bool, bool, bool)
+
+  Each return value is true if the corresponding parameter is the
+  zero value for its type (0 for int, 0.0 for float64, "" for string,
+  false for bool).
+
+  For example:
+    zeroCheck(0, 0.0, "", false)     returns (true, true, true, true)
+    zeroCheck(1, 3.14, "hi", true)   returns (false, false, false, false)
+    zeroCheck(0, 1.0, "", true)      returns (true, false, true, false)
+template: |
+  package main
+
+  // TODO: implement zeroCheck
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestZeroCheck(t *testing.T) {
+  	cases := []struct {
+  		i    int
+  		f    float64
+  		s    string
+  		b    bool
+  		wI   bool
+  		wF   bool
+  		wS   bool
+  		wB   bool
+  	}{
+  		{0, 0.0, "", false, true, true, true, true},
+  		{1, 3.14, "hi", true, false, false, false, false},
+  		{0, 1.0, "", true, true, false, true, false},
+  		{-1, 0.0, "x", false, false, true, false, true},
+  		{42, 0.0, "", false, false, true, true, true},
+  	}
+  	for _, c := range cases {
+  		gI, gF, gS, gB := zeroCheck(c.i, c.f, c.s, c.b)
+  		if gI != c.wI || gF != c.wF || gS != c.wS || gB != c.wB {
+  			t.Errorf("zeroCheck(%d, %f, %q, %v): expected (%v,%v,%v,%v), got (%v,%v,%v,%v)",
+  				c.i, c.f, c.s, c.b, c.wI, c.wF, c.wS, c.wB, gI, gF, gS, gB)
+  		}
+  	}
+  }
+
+  func TestZeroValuesFromVar(t *testing.T) {
+  	var i int
+  	var f float64
+  	var s string
+  	var b bool
+  	gI, gF, gS, gB := zeroCheck(i, f, s, b)
+  	if !gI || !gF || !gS || !gB {
+  		t.Errorf("var-declared values should all be zero: got (%v,%v,%v,%v)",
+  			gI, gF, gS, gB)
+  	}
+  }
+hint: "Compare each parameter to its zero value: i == 0, f == 0.0, s == \"\", b == false."
+solution: |
+  package main
+
+  func zeroCheck(i int, f float64, s string, b bool) (bool, bool, bool, bool) {
+  	return i == 0, f == 0.0, s == "", b == false
+  }
+explanation: |
+  Every type in Go has a zero value that is assigned when a variable
+  is declared without an explicit value using var:
+    var i int     // 0
+    var f float64 // 0.0
+    var s string  // ""
+    var b bool    // false
+
+  This is different from many languages where uninitialized variables
+  are undefined or null. In Go, zero values are always well-defined
+  and usable. This means you can safely use a var-declared variable
+  immediately without initialization. Slices, maps, and pointers
+  have a zero value of nil.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch2.html"

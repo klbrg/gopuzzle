@@ -1,0 +1,169 @@
+id: "lg12-003"
+title: "Lazy Singleton with sync.Once"
+concept: "concurrency"
+difficulty: 6
+description: |
+  Implement a thread-safe lazy-initialized registry using sync.Once.
+
+  NewRegistry() *Registry — creates a new registry (the internal map should NOT be
+  initialized yet).
+  (r *Registry) Get(key string) (string, bool) — returns the value for key, initializing
+  the internal map on first access.
+  (r *Registry) Set(key, value string) — sets a key-value pair, initializing the internal
+  map on first access.
+
+  The critical requirement: the internal map must be allocated exactly once, no matter how
+  many goroutines call Get or Set concurrently. Do not initialize it in NewRegistry.
+
+  Example:
+    r := NewRegistry()
+    r.Set("lang", "Go")
+    v, ok := r.Get("lang") // "Go", true
+    _, ok = r.Get("missing") // "", false
+template: |
+  package main
+
+  import "sync"
+
+  type Registry struct {
+  	once sync.Once
+  	data map[string]string
+  	mu   sync.RWMutex
+  }
+
+  func NewRegistry() *Registry {
+  	// TODO: return a Registry without initializing the map
+  	return nil
+  }
+
+  func (r *Registry) init() {
+  	// TODO: use sync.Once to initialize the map exactly once
+  }
+
+  func (r *Registry) Get(key string) (string, bool) {
+  	// TODO: ensure init, then read from map safely
+  	return "", false
+  }
+
+  func (r *Registry) Set(key, value string) {
+  	// TODO: ensure init, then write to map safely
+  }
+test_code: |
+  package main
+
+  import (
+  	"sync"
+  	"testing"
+  )
+
+  func TestRegistrySetGet(t *testing.T) {
+  	r := NewRegistry()
+  	r.Set("lang", "Go")
+  	v, ok := r.Get("lang")
+  	if !ok || v != "Go" {
+  		t.Errorf("expected (Go, true), got (%s, %v)", v, ok)
+  	}
+  }
+
+  func TestRegistryMissing(t *testing.T) {
+  	r := NewRegistry()
+  	r.Set("a", "b")
+  	_, ok := r.Get("missing")
+  	if ok {
+  		t.Error("expected missing key to return false")
+  	}
+  }
+
+  func TestRegistryGetBeforeSet(t *testing.T) {
+  	r := NewRegistry()
+  	_, ok := r.Get("anything")
+  	if ok {
+  		t.Error("expected empty registry to return false")
+  	}
+  	r.Set("anything", "value")
+  	v, ok := r.Get("anything")
+  	if !ok || v != "value" {
+  		t.Errorf("expected (value, true), got (%s, %v)", v, ok)
+  	}
+  }
+
+  func TestRegistryConcurrent(t *testing.T) {
+  	r := NewRegistry()
+  	var wg sync.WaitGroup
+  	for i := 0; i < 100; i++ {
+  		wg.Add(2)
+  		key := string(rune('a' + i%26))
+  		go func() {
+  			defer wg.Done()
+  			r.Set(key, "val")
+  		}()
+  		go func() {
+  			defer wg.Done()
+  			r.Get(key)
+  		}()
+  	}
+  	wg.Wait()
+  }
+
+  func TestRegistryMultipleInstances(t *testing.T) {
+  	r1 := NewRegistry()
+  	r2 := NewRegistry()
+  	r1.Set("x", "1")
+  	r2.Set("x", "2")
+  	v1, _ := r1.Get("x")
+  	v2, _ := r2.Get("x")
+  	if v1 != "1" || v2 != "2" {
+  		t.Errorf("instances should be independent: r1=%s, r2=%s", v1, v2)
+  	}
+  }
+hint: "sync.Once.Do guarantees the function runs exactly once. Use r.once.Do(func() { r.data = make(map[string]string) }) in an init helper called from both Get and Set. Protect map access with sync.RWMutex."
+solution: |
+  package main
+
+  import "sync"
+
+  type Registry struct {
+  	once sync.Once
+  	data map[string]string
+  	mu   sync.RWMutex
+  }
+
+  func NewRegistry() *Registry {
+  	return &Registry{}
+  }
+
+  func (r *Registry) init() {
+  	r.once.Do(func() {
+  		r.data = make(map[string]string)
+  	})
+  }
+
+  func (r *Registry) Get(key string) (string, bool) {
+  	r.init()
+  	r.mu.RLock()
+  	defer r.mu.RUnlock()
+  	v, ok := r.data[key]
+  	return v, ok
+  }
+
+  func (r *Registry) Set(key, value string) {
+  	r.init()
+  	r.mu.Lock()
+  	defer r.mu.Unlock()
+  	r.data[key] = value
+  }
+explanation: |
+  sync.Once guarantees its function argument runs exactly once, even when called
+  from multiple goroutines concurrently. This makes it ideal for lazy initialization:
+
+    r.once.Do(func() {
+        r.data = make(map[string]string)
+    })
+
+  After initialization, map access still needs protection. sync.RWMutex provides
+  concurrent reads (RLock) while serializing writes (Lock), which is more efficient
+  than a plain Mutex when reads outnumber writes.
+
+  Key insight: sync.Once is about initialization, not ongoing access control. You
+  still need a separate mutex for the map itself.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch12.html"

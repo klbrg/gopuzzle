@@ -1,0 +1,181 @@
+id: "lg12-002"
+title: "Backpressure"
+concept: "concurrency"
+difficulty: 7
+description: |
+  Implement a Throttle that limits the number of concurrent operations.
+
+  NewThrottle(limit int) *Throttle — creates a throttle allowing at most limit concurrent calls.
+  (t *Throttle) Do(f func()) bool — runs f if under the limit and returns true. If at capacity, returns false immediately without running f.
+  (t *Throttle) ActiveCount() int — returns the number of currently running operations.
+
+  Example:
+    th := NewThrottle(2)
+    th.Do(func() { time.Sleep(time.Second) }) // true, runs
+    th.Do(func() { time.Sleep(time.Second) }) // true, runs
+    th.Do(func() { time.Sleep(time.Second) }) // false, at capacity
+template: |
+  package main
+
+  type Throttle struct {
+  	// TODO
+  }
+
+  func NewThrottle(limit int) *Throttle {
+  	// TODO
+  	return nil
+  }
+
+  func (t *Throttle) Do(f func()) bool {
+  	// TODO: run f if under limit, return true; else return false
+  	return false
+  }
+
+  func (t *Throttle) ActiveCount() int {
+  	// TODO: return number of active operations
+  	return 0
+  }
+test_code: |
+  package main
+
+  import (
+  	"sync"
+  	"sync/atomic"
+  	"testing"
+  	"time"
+  )
+
+  func TestThrottleBasic(t *testing.T) {
+  	th := NewThrottle(2)
+  	done := make(chan struct{})
+  	ok1 := th.Do(func() { <-done })
+  	ok2 := th.Do(func() { <-done })
+  	if !ok1 || !ok2 {
+  		t.Error("expected first two calls to succeed")
+  	}
+  	ok3 := th.Do(func() {})
+  	if ok3 {
+  		t.Error("expected third call to be rejected")
+  	}
+  	close(done)
+  	time.Sleep(50 * time.Millisecond)
+  }
+
+  func TestThrottleRelease(t *testing.T) {
+  	th := NewThrottle(1)
+  	done := make(chan struct{})
+  	th.Do(func() { <-done })
+  	close(done)
+  	time.Sleep(100 * time.Millisecond) // wait for goroutine to release semaphore
+  	ok := th.Do(func() {})
+  	if !ok {
+  		t.Error("expected slot to be available after previous call completed")
+  	}
+  }
+
+  func TestThrottleActiveCount(t *testing.T) {
+  	th := NewThrottle(3)
+  	blocker := make(chan struct{})
+  	th.Do(func() { <-blocker })
+  	th.Do(func() { <-blocker })
+  	time.Sleep(20 * time.Millisecond)
+  	if c := th.ActiveCount(); c != 2 {
+  		t.Errorf("expected 2 active, got %d", c)
+  	}
+  	close(blocker)
+  	time.Sleep(50 * time.Millisecond)
+  	if c := th.ActiveCount(); c != 0 {
+  		t.Errorf("expected 0 active after completion, got %d", c)
+  	}
+  }
+
+  func TestThrottleConcurrent(t *testing.T) {
+  	th := NewThrottle(5)
+  	var maxSeen int64
+  	var current int64
+  	var rejected int64
+  	var wg sync.WaitGroup
+
+  	for i := 0; i < 20; i++ {
+  		wg.Add(1)
+  		go func() {
+  			defer wg.Done()
+  			ok := th.Do(func() {
+  				cur := atomic.AddInt64(&current, 1)
+  				for {
+  					old := atomic.LoadInt64(&maxSeen)
+  					if cur <= old || atomic.CompareAndSwapInt64(&maxSeen, old, cur) {
+  						break
+  					}
+  				}
+  				time.Sleep(20 * time.Millisecond)
+  				atomic.AddInt64(&current, -1)
+  			})
+  			if !ok {
+  				atomic.AddInt64(&rejected, 1)
+  			}
+  		}()
+  	}
+  	wg.Wait()
+  	if m := atomic.LoadInt64(&maxSeen); m > 5 {
+  		t.Errorf("max concurrent exceeded limit: %d > 5", m)
+  	}
+  	if r := atomic.LoadInt64(&rejected); r == 0 {
+  		t.Error("expected some calls to be rejected when exceeding limit")
+  	}
+  }
+hint: "Use a buffered channel of capacity limit as a semaphore. select with a default case gives non-blocking send behavior."
+solution: |
+  package main
+
+  import "sync/atomic"
+
+  type Throttle struct {
+  	sem    chan struct{}
+  	active int64
+  }
+
+  func NewThrottle(limit int) *Throttle {
+  	return &Throttle{
+  		sem: make(chan struct{}, limit),
+  	}
+  }
+
+  func (t *Throttle) Do(f func()) bool {
+  	select {
+  	case t.sem <- struct{}{}:
+  		atomic.AddInt64(&t.active, 1)
+  		go func() {
+  			defer func() {
+  				atomic.AddInt64(&t.active, -1)
+  				<-t.sem
+  			}()
+  			f()
+  		}()
+  		return true
+  	default:
+  		return false
+  	}
+  }
+
+  func (t *Throttle) ActiveCount() int {
+  	return int(atomic.LoadInt64(&t.active))
+  }
+explanation: |
+  A buffered channel acts as a counting semaphore:
+    sem: make(chan struct{}, limit)
+  Non-blocking acquire using select with default:
+    select {
+    case t.sem <- struct{}{}: // acquired slot
+        go func() {
+            defer func() { <-t.sem }() // release slot
+            f()
+        }()
+        return true
+    default:
+        return false // at capacity
+    }
+  This is the backpressure pattern — reject work when the system is full rather
+  than queuing unboundedly. It is commonly used in HTTP servers and API gateways
+  to prevent overload.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch12.html"

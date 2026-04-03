@@ -1,0 +1,93 @@
+id: "17-001"
+title: "Environment Variables"
+concept: "cli"
+difficulty: 3
+description: |
+  Write getEnv(key, fallback string) string that returns the environment variable
+  or fallback if it is not set.
+  Write requireEnv(key string) (string, error) that returns an error when the variable is absent.
+template: |
+  package main
+
+  import (
+  	"fmt"
+  	"os"
+  )
+
+  func getEnv(key, fallback string) string {
+  	// TODO
+  }
+
+  func requireEnv(key string) (string, error) {
+  	// TODO
+  }
+test_code: |
+  package main
+
+  import (
+  	"os"
+  	"testing"
+  )
+
+  func TestGetEnv(t *testing.T) {
+  	os.Setenv("TEST_VAR", "hello")
+  	defer os.Unsetenv("TEST_VAR")
+
+  	if got := getEnv("TEST_VAR", "default"); got != "hello" {
+  		t.Errorf("expected %q, got %q", "hello", got)
+  	}
+  	if got := getEnv("UNSET_VAR_XYZ", "default"); got != "default" {
+  		t.Errorf("expected %q, got %q", "default", got)
+  	}
+  }
+
+  func TestRequireEnv(t *testing.T) {
+  	os.Setenv("REQUIRED_VAR", "value")
+  	defer os.Unsetenv("REQUIRED_VAR")
+
+  	v, err := requireEnv("REQUIRED_VAR")
+  	if err != nil || v != "value" {
+  		t.Errorf("expected (\"value\", nil), got (%q, %v)", v, err)
+  	}
+  	_, err2 := requireEnv("DEFINITELY_NOT_SET_XYZ")
+  	if err2 == nil {
+  		t.Error("expected error for unset variable")
+  	}
+  }
+hint: "os.LookupEnv returns (value, ok) — use ok to distinguish an unset variable from an empty one."
+solution: |
+  package main
+
+  import (
+  	"fmt"
+  	"os"
+  )
+
+  func getEnv(key, fallback string) string {
+  	if v, ok := os.LookupEnv(key); ok {
+  		return v
+  	}
+  	return fallback
+  }
+
+  func requireEnv(key string) (string, error) {
+  	v, ok := os.LookupEnv(key)
+  	if !ok {
+  		return "", fmt.Errorf("environment variable %s is not set", key)
+  	}
+  	return v, nil
+  }
+explanation: |
+  os.LookupEnv returns the value and whether it was set:
+    func getEnv(key, fallback string) string {
+        if v, ok := os.LookupEnv(key); ok {
+            return v
+        }
+        return fallback
+    }
+  os.Getenv returns "" for unset vars — use LookupEnv to distinguish empty vs unset.
+  Other env functions:
+    os.Setenv(key, val)   // set
+    os.Unsetenv(key)      // unset
+    os.Environ()          // all vars as []string "KEY=value"
+reference: "https://gobyexample.com/environment-variables"

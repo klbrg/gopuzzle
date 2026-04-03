@@ -1,0 +1,63 @@
+id: "11-006"
+title: "Timeouts"
+concept: "channels"
+difficulty: 6
+description: |
+  Write withTimeout(ch <-chan string, d time.Duration) (string, bool) that returns
+  the first value from ch, or ("", false) if nothing arrives within d.
+template: |
+  package main
+
+  import "time"
+
+  func withTimeout(ch <-chan string, d time.Duration) (string, bool) {
+  	// TODO
+  }
+test_code: |
+  package main
+
+  import (
+  	"testing"
+  	"time"
+  )
+
+  func TestWithTimeout(t *testing.T) {
+  	ch := make(chan string, 1)
+  	ch <- "hello"
+  	got, ok := withTimeout(ch, time.Second)
+  	if !ok || got != "hello" {
+  		t.Errorf("expected (\"hello\", true), got (%q, %v)", got, ok)
+  	}
+
+  	empty := make(chan string)
+  	_, ok2 := withTimeout(empty, 20*time.Millisecond)
+  	if ok2 {
+  		t.Error("expected timeout (false)")
+  	}
+  }
+hint: "time.After(d) returns a channel that fires after the duration — combine with select."
+solution: |
+  package main
+
+  import "time"
+
+  func withTimeout(ch <-chan string, d time.Duration) (string, bool) {
+  	select {
+  	case v := <-ch:
+  		return v, true
+  	case <-time.After(d):
+  		return "", false
+  	}
+  }
+explanation: |
+  time.After(d) returns a channel that sends after duration d.
+  Use it in select for timeouts:
+    select {
+    case v := <-ch:
+        return v, true
+    case <-time.After(d):
+        return "", false
+    }
+  This is the standard Go timeout pattern. context.WithTimeout is preferred
+  for cancellable operations that propagate through call stacks.
+reference: "https://gobyexample.com/timeouts"

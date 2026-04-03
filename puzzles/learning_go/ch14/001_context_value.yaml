@@ -1,0 +1,112 @@
+id: "lg14-001"
+title: "Context Values"
+concept: "advanced"
+difficulty: 6
+description: |
+  Implement a request-scoped identity system using context values:
+
+  1. ContextWithUserID(ctx context.Context, userID string) context.Context — returns a
+     new context carrying the user ID.
+  2. UserIDFromContext(ctx context.Context) (string, bool) — extracts the user ID from
+     the context. Returns ("", false) if no user ID is present.
+
+  Use an unexported type for the context key to prevent collisions with other packages.
+
+  Example:
+    ctx := ContextWithUserID(context.Background(), "user-42")
+    id, ok := UserIDFromContext(ctx) // "user-42", true
+template: |
+  package main
+
+  import "context"
+
+  // TODO: define an unexported key type and constant
+
+  func ContextWithUserID(ctx context.Context, userID string) context.Context {
+  	// TODO
+  	return ctx
+  }
+
+  func UserIDFromContext(ctx context.Context) (string, bool) {
+  	// TODO
+  	return "", false
+  }
+test_code: |
+  package main
+
+  import (
+  	"context"
+  	"testing"
+  )
+
+  func TestContextWithUserID(t *testing.T) {
+  	ctx := ContextWithUserID(context.Background(), "user-42")
+  	id, ok := UserIDFromContext(ctx)
+  	if !ok {
+  		t.Fatal("expected user ID to be present")
+  	}
+  	if id != "user-42" {
+  		t.Errorf("expected user-42, got %q", id)
+  	}
+  }
+
+  func TestContextWithoutUserID(t *testing.T) {
+  	ctx := context.Background()
+  	id, ok := UserIDFromContext(ctx)
+  	if ok {
+  		t.Error("expected no user ID")
+  	}
+  	if id != "" {
+  		t.Errorf("expected empty string, got %q", id)
+  	}
+  }
+
+  func TestContextOverwrite(t *testing.T) {
+  	ctx := ContextWithUserID(context.Background(), "first")
+  	ctx = ContextWithUserID(ctx, "second")
+  	id, ok := UserIDFromContext(ctx)
+  	if !ok || id != "second" {
+  		t.Errorf("expected second, got %q (ok=%v)", id, ok)
+  	}
+  }
+
+  func TestContextInheritance(t *testing.T) {
+  	parent := ContextWithUserID(context.Background(), "parent-id")
+  	child, cancel := context.WithCancel(parent)
+  	defer cancel()
+  	id, ok := UserIDFromContext(child)
+  	if !ok || id != "parent-id" {
+  		t.Errorf("child should inherit parent value, got %q (ok=%v)", id, ok)
+  	}
+  }
+hint: "Define a private type like `type ctxKey int` and a constant of that type. Use context.WithValue to store and ctx.Value to retrieve. Type-assert the result."
+solution: |
+  package main
+
+  import "context"
+
+  type ctxKey int
+
+  const userIDKey ctxKey = iota
+
+  func ContextWithUserID(ctx context.Context, userID string) context.Context {
+  	return context.WithValue(ctx, userIDKey, userID)
+  }
+
+  func UserIDFromContext(ctx context.Context) (string, bool) {
+  	userID, ok := ctx.Value(userIDKey).(string)
+  	return userID, ok
+  }
+explanation: |
+  Context values use an unexported key type to prevent collisions:
+    type ctxKey int
+    const userIDKey ctxKey = iota
+  Store values with context.WithValue:
+    context.WithValue(ctx, userIDKey, userID)
+  Retrieve with type assertion:
+    val, ok := ctx.Value(userIDKey).(string)
+  The unexported type ensures that only your package can read or write the value,
+  even if another package uses the same underlying value (like 0). This is the
+  standard Go pattern for request-scoped data like user identity, trace IDs,
+  and request metadata.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch14.html"

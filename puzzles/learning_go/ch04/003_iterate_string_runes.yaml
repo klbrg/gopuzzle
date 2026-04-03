@@ -1,0 +1,84 @@
+id: "lg04-003"
+title: "Iterating Strings by Rune"
+concept: "control-flow"
+difficulty: 2
+description: |
+  Write a function vowelPositions that takes a string and returns a
+  []int containing the rune indices (not byte indices) of all vowels
+  (a, e, i, o, u - case insensitive) in the string.
+
+  A rune index is the position when counting characters, starting at 0.
+  Use a counter variable with for-range to track the rune position,
+  since for-range over a string gives byte indices, not rune indices.
+
+  For example:
+    vowelPositions("hello")    returns [1, 4]       (e at rune 0-indexed pos 1, o at 4)
+    vowelPositions("Go")       returns [1]          (o at rune position 1)
+    vowelPositions("xyz")      returns nil or []int{}
+    vowelPositions("AEI")      returns [0, 1, 2]
+template: |
+  package main
+
+  // TODO: implement vowelPositions
+test_code: |
+  package main
+
+  import (
+  	"reflect"
+  	"testing"
+  )
+
+  func TestVowelPositions(t *testing.T) {
+  	cases := []struct {
+  		input string
+  		want  []int
+  	}{
+  		{"hello", []int{1, 4}},
+  		{"Go", []int{1}},
+  		{"xyz", nil},
+  		{"AEI", []int{0, 1, 2}},
+  		{"", nil},
+  		{"aEiOu", []int{0, 1, 2, 3, 4}},
+  		{"bcd", nil},
+  		{"Apple", []int{0, 4}},
+  		{"café", []int{3}},
+  		{"héllo", []int{1, 4}},
+  	}
+  	for _, c := range cases {
+  		got := vowelPositions(c.input)
+  		if !reflect.DeepEqual(got, c.want) {
+  			t.Errorf("vowelPositions(%q): expected %v, got %v", c.input, c.want, got)
+  		}
+  	}
+  }
+hint: "Use for-range to iterate over the string (which gives runes). Keep a separate counter for rune position. Check if each rune is a vowel by comparing against 'a','e','i','o','u' and their uppercase equivalents."
+solution: |
+  package main
+
+  func vowelPositions(s string) []int {
+  	var positions []int
+  	runeIdx := 0
+  	for _, r := range s {
+  		switch r {
+  		case 'a', 'e', 'i', 'o', 'u', 'A', 'E', 'I', 'O', 'U':
+  			positions = append(positions, runeIdx)
+  		}
+  		runeIdx++
+  	}
+  	return positions
+  }
+explanation: |
+  When you use for-range on a string, Go iterates by rune (Unicode
+  code point), not by byte. The index variable from range gives
+  the byte offset, not the character position. For multi-byte
+  characters, byte offsets skip numbers (e.g., 0, 1, 4 if position
+  2 is a 3-byte rune).
+
+  To get a sequential rune index (0, 1, 2, ...), maintain a
+  separate counter that increments once per iteration. This is
+  important when you need character positions rather than byte
+  positions.
+
+  The switch statement here uses multiple values per case
+  (case 'a', 'e', ...) which is cleaner than a chain of || operators.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch4.html"

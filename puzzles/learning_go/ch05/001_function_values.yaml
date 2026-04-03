@@ -1,0 +1,91 @@
+id: "lg05-001"
+title: "Function Values"
+concept: "functions"
+difficulty: 3
+description: |
+  Write a function applyOp that takes two integers and a function
+  (of type func(int, int) int) and returns the result of calling
+  that function with the two integers.
+
+  Also write three operation functions: add, multiply, and negate
+  (negate ignores the second argument and returns -a).
+
+  For example:
+    applyOp(3, 4, add)      returns 7
+    applyOp(3, 4, multiply) returns 12
+    applyOp(5, 0, negate)   returns -5
+template: |
+  package main
+
+  // TODO: implement add, multiply, negate
+  // TODO: implement applyOp
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestApplyOp(t *testing.T) {
+  	cases := []struct {
+  		a, b int
+  		op   func(int, int) int
+  		name string
+  		want int
+  	}{
+  		{3, 4, add, "add", 7},
+  		{3, 4, multiply, "multiply", 12},
+  		{5, 0, negate, "negate", -5},
+  		{0, 0, add, "add", 0},
+  		{-2, 3, multiply, "multiply", -6},
+  		{-7, 99, negate, "negate", 7},
+  		{100, 1, add, "add", 101},
+  	}
+  	for _, c := range cases {
+  		got := applyOp(c.a, c.b, c.op)
+  		if got != c.want {
+  			t.Errorf("applyOp(%d, %d, %s): expected %d, got %d",
+  				c.a, c.b, c.name, c.want, got)
+  		}
+  	}
+  }
+
+  func TestFunctionAsVariable(t *testing.T) {
+  	var op func(int, int) int
+  	op = add
+  	if got := op(10, 20); got != 30 {
+  		t.Errorf("expected 30, got %d", got)
+  	}
+  	op = multiply
+  	if got := op(10, 20); got != 200 {
+  		t.Errorf("expected 200, got %d", got)
+  	}
+  }
+hint: "Functions are first-class values in Go. You can pass them as arguments just like any other type. The parameter type is func(int, int) int."
+solution: |
+  package main
+
+  func add(a, b int) int {
+  	return a + b
+  }
+
+  func multiply(a, b int) int {
+  	return a * b
+  }
+
+  func negate(a, b int) int {
+  	return -a
+  }
+
+  func applyOp(a, b int, op func(int, int) int) int {
+  	return op(a, b)
+  }
+explanation: |
+  In Go, functions are first-class values. They can be:
+  - Assigned to variables: var op func(int, int) int = add
+  - Passed as arguments: func applyOp(a, b int, op func(int, int) int) int
+  - Returned from other functions (see closures)
+
+  The function signature func(int, int) int is itself a type. Any
+  function matching that signature can be used wherever that type is
+  expected. This enables patterns like callback functions, strategy
+  pattern, and the calculator map from Learning Go ch05.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch5.html"

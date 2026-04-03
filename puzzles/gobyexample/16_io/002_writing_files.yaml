@@ -1,0 +1,82 @@
+id: "16-002"
+title: "Writing Files"
+concept: "io"
+difficulty: 4
+description: |
+  Write writeFile(path, content string) error that creates or overwrites a file with the given content.
+  Write appendFile(path, line string) error that appends a line followed by a newline to a file.
+template: |
+  package main
+
+  import (
+  	"os"
+  )
+
+  func writeFile(path, content string) error {
+  	// TODO
+  }
+
+  func appendFile(path, line string) error {
+  	// TODO
+  }
+test_code: |
+  package main
+
+  import (
+  	"os"
+  	"testing"
+  )
+
+  func TestWriteFile(t *testing.T) {
+  	path := t.TempDir() + "/test.txt"
+  	if err := writeFile(path, "hello"); err != nil {
+  		t.Fatal(err)
+  	}
+  	data, _ := os.ReadFile(path)
+  	if string(data) != "hello" {
+  		t.Errorf("expected %q, got %q", "hello", string(data))
+  	}
+  }
+
+  func TestAppendFile(t *testing.T) {
+  	path := t.TempDir() + "/test.txt"
+  	writeFile(path, "first\n")
+  	appendFile(path, "second")
+  	data, _ := os.ReadFile(path)
+  	if string(data) != "first\nsecond\n" {
+  		t.Errorf("unexpected content: %q", string(data))
+  	}
+  }
+hint: "os.WriteFile for create/overwrite; os.OpenFile with os.O_APPEND|os.O_WRONLY for appending."
+solution: |
+  package main
+
+  import (
+  	"os"
+  )
+
+  func writeFile(path, content string) error {
+  	return os.WriteFile(path, []byte(content), 0644)
+  }
+
+  func appendFile(path, line string) error {
+  	f, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, 0644)
+  	if err != nil {
+  		return err
+  	}
+  	defer f.Close()
+  	_, err = f.WriteString(line + "\n")
+  	return err
+  }
+explanation: |
+  Write (create/overwrite):
+    os.WriteFile(path, []byte(content), 0644)  // 0644 = rw-r--r-- permissions
+  Append to existing file:
+    f, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, 0644)
+    if err != nil { return err }
+    defer f.Close()
+    _, err = fmt.Fprintln(f, line)
+    return err
+  For complex writing, use bufio.NewWriter for buffering.
+  Always check error returns when writing — disk can fill up.
+reference: "https://gobyexample.com/writing-files"

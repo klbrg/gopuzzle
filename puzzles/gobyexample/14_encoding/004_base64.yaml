@@ -1,0 +1,123 @@
+id: "14-004"
+title: "Base64 Encoding"
+concept: "encoding"
+difficulty: 4
+description: |
+  Implement two functions:
+  - isBase64(s string) bool that returns true if s is a valid standard base64 string
+    (decodable without error and non-empty).
+  - roundTrip(s string) (string, error) that encodes s to base64 and decodes it back,
+    returning the result. Return an error if the decode step fails (it shouldn't, but
+    handle it properly).
+template: |
+  package main
+
+  import "encoding/base64"
+
+  func isBase64(s string) bool {
+  	// TODO: return true if s is non-empty and valid standard base64
+  	return false
+  }
+
+  func roundTrip(s string) (string, error) {
+  	// TODO: encode s to base64, decode it back, return the result
+  	return "", nil
+  }
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestIsBase64Valid(t *testing.T) {
+  	valid := []string{
+  		"SGVsbG8=",          // "Hello"
+  		"R28gcnVsZXMh",     // "Go rules!"
+  		"YQ==",              // "a"
+  	}
+  	for _, s := range valid {
+  		if !isBase64(s) {
+  			t.Errorf("expected %q to be valid base64", s)
+  		}
+  	}
+  }
+
+  func TestIsBase64Invalid(t *testing.T) {
+  	invalid := []string{
+  		"",              // empty
+  		"not base64!!!",
+  		"====",
+  		"SGVs bG8=",     // space in middle
+  	}
+  	for _, s := range invalid {
+  		if isBase64(s) {
+  			t.Errorf("expected %q to be invalid base64", s)
+  		}
+  	}
+  }
+
+  func TestRoundTripBasic(t *testing.T) {
+  	cases := []string{
+  		"Hello, World!",
+  		"",
+  		"Go puzzles are fun",
+  		"special chars: !@#$%^&*()",
+  		"\x00\x01\x02binary",
+  	}
+  	for _, original := range cases {
+  		got, err := roundTrip(original)
+  		if err != nil {
+  			t.Errorf("roundTrip(%q): unexpected error: %v", original, err)
+  		}
+  		if got != original {
+  			t.Errorf("roundTrip(%q) = %q, want %q", original, got, original)
+  		}
+  	}
+  }
+
+  func TestRoundTripPreservesContent(t *testing.T) {
+  	input := "The quick brown fox jumps over the lazy dog"
+  	got, err := roundTrip(input)
+  	if err != nil {
+  		t.Fatalf("unexpected error: %v", err)
+  	}
+  	if got != input {
+  		t.Errorf("round trip changed content: got %q", got)
+  	}
+  }
+hint: "base64.StdEncoding.DecodeString returns ([]byte, error) — a nil error means valid base64. For roundTrip, EncodeToString then DecodeString."
+solution: |
+  package main
+
+  import "encoding/base64"
+
+  func isBase64(s string) bool {
+  	if s == "" {
+  		return false
+  	}
+  	_, err := base64.StdEncoding.DecodeString(s)
+  	return err == nil
+  }
+
+  func roundTrip(s string) (string, error) {
+  	encoded := base64.StdEncoding.EncodeToString([]byte(s))
+  	decoded, err := base64.StdEncoding.DecodeString(encoded)
+  	if err != nil {
+  		return "", err
+  	}
+  	return string(decoded), nil
+  }
+explanation: |
+  base64.StdEncoding validates and decodes in one call:
+    _, err := base64.StdEncoding.DecodeString(s)
+  A nil error means s is valid standard base64.
+  Round-trip verifies encode/decode are inverses:
+    encoded := base64.StdEncoding.EncodeToString([]byte(s))
+    decoded, err := base64.StdEncoding.DecodeString(encoded)
+  Encoding variants in Go:
+    base64.StdEncoding    — standard alphabet (+, /, = padding)
+    base64.URLEncoding    — URL-safe (-, _, = padding)
+    base64.RawStdEncoding — standard without padding
+    base64.RawURLEncoding — URL-safe without padding
+  Round-trip testing is a general technique for verifying
+  serialization correctness.
+reference: "https://gobyexample.com/base64-encoding"

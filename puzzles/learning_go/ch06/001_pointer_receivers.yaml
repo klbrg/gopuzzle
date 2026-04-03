@@ -1,0 +1,123 @@
+id: "lg06-001"
+title: "Pointer Receivers"
+concept: "pointers"
+difficulty: 4
+description: |
+  Define a Counter struct with a single field Count int.
+
+  Add a method Increment() that increases Count by 1. This must use a
+  pointer receiver so the change is visible to the caller.
+
+  Add a method Reset() that sets Count back to 0. This also needs a
+  pointer receiver.
+
+  Add a method Value() int that returns the current Count. This can use
+  a value receiver since it only reads the data.
+
+  Examples:
+    c := Counter{}
+    c.Value()     => 0
+    c.Increment()
+    c.Increment()
+    c.Value()     => 2
+    c.Reset()
+    c.Value()     => 0
+template: |
+  package main
+
+  // TODO: define Counter struct
+
+  // TODO: implement Increment with pointer receiver
+
+  // TODO: implement Reset with pointer receiver
+
+  // TODO: implement Value (can use value receiver)
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestCounterInitialValue(t *testing.T) {
+  	c := Counter{}
+  	if c.Value() != 0 {
+  		t.Errorf("expected 0, got %d", c.Value())
+  	}
+  }
+
+  func TestCounterIncrement(t *testing.T) {
+  	c := Counter{}
+  	c.Increment()
+  	c.Increment()
+  	c.Increment()
+  	if c.Value() != 3 {
+  		t.Errorf("expected 3, got %d", c.Value())
+  	}
+  }
+
+  func TestCounterReset(t *testing.T) {
+  	c := Counter{}
+  	c.Increment()
+  	c.Increment()
+  	c.Reset()
+  	if c.Value() != 0 {
+  		t.Errorf("expected 0 after reset, got %d", c.Value())
+  	}
+  }
+
+  func TestCounterIncrementAfterReset(t *testing.T) {
+  	c := Counter{}
+  	c.Increment()
+  	c.Increment()
+  	c.Reset()
+  	c.Increment()
+  	if c.Value() != 1 {
+  		t.Errorf("expected 1, got %d", c.Value())
+  	}
+  }
+
+  func TestCounterPointerReceiver(t *testing.T) {
+  	c := &Counter{}
+  	c.Increment()
+  	c.Increment()
+  	if c.Value() != 2 {
+  		t.Errorf("expected 2, got %d", c.Value())
+  	}
+  }
+hint: "A pointer receiver looks like func (c *Counter) Increment(). It receives a pointer to the struct, so changes to c.Count persist after the method returns."
+solution: |
+  package main
+
+  type Counter struct {
+  	Count int
+  }
+
+  func (c *Counter) Increment() {
+  	c.Count++
+  }
+
+  func (c *Counter) Reset() {
+  	c.Count = 0
+  }
+
+  func (c Counter) Value() int {
+  	return c.Count
+  }
+explanation: |
+  Methods that modify the receiver need a pointer receiver (*Counter):
+    func (c *Counter) Increment() {
+        c.Count++  // modifies the original struct
+    }
+  With a value receiver (Counter), the method gets a copy -- changes
+  would be lost when the method returns.
+
+  Methods that only read data can use either receiver type. Value
+  receivers are simpler and convey "this does not mutate":
+    func (c Counter) Value() int {
+        return c.Count
+    }
+
+  Go automatically takes the address when calling a pointer-receiver
+  method on a value: c.Increment() works whether c is Counter or *Counter.
+  However, a general guideline is: if any method needs a pointer receiver,
+  make all methods use pointer receivers for consistency.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch6.html"

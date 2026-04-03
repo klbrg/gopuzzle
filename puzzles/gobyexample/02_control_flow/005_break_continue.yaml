@@ -1,0 +1,62 @@
+id: "02-005"
+title: "Break and Continue"
+concept: "control-flow"
+difficulty: 2
+description: |
+  Starting from 1, sum consecutive integers.
+  Skip any number divisible by 3.
+  Stop immediately when the running total exceeds 50.
+  Return the total.
+template: |
+  package main
+
+  func sumWithRules(n int) int {
+  	// TODO
+  }
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestSumWithRules(t *testing.T) {
+  	tests := []struct{ in, want int }{
+  		{10, 37},
+  		{20, 52},
+  		{100, 52},
+  		{5, 12},
+  		{3, 3},
+  		{1, 1},
+  	}
+  	for _, tt := range tests {
+  		if got := sumWithRules(tt.in); got != tt.want {
+  			t.Errorf("sumWithRules(%d): expected %d, got %d", tt.in, tt.want, got)
+  		}
+  	}
+  }
+hint: "break exits the loop entirely, continue skips to the next iteration."
+solution: |
+  package main
+
+  func sumWithRules(n int) int {
+  	sum := 0
+  	for i := 1; i <= n; i++ {
+  		if i%3 == 0 {
+  			continue
+  		}
+  		sum += i
+  		if sum > 50 {
+  			break
+  		}
+  	}
+  	return sum
+  }
+explanation: |
+  break exits the innermost loop immediately.
+  continue skips the rest of the current iteration and moves to the next one.
+    for i := 1; i <= n; i++ {
+        if i%3 == 0 { continue }  // skip multiples of 3
+        sum += i
+        if sum > 50 { break }     // stop once past 50
+    }
+  These work the same as in C/Java/Python.
+reference: "https://gobyexample.com/for"

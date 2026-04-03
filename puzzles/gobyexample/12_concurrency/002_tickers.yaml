@@ -1,0 +1,61 @@
+id: "12-002"
+title: "Tickers"
+concept: "concurrency"
+difficulty: 5
+description: |
+  Write collectTicks(d time.Duration, n int) []time.Time that collects exactly n tick
+  timestamps from a ticker with interval d, stops the ticker, and returns the times.
+template: |
+  package main
+
+  import "time"
+
+  func collectTicks(d time.Duration, n int) []time.Time {
+  	// TODO
+  }
+test_code: |
+  package main
+
+  import (
+  	"testing"
+  	"time"
+  )
+
+  func TestCollectTicks(t *testing.T) {
+  	times := collectTicks(10*time.Millisecond, 3)
+  	if len(times) != 3 {
+  		t.Errorf("expected 3 ticks, got %d", len(times))
+  	}
+  	for i := 1; i < len(times); i++ {
+  		if times[i].Before(times[i-1]) {
+  			t.Error("ticks should be in order")
+  		}
+  	}
+  }
+hint: "time.NewTicker(d) fires repeatedly on .C; always call .Stop() when done."
+solution: |
+  package main
+
+  import "time"
+
+  func collectTicks(d time.Duration, n int) []time.Time {
+  	ticker := time.NewTicker(d)
+  	defer ticker.Stop()
+  	var times []time.Time
+  	for i := 0; i < n; i++ {
+  		times = append(times, <-ticker.C)
+  	}
+  	return times
+  }
+explanation: |
+  time.Ticker sends the current time on its C channel at regular intervals:
+    ticker := time.NewTicker(d)
+    defer ticker.Stop()
+    var times []time.Time
+    for i := 0; i < n; i++ {
+        times = append(times, <-ticker.C)
+    }
+    return times
+  Always call Stop() to release resources — use defer for safety.
+  Unlike time.After, a ticker keeps firing until stopped.
+reference: "https://gobyexample.com/tickers"

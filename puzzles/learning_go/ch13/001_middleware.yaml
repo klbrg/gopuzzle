@@ -1,0 +1,159 @@
+id: "lg13-001"
+title: "HTTP Middleware"
+concept: "http"
+difficulty: 7
+description: |
+  Write two HTTP middleware functions:
+
+  1. RequireHeader(header, value string) func(http.Handler) http.Handler — returns
+     middleware that checks for the given request header. If the header is missing or
+     does not match value, respond with 403 Forbidden and body "forbidden". Otherwise,
+     pass through to the next handler.
+
+  2. AddHeader(header, value string) func(http.Handler) http.Handler — returns
+     middleware that adds the given header to the response before calling the next handler.
+
+  Example usage:
+    handler := AddHeader("X-Server", "GoPuzzle")(RequireHeader("X-API-Key", "secret123")(myHandler))
+template: |
+  package main
+
+  import "net/http"
+
+  func RequireHeader(header, value string) func(http.Handler) http.Handler {
+  	// TODO: return middleware that checks for the header
+  	return nil
+  }
+
+  func AddHeader(header, value string) func(http.Handler) http.Handler {
+  	// TODO: return middleware that adds a response header
+  	return nil
+  }
+test_code: |
+  package main
+
+  import (
+  	"net/http"
+  	"net/http/httptest"
+  	"testing"
+  )
+
+  func okHandler() http.Handler {
+  	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+  		w.Write([]byte("ok"))
+  	})
+  }
+
+  func TestRequireHeaderPresent(t *testing.T) {
+  	h := RequireHeader("X-API-Key", "secret")(okHandler())
+  	req := httptest.NewRequest(http.MethodGet, "/", nil)
+  	req.Header.Set("X-API-Key", "secret")
+  	w := httptest.NewRecorder()
+  	h.ServeHTTP(w, req)
+  	if w.Code != 200 {
+  		t.Errorf("expected 200, got %d", w.Code)
+  	}
+  	if w.Body.String() != "ok" {
+  		t.Errorf("expected ok, got %q", w.Body.String())
+  	}
+  }
+
+  func TestRequireHeaderMissing(t *testing.T) {
+  	h := RequireHeader("X-API-Key", "secret")(okHandler())
+  	req := httptest.NewRequest(http.MethodGet, "/", nil)
+  	w := httptest.NewRecorder()
+  	h.ServeHTTP(w, req)
+  	if w.Code != 403 {
+  		t.Errorf("expected 403, got %d", w.Code)
+  	}
+  	if w.Body.String() != "forbidden" {
+  		t.Errorf("expected forbidden, got %q", w.Body.String())
+  	}
+  }
+
+  func TestRequireHeaderWrongValue(t *testing.T) {
+  	h := RequireHeader("X-API-Key", "secret")(okHandler())
+  	req := httptest.NewRequest(http.MethodGet, "/", nil)
+  	req.Header.Set("X-API-Key", "wrong")
+  	w := httptest.NewRecorder()
+  	h.ServeHTTP(w, req)
+  	if w.Code != 403 {
+  		t.Errorf("expected 403, got %d", w.Code)
+  	}
+  }
+
+  func TestAddHeader(t *testing.T) {
+  	h := AddHeader("X-Server", "GoPuzzle")(okHandler())
+  	req := httptest.NewRequest(http.MethodGet, "/", nil)
+  	w := httptest.NewRecorder()
+  	h.ServeHTTP(w, req)
+  	if w.Header().Get("X-Server") != "GoPuzzle" {
+  		t.Errorf("expected X-Server=GoPuzzle, got %q", w.Header().Get("X-Server"))
+  	}
+  	if w.Body.String() != "ok" {
+  		t.Errorf("expected ok, got %q", w.Body.String())
+  	}
+  }
+
+  func TestMiddlewareChain(t *testing.T) {
+  	h := AddHeader("X-Powered-By", "Go")(
+  		RequireHeader("X-Token", "abc")(okHandler()),
+  	)
+  	req := httptest.NewRequest(http.MethodGet, "/", nil)
+  	req.Header.Set("X-Token", "abc")
+  	w := httptest.NewRecorder()
+  	h.ServeHTTP(w, req)
+  	if w.Code != 200 {
+  		t.Errorf("expected 200, got %d", w.Code)
+  	}
+  	if w.Header().Get("X-Powered-By") != "Go" {
+  		t.Errorf("expected X-Powered-By=Go, got %q", w.Header().Get("X-Powered-By"))
+  	}
+  	if w.Body.String() != "ok" {
+  		t.Errorf("expected ok, got %q", w.Body.String())
+  	}
+  }
+hint: "Middleware is a function that takes an http.Handler and returns an http.Handler. Use http.HandlerFunc to wrap a closure. Call h.ServeHTTP(w, r) to pass to the next handler."
+solution: |
+  package main
+
+  import "net/http"
+
+  func RequireHeader(header, value string) func(http.Handler) http.Handler {
+  	return func(h http.Handler) http.Handler {
+  		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+  			if r.Header.Get(header) != value {
+  				w.WriteHeader(http.StatusForbidden)
+  				w.Write([]byte("forbidden"))
+  				return
+  			}
+  			h.ServeHTTP(w, r)
+  		})
+  	}
+  }
+
+  func AddHeader(header, value string) func(http.Handler) http.Handler {
+  	return func(h http.Handler) http.Handler {
+  		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+  			w.Header().Set(header, value)
+  			h.ServeHTTP(w, r)
+  		})
+  	}
+  }
+explanation: |
+  HTTP middleware in Go follows the pattern:
+    func(http.Handler) http.Handler
+  A middleware factory adds configuration:
+    func RequireHeader(header, value string) func(http.Handler) http.Handler
+  This returns a closure that captures the config and wraps the next handler:
+    return func(h http.Handler) http.Handler {
+        return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+            // check/modify request or response
+            h.ServeHTTP(w, r)  // call next handler
+        })
+    }
+  Middleware composes by nesting: outer(inner(handler)).
+  For AddHeader, set the header BEFORE calling h.ServeHTTP so it is included
+  in the response. For RequireHeader, return early with an error status to
+  short-circuit the chain.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch13.html"

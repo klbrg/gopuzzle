@@ -1,0 +1,53 @@
+id: "09-002"
+title: "String Functions"
+concept: "strings"
+difficulty: 2
+description: |
+  Given a string, trim its surrounding whitespace, convert it to uppercase,
+  split it by comma, and return the resulting slice.
+template: |
+  package main
+
+  import "strings"
+
+  func cleanAndSplit(s string) []string {
+  	// TODO
+  }
+test_code: |
+  package main
+
+  import (
+  	"reflect"
+  	"testing"
+  )
+
+  func TestCleanAndSplit(t *testing.T) {
+  	got := cleanAndSplit("  go,python,rust  ")
+  	want := []string{"GO", "PYTHON", "RUST"}
+  	if !reflect.DeepEqual(got, want) {
+  		t.Errorf("expected %v, got %v", want, got)
+  	}
+  }
+hint: "The strings package has TrimSpace, ToUpper, and Split."
+solution: |
+  package main
+
+  import "strings"
+
+  func cleanAndSplit(s string) []string {
+  	s = strings.TrimSpace(s)
+  	s = strings.ToUpper(s)
+  	return strings.Split(s, ",")
+  }
+explanation: |
+  The strings package has many useful functions:
+    s = strings.TrimSpace(s)   // remove leading/trailing whitespace
+    s = strings.ToUpper(s)     // uppercase
+    parts := strings.Split(s, ",")  // split by delimiter
+  Other common ones:
+    strings.Contains(s, sub)     // check substring
+    strings.HasPrefix(s, prefix) // check prefix
+    strings.Replace(s, old, new, n) // replace
+    strings.Join(parts, sep)     // join slice to string
+    strings.Count(s, sub)        // count occurrences
+reference: "https://gobyexample.com/string-functions"

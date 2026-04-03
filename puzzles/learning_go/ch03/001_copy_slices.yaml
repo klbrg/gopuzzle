@@ -1,0 +1,89 @@
+id: "lg03-001"
+title: "Copying Slices"
+concept: "collections"
+difficulty: 3
+description: |
+  Write a function rotateLeft that takes a []int and an integer n, and
+  returns a new []int rotated left by n positions. The original slice
+  must not be modified.
+
+  For example:
+    rotateLeft([]int{1, 2, 3, 4, 5}, 2) returns [3, 4, 5, 1, 2]
+    rotateLeft([]int{1, 2, 3}, 0)        returns [1, 2, 3]
+    rotateLeft([]int{1, 2, 3}, 5)        returns [3, 1, 2]  (wraps around)
+
+  Assume n >= 0.
+
+  Use make and copy (the built-in) or append to build the result
+  without altering the input.
+template: |
+  package main
+
+  func rotateLeft(nums []int, n int) []int {
+  	// TODO: return a new slice rotated left by n positions
+  }
+test_code: |
+  package main
+
+  import (
+  	"reflect"
+  	"testing"
+  )
+
+  func TestRotateLeft(t *testing.T) {
+  	cases := []struct {
+  		input []int
+  		n     int
+  		want  []int
+  	}{
+  		{[]int{1, 2, 3, 4, 5}, 2, []int{3, 4, 5, 1, 2}},
+  		{[]int{1, 2, 3, 4, 5}, 0, []int{1, 2, 3, 4, 5}},
+  		{[]int{1, 2, 3, 4, 5}, 5, []int{1, 2, 3, 4, 5}},
+  		{[]int{1, 2, 3}, 5, []int{3, 1, 2}},
+  		{[]int{10, 20}, 1, []int{20, 10}},
+  		{[]int{42}, 3, []int{42}},
+  		{[]int{}, 2, []int{}},
+  	}
+  	for _, c := range cases {
+  		original := make([]int, len(c.input))
+  		copy(original, c.input)
+  		got := rotateLeft(c.input, c.n)
+  		if !reflect.DeepEqual(got, c.want) {
+  			t.Errorf("rotateLeft(%v, %d): expected %v, got %v",
+  				original, c.n, c.want, got)
+  		}
+  		if !reflect.DeepEqual(c.input, original) {
+  			t.Errorf("rotateLeft modified the original slice: was %v, now %v",
+  				original, c.input)
+  		}
+  	}
+  }
+hint: "Use n % len(nums) to handle wraparound. Then append the tail (from index n onward) with the head (up to index n) to form the rotated slice."
+solution: |
+  package main
+
+  func rotateLeft(nums []int, n int) []int {
+  	if len(nums) == 0 {
+  		return []int{}
+  	}
+  	n = n % len(nums)
+  	result := make([]int, len(nums))
+  	copy(result, nums[n:])
+  	copy(result[len(nums)-n:], nums[:n])
+  	return result
+  }
+explanation: |
+  The key ideas are:
+  1. Handle wraparound with modulo: n = n % len(nums)
+  2. Use make to allocate a new slice so the original is untouched
+  3. Use copy to transfer elements efficiently:
+     copy(result, nums[n:])           // tail goes to the front
+     copy(result[len(nums)-n:], nums[:n])  // head goes to the back
+
+  An alternative approach using append:
+     result := append([]int{}, nums[n:]...)
+     result = append(result, nums[:n]...)
+  Both approaches avoid modifying the original slice. The copy
+  built-in returns the number of elements copied, which is the
+  minimum of len(dst) and len(src).
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch3.html"

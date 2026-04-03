@@ -1,0 +1,69 @@
+id: "06-002"
+title: "Generics"
+concept: "interfaces"
+difficulty: 6
+description: |
+  Write a generic Map function that transforms a slice by applying a function to each element.
+  Write a generic Contains function that reports whether a target value appears in a slice.
+template: |
+  package main
+
+  func Map[T, U any](slice []T, f func(T) U) []U {
+  	// TODO
+  }
+
+  func Contains[T comparable](slice []T, target T) bool {
+  	// TODO
+  }
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestMap(t *testing.T) {
+  	doubled := Map([]int{1, 2, 3}, func(n int) int { return n * 2 })
+  	if doubled[0] != 2 || doubled[1] != 4 || doubled[2] != 6 {
+  		t.Errorf("unexpected: %v", doubled)
+  	}
+  	lengths := Map([]string{"go", "golang"}, func(s string) int { return len(s) })
+  	if lengths[0] != 2 || lengths[1] != 6 {
+  		t.Errorf("unexpected: %v", lengths)
+  	}
+  }
+
+  func TestContains(t *testing.T) {
+  	if !Contains([]int{1, 2, 3}, 2) {
+  		t.Error("expected 2 to be found")
+  	}
+  	if Contains([]string{"a", "b"}, "c") {
+  		t.Error("c should not be found")
+  	}
+  }
+hint: "Type parameters go in square brackets: func Map[T, U any](...). comparable allows == comparisons."
+solution: |
+  package main
+
+  func Map[T, U any](slice []T, f func(T) U) []U {
+  	result := make([]U, len(slice))
+  	for i, v := range slice {
+  		result[i] = f(v)
+  	}
+  	return result
+  }
+
+  func Contains[T comparable](slice []T, target T) bool {
+  	for _, v := range slice {
+  		if v == target {
+  			return true
+  		}
+  	}
+  	return false
+  }
+explanation: |
+  Generics (Go 1.18+) let functions work with multiple types.
+  Type parameters are declared in square brackets:
+    func Map[T, U any](slice []T, f func(T) U) []U
+  any is shorthand for interface{} — any type is accepted.
+  comparable allows == comparisons (needed for Contains).
+  The compiler infers type arguments at call sites — no need to write Map[int, int](...).
+reference: "https://gobyexample.com/generics"

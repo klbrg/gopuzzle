@@ -1,0 +1,114 @@
+id: "06-001"
+title: "Interfaces"
+concept: "interfaces"
+difficulty: 4
+description: |
+  Define a Notifier interface with a Notify(msg string) string method.
+  Implement it with EmailNotifier (has Addr string) which returns "EMAIL: <Addr>: <msg>",
+  and SMSNotifier (has Phone string) which returns "SMS: <Phone>: <msg>".
+  Write broadcastAll(notifiers []Notifier, msg string) []string that calls Notify on
+  each notifier and collects the results into a slice.
+template: |
+  package main
+
+  // TODO: define the Notifier interface
+
+  // TODO: define EmailNotifier and implement Notify
+
+  // TODO: define SMSNotifier and implement Notify
+
+  // TODO: write broadcastAll
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestEmailNotifier(t *testing.T) {
+  	e := EmailNotifier{Addr: "alice@example.com"}
+  	got := e.Notify("hello")
+  	want := "EMAIL: alice@example.com: hello"
+  	if got != want {
+  		t.Errorf("expected %q, got %q", want, got)
+  	}
+  }
+
+  func TestSMSNotifier(t *testing.T) {
+  	s := SMSNotifier{Phone: "+1234567890"}
+  	got := s.Notify("hello")
+  	want := "SMS: +1234567890: hello"
+  	if got != want {
+  		t.Errorf("expected %q, got %q", want, got)
+  	}
+  }
+
+  func TestBroadcastAll(t *testing.T) {
+  	notifiers := []Notifier{
+  		EmailNotifier{Addr: "bob@test.com"},
+  		SMSNotifier{Phone: "+9999"},
+  		EmailNotifier{Addr: "carol@test.com"},
+  	}
+  	results := broadcastAll(notifiers, "alert")
+  	expected := []string{
+  		"EMAIL: bob@test.com: alert",
+  		"SMS: +9999: alert",
+  		"EMAIL: carol@test.com: alert",
+  	}
+  	if len(results) != len(expected) {
+  		t.Fatalf("expected %d results, got %d", len(expected), len(results))
+  	}
+  	for i, want := range expected {
+  		if results[i] != want {
+  			t.Errorf("result[%d]: expected %q, got %q", i, want, results[i])
+  		}
+  	}
+  }
+
+  func TestBroadcastAllEmpty(t *testing.T) {
+  	results := broadcastAll(nil, "test")
+  	if len(results) != 0 {
+  		t.Errorf("expected empty results for nil notifiers, got %d", len(results))
+  	}
+  }
+hint: "A type implements an interface automatically if it has all the required methods. broadcastAll ranges over the slice and appends each Notify result."
+solution: |
+  package main
+
+  type Notifier interface {
+  	Notify(msg string) string
+  }
+
+  type EmailNotifier struct {
+  	Addr string
+  }
+
+  func (e EmailNotifier) Notify(msg string) string {
+  	return "EMAIL: " + e.Addr + ": " + msg
+  }
+
+  type SMSNotifier struct {
+  	Phone string
+  }
+
+  func (s SMSNotifier) Notify(msg string) string {
+  	return "SMS: " + s.Phone + ": " + msg
+  }
+
+  func broadcastAll(notifiers []Notifier, msg string) []string {
+  	var results []string
+  	for _, n := range notifiers {
+  		results = append(results, n.Notify(msg))
+  	}
+  	return results
+  }
+explanation: |
+  Interfaces in Go are satisfied implicitly — no "implements" keyword needed:
+    type Notifier interface {
+        Notify(msg string) string
+    }
+  Any type with a Notify(string) string method is a Notifier automatically.
+  broadcastAll demonstrates polymorphism — it works with any Notifier:
+    for _, n := range notifiers {
+        results = append(results, n.Notify(msg))
+    }
+  This pattern of collecting interface results into a slice is common in Go.
+reference: "https://gobyexample.com/interfaces"

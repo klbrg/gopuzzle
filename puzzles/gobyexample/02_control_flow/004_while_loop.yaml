@@ -1,0 +1,53 @@
+id: "02-004"
+title: "While-style loop"
+concept: "control-flow"
+difficulty: 2
+description: |
+  Given an integer n, keep dividing it by 2 (integer division) until it reaches 0.
+  Return how many divisions it took.
+template: |
+  package main
+
+  func countHalves(n int) int {
+  	// TODO
+  }
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestCountHalves(t *testing.T) {
+  	tests := []struct{ in, want int }{
+  		{1, 1},
+  		{2, 2},
+  		{7, 3},
+  		{16, 5},
+  		{100, 7},
+  		{0, 0},
+  	}
+  	for _, tt := range tests {
+  		if got := countHalves(tt.in); got != tt.want {
+  			t.Errorf("countHalves(%d): expected %d, got %d", tt.in, tt.want, got)
+  		}
+  	}
+  }
+hint: "Go has no while keyword — use for with just a condition."
+solution: |
+  package main
+
+  func countHalves(n int) int {
+  	count := 0
+  	for n > 0 {
+  		n /= 2
+  		count++
+  	}
+  	return count
+  }
+explanation: |
+  Go's for loop doubles as a while loop when you omit the init and post statements:
+    for n > 0 {
+        n /= 2
+        count++
+    }
+  This is idiomatic Go — there is no separate while keyword.
+reference: "https://gobyexample.com/for"

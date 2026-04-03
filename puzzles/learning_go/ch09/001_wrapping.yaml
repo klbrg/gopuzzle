@@ -1,0 +1,137 @@
+id: "lg09-001"
+title: "Error Wrapping"
+concept: "errors"
+difficulty: 5
+description: |
+  Write a function lookupUser(id int) (string, error) that returns a user name
+  for known IDs and an error for unknown ones. Known users:
+    1 => "Alice"
+    2 => "Bob"
+  For unknown IDs, return a sentinel error ErrNotFound.
+
+  Write a function greetUser(id int) (string, error) that calls lookupUser
+  and, if it fails, wraps the error with additional context using fmt.Errorf
+  and the %w verb. The wrapped message should be:
+    "greetUser(id=<id>): <original error>"
+  On success, return "Hello, <name>!" with no error.
+
+  The caller should be able to use errors.Is to detect ErrNotFound even
+  through the wrapping.
+
+  Examples:
+    greetUser(1)  => ("Hello, Alice!", nil)
+    greetUser(99) => ("", error wrapping ErrNotFound)
+    errors.Is(err, ErrNotFound) => true
+template: |
+  package main
+
+  import (
+  	"errors"
+  	"fmt"
+  )
+
+  // TODO: define ErrNotFound sentinel error
+
+  // TODO: implement lookupUser
+
+  // TODO: implement greetUser that wraps errors with context
+test_code: |
+  package main
+
+  import (
+  	"errors"
+  	"strings"
+  	"testing"
+  )
+
+  func TestLookupUserFound(t *testing.T) {
+  	name, err := lookupUser(1)
+  	if err != nil || name != "Alice" {
+  		t.Errorf("expected (Alice, nil), got (%q, %v)", name, err)
+  	}
+  }
+
+  func TestLookupUserNotFound(t *testing.T) {
+  	_, err := lookupUser(99)
+  	if !errors.Is(err, ErrNotFound) {
+  		t.Errorf("expected ErrNotFound, got %v", err)
+  	}
+  }
+
+  func TestGreetUserSuccess(t *testing.T) {
+  	msg, err := greetUser(2)
+  	if err != nil || msg != "Hello, Bob!" {
+  		t.Errorf("expected (Hello, Bob!, nil), got (%q, %v)", msg, err)
+  	}
+  }
+
+  func TestGreetUserWrapsError(t *testing.T) {
+  	_, err := greetUser(99)
+  	if err == nil {
+  		t.Fatal("expected error for unknown user")
+  	}
+  	if !errors.Is(err, ErrNotFound) {
+  		t.Errorf("wrapped error should match ErrNotFound via errors.Is")
+  	}
+  	if !strings.Contains(err.Error(), "greetUser") {
+  		t.Errorf("wrapped error should contain context 'greetUser': %v", err)
+  	}
+  	if !strings.Contains(err.Error(), "99") {
+  		t.Errorf("wrapped error should contain the ID: %v", err)
+  	}
+  }
+
+  func TestGreetUserErrorMessage(t *testing.T) {
+  	_, err := greetUser(42)
+  	if err == nil {
+  		t.Fatal("expected error")
+  	}
+  	if !strings.Contains(err.Error(), "42") {
+  		t.Errorf("error should mention the ID 42: %v", err)
+  	}
+  }
+hint: "Use fmt.Errorf(\"context: %%w\", err) to wrap an error. The %%w verb preserves the error chain so errors.Is can find the original sentinel."
+solution: |
+  package main
+
+  import (
+  	"errors"
+  	"fmt"
+  )
+
+  var ErrNotFound = errors.New("not found")
+
+  func lookupUser(id int) (string, error) {
+  	users := map[int]string{
+  		1: "Alice",
+  		2: "Bob",
+  	}
+  	name, ok := users[id]
+  	if !ok {
+  		return "", ErrNotFound
+  	}
+  	return name, nil
+  }
+
+  func greetUser(id int) (string, error) {
+  	name, err := lookupUser(id)
+  	if err != nil {
+  		return "", fmt.Errorf("greetUser(id=%d): %w", id, err)
+  	}
+  	return fmt.Sprintf("Hello, %s!", name), nil
+  }
+explanation: |
+  Error wrapping adds context while preserving the error chain:
+    return fmt.Errorf("greetUser(id=%d): %w", id, err)
+  The %w verb (not %v) wraps the error so that errors.Is and errors.As
+  can still match the original error through any number of wrapping layers:
+    errors.Is(err, ErrNotFound) // true, even after wrapping
+
+  This is a core Go pattern: each function that handles an error either
+  deals with it or wraps it with context before passing it up. This gives
+  you a trail of breadcrumbs when debugging:
+    "greetUser(id=99): not found"
+
+  Use %v instead of %w when you want to include the message but NOT
+  allow callers to unwrap and match the inner error.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch9.html"

@@ -1,0 +1,98 @@
+id: "16-005"
+title: "Temporary Files and Directories"
+concept: "io"
+difficulty: 4
+description: |
+  Write writeTempFile(content string) (path string, err error) that creates a temporary
+  file, writes content to it, and returns its path (caller cleans up).
+  Write withTempDir(f func(dir string) error) error that creates a temp directory,
+  calls f with it, then removes the directory and all contents regardless of error.
+template: |
+  package main
+
+  import (
+  	"os"
+  )
+
+  func writeTempFile(content string) (string, error) {
+  	// TODO
+  }
+
+  func withTempDir(f func(dir string) error) error {
+  	// TODO
+  }
+test_code: |
+  package main
+
+  import (
+  	"os"
+  	"testing"
+  )
+
+  func TestWriteTempFile(t *testing.T) {
+  	path, err := writeTempFile("test content")
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	defer os.Remove(path)
+  	data, _ := os.ReadFile(path)
+  	if string(data) != "test content" {
+  		t.Errorf("unexpected: %q", string(data))
+  	}
+  }
+
+  func TestWithTempDir(t *testing.T) {
+  	var captured string
+  	err := withTempDir(func(dir string) error {
+  		captured = dir
+  		return nil
+  	})
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if _, err := os.Stat(captured); !os.IsNotExist(err) {
+  		t.Error("temp dir should be removed after withTempDir")
+  	}
+  }
+hint: "os.CreateTemp creates a temp file; os.MkdirTemp creates a temp dir; os.RemoveAll deletes a tree."
+solution: |
+  package main
+
+  import (
+  	"os"
+  )
+
+  func writeTempFile(content string) (string, error) {
+  	f, err := os.CreateTemp("", "gopuzzle-*")
+  	if err != nil {
+  		return "", err
+  	}
+  	defer f.Close()
+  	if _, err := f.WriteString(content); err != nil {
+  		return "", err
+  	}
+  	return f.Name(), nil
+  }
+
+  func withTempDir(f func(dir string) error) error {
+  	dir, err := os.MkdirTemp("", "gopuzzle-*")
+  	if err != nil {
+  		return err
+  	}
+  	defer os.RemoveAll(dir)
+  	return f(dir)
+  }
+explanation: |
+  Temporary files:
+    f, err := os.CreateTemp("", "gopuzzle-*")  // "" = system temp dir
+    defer f.Close()
+    f.WriteString(content)
+    return f.Name(), nil
+  Temporary directories:
+    dir, err := os.MkdirTemp("", "gopuzzle-*")
+    if err != nil { return err }
+    defer os.RemoveAll(dir)   // removes dir and all contents
+    return f(dir)
+  os.RemoveAll is safe even if the directory doesn't exist.
+  In tests, prefer t.TempDir() — it's cleaned up automatically.
+reference: "https://gobyexample.com/temporary-files-and-directories"

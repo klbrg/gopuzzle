@@ -1,0 +1,122 @@
+id: "lg05-002"
+title: "Closures Returning Closures"
+concept: "functions"
+difficulty: 3
+description: |
+  Write a function makeAccumulator that takes an initial int value and
+  returns a function. The returned function takes an int and returns an
+  int: each call adds its argument to a running total (starting from
+  the initial value) and returns the new total.
+
+  Also write a function makePrefixer that takes a string prefix and
+  returns a function that takes a string and returns the prefix joined
+  with a space to the argument.
+
+  For example:
+    acc := makeAccumulator(10)
+    acc(5)   returns 15
+    acc(3)   returns 18
+    acc(-8)  returns 10
+
+    greet := makePrefixer("Hello")
+    greet("Alice") returns "Hello Alice"
+    greet("Bob")   returns "Hello Bob"
+template: |
+  package main
+
+  // TODO: implement makeAccumulator
+
+  // TODO: implement makePrefixer
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestMakeAccumulator(t *testing.T) {
+  	acc := makeAccumulator(0)
+  	if got := acc(5); got != 5 {
+  		t.Errorf("acc(5): expected 5, got %d", got)
+  	}
+  	if got := acc(3); got != 8 {
+  		t.Errorf("acc(3): expected 8, got %d", got)
+  	}
+  	if got := acc(-2); got != 6 {
+  		t.Errorf("acc(-2): expected 6, got %d", got)
+  	}
+  }
+
+  func TestMakeAccumulatorWithInitial(t *testing.T) {
+  	acc := makeAccumulator(100)
+  	if got := acc(10); got != 110 {
+  		t.Errorf("acc(10): expected 110, got %d", got)
+  	}
+  	if got := acc(-50); got != 60 {
+  		t.Errorf("acc(-50): expected 60, got %d", got)
+  	}
+  }
+
+  func TestAccumulatorsAreIndependent(t *testing.T) {
+  	a := makeAccumulator(0)
+  	b := makeAccumulator(0)
+  	a(10)
+  	b(20)
+  	if got := a(0); got != 10 {
+  		t.Errorf("a should be 10, got %d", got)
+  	}
+  	if got := b(0); got != 20 {
+  		t.Errorf("b should be 20, got %d", got)
+  	}
+  }
+
+  func TestMakePrefixer(t *testing.T) {
+  	hello := makePrefixer("Hello")
+  	bye := makePrefixer("Goodbye")
+
+  	if got := hello("Alice"); got != "Hello Alice" {
+  		t.Errorf("expected %q, got %q", "Hello Alice", got)
+  	}
+  	if got := hello("Bob"); got != "Hello Bob" {
+  		t.Errorf("expected %q, got %q", "Hello Bob", got)
+  	}
+  	if got := bye("World"); got != "Goodbye World" {
+  		t.Errorf("expected %q, got %q", "Goodbye World", got)
+  	}
+  }
+hint: "The returned function captures the variable from the outer function's scope. For makeAccumulator, the closure captures the total variable and mutates it on each call."
+solution: |
+  package main
+
+  func makeAccumulator(initial int) func(int) int {
+  	total := initial
+  	return func(n int) int {
+  		total += n
+  		return total
+  	}
+  }
+
+  func makePrefixer(prefix string) func(string) string {
+  	return func(body string) string {
+  		return prefix + " " + body
+  	}
+  }
+explanation: |
+  A closure is a function that captures variables from its enclosing
+  scope. When makeAccumulator returns, the inner function still has
+  access to the total variable, and each call modifies it:
+
+    func makeAccumulator(initial int) func(int) int {
+        total := initial
+        return func(n int) int {
+            total += n   // modifies the captured variable
+            return total
+        }
+    }
+
+  Each call to makeAccumulator creates a new total variable, so
+  multiple accumulators are independent. This is how closures
+  maintain state without structs or global variables.
+
+  makePrefixer is simpler: it captures prefix but never modifies it
+  (a read-only closure). Both patterns are extremely common in Go
+  for callbacks, middleware, and factory functions.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch5.html"

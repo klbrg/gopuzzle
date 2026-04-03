@@ -1,0 +1,70 @@
+id: "09-005"
+title: "Regular Expressions"
+concept: "strings"
+difficulty: 5
+description: |
+  Write isEmail(s string) bool that returns true if s looks like a simple email (word@word.word).
+  Write extractNumbers(s string) []string that returns all sequences of digits found in s.
+template: |
+  package main
+
+  import "regexp"
+
+  func isEmail(s string) bool {
+  	// TODO
+  }
+
+  func extractNumbers(s string) []string {
+  	// TODO
+  }
+test_code: |
+  package main
+
+  import (
+  	"reflect"
+  	"testing"
+  )
+
+  func TestIsEmail(t *testing.T) {
+  	if !isEmail("user@example.com") {
+  		t.Error("user@example.com should be valid")
+  	}
+  	if isEmail("notanemail") {
+  		t.Error("notanemail should be invalid")
+  	}
+  }
+
+  func TestExtractNumbers(t *testing.T) {
+  	got := extractNumbers("abc 123 def 456 g 7")
+  	want := []string{"123", "456", "7"}
+  	if !reflect.DeepEqual(got, want) {
+  		t.Errorf("expected %v, got %v", want, got)
+  	}
+  }
+hint: "regexp.MustCompile compiles a pattern; use MatchString to test and FindAllString to collect matches."
+solution: |
+  package main
+
+  import "regexp"
+
+  var emailRe = regexp.MustCompile(`^\w+@\w+\.\w+$`)
+
+  func isEmail(s string) bool {
+  	return emailRe.MatchString(s)
+  }
+
+  var numRe = regexp.MustCompile(`\d+`)
+
+  func extractNumbers(s string) []string {
+  	return numRe.FindAllString(s, -1)
+  }
+explanation: |
+  regexp.MustCompile compiles a regex at startup (panics on bad pattern — good for constants).
+    var emailRe = regexp.MustCompile(`\w+@\w+\.\w+`)
+    func isEmail(s string) bool { return emailRe.MatchString(s) }
+
+    var numRe = regexp.MustCompile(`\d+`)
+    func extractNumbers(s string) []string { return numRe.FindAllString(s, -1) }
+  -1 means "find all". Use ReplaceAllString, FindStringSubmatch for capture groups.
+  Compile patterns once (package-level) rather than inside functions for performance.
+reference: "https://gobyexample.com/regular-expressions"

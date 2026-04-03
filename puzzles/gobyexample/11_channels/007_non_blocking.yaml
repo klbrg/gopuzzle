@@ -1,0 +1,151 @@
+id: "11-007"
+title: "Non-Blocking Channel Operations"
+concept: "channels"
+difficulty: 6
+description: |
+  Implement pollChannels(channels []<-chan string, timeout time.Duration) (int, string, bool)
+  that checks a list of channels in priority order (index 0 is highest priority). Return
+  the index and value of the first channel that has data ready, plus true. If no channel
+  is ready, wait up to timeout for any of them, returning the index and value if one becomes
+  ready. Return (-1, "", false) if the timeout expires with nothing available.
+template: |
+  package main
+
+  import "time"
+
+  func pollChannels(channels []<-chan string, timeout time.Duration) (int, string, bool) {
+  	// TODO: check channels in priority order without blocking
+  	// If none ready, wait up to timeout for any channel
+  	// Return (index, value, true) or (-1, "", false)
+  	return -1, "", false
+  }
+test_code: |
+  package main
+
+  import (
+  	"testing"
+  	"time"
+  )
+
+  func TestPollPriority(t *testing.T) {
+  	ch0 := make(chan string, 1)
+  	ch1 := make(chan string, 1)
+  	ch0 <- "high"
+  	ch1 <- "low"
+
+  	idx, val, ok := pollChannels([]<-chan string{ch0, ch1}, time.Second)
+  	if !ok || idx != 0 || val != "high" {
+  		t.Errorf("expected (0, high, true), got (%d, %s, %v)", idx, val, ok)
+  	}
+  }
+
+  func TestPollLowerPriority(t *testing.T) {
+  	ch0 := make(chan string, 1)
+  	ch1 := make(chan string, 1)
+  	ch1 <- "low"
+
+  	idx, val, ok := pollChannels([]<-chan string{ch0, ch1}, 50*time.Millisecond)
+  	if !ok || idx != 1 || val != "low" {
+  		t.Errorf("expected (1, low, true), got (%d, %s, %v)", idx, val, ok)
+  	}
+  }
+
+  func TestPollTimeout(t *testing.T) {
+  	ch0 := make(chan string, 1)
+  	ch1 := make(chan string, 1)
+
+  	start := time.Now()
+  	idx, val, ok := pollChannels([]<-chan string{ch0, ch1}, 50*time.Millisecond)
+  	elapsed := time.Since(start)
+
+  	if ok || idx != -1 || val != "" {
+  		t.Errorf("expected (-1, \"\", false), got (%d, %s, %v)", idx, val, ok)
+  	}
+  	if elapsed < 40*time.Millisecond {
+  		t.Errorf("returned too fast: %v", elapsed)
+  	}
+  }
+
+  func TestPollEmpty(t *testing.T) {
+  	idx, val, ok := pollChannels(nil, 10*time.Millisecond)
+  	if ok || idx != -1 || val != "" {
+  		t.Errorf("expected (-1, \"\", false) for empty channels, got (%d, %s, %v)", idx, val, ok)
+  	}
+  }
+
+  func TestPollDelayedArrival(t *testing.T) {
+  	ch0 := make(chan string, 1)
+  	go func() {
+  		time.Sleep(20 * time.Millisecond)
+  		ch0 <- "arrived"
+  	}()
+
+  	idx, val, ok := pollChannels([]<-chan string{ch0}, 200*time.Millisecond)
+  	if !ok || idx != 0 || val != "arrived" {
+  		t.Errorf("expected (0, arrived, true), got (%d, %s, %v)", idx, val, ok)
+  	}
+  }
+hint: "First loop through channels using select/default to check each without blocking (priority order). If none ready, use reflect.Select or fan all channels into one with goroutines, adding a time.After case for timeout."
+solution: |
+  package main
+
+  import "time"
+
+  func pollChannels(channels []<-chan string, timeout time.Duration) (int, string, bool) {
+  	// Priority pass: check each channel in order without blocking
+  	for i, ch := range channels {
+  		select {
+  		case val := <-ch:
+  			return i, val, true
+  		default:
+  		}
+  	}
+
+  	if len(channels) == 0 {
+  		time.Sleep(timeout)
+  		return -1, "", false
+  	}
+
+  	// No channel ready — fan in all channels and wait with timeout
+  	type result struct {
+  		index int
+  		value string
+  	}
+  	found := make(chan result, len(channels))
+  	for i, ch := range channels {
+  		go func() {
+  			val, ok := <-ch
+  			if ok {
+  				found <- result{i, val}
+  			}
+  		}()
+  	}
+
+  	select {
+  	case r := <-found:
+  		return r.index, r.value, true
+  	case <-time.After(timeout):
+  		return -1, "", false
+  	}
+  }
+explanation: |
+  Priority polling uses non-blocking select with default:
+    for i, ch := range channels {
+        select {
+        case val := <-ch:
+            return i, val, true
+        default:
+        }
+    }
+  If no channel is ready, we fan all channels into one result channel
+  using goroutines, then select between that and a timeout:
+    select {
+    case r := <-found:
+        return r.index, r.value, true
+    case <-time.After(timeout):
+        return -1, "", false
+    }
+  The select/default pattern is the core of non-blocking channel
+  operations in Go. Combining it with time.After provides timeout
+  semantics.
+reference: "https://gobyexample.com/non-blocking-channel-operations"

@@ -1,0 +1,126 @@
+id: "17-002"
+title: "Command-Line Arguments"
+concept: "cli"
+difficulty: 2
+description: |
+  Write parseArgs(args []string) (flags map[string]string, positional []string) that
+  splits a slice of command-line arguments into flags and positional arguments.
+
+  Rules:
+    - An item starting with "-" is a flag name; the next item is its value.
+    - A flag at the end of the slice with no following value gets an empty string as its value.
+    - All other items are positional arguments.
+    - Strip the leading "-" or "--" prefix from flag names in the map.
+template: |
+  package main
+
+  func parseArgs(args []string) (flags map[string]string, positional []string) {
+  	// TODO: iterate through args. When an item starts with "-",
+  	// treat it as a flag key (strip the prefix) and consume the
+  	// next item as its value. Otherwise, append to positional.
+  }
+test_code: |
+  package main
+
+  import (
+  	"reflect"
+  	"testing"
+  )
+
+  func TestParseArgsMixed(t *testing.T) {
+  	flags, pos := parseArgs([]string{"-v", "2", "file1.txt", "--output", "result.csv", "file2.txt"})
+  	wantFlags := map[string]string{"v": "2", "output": "result.csv"}
+  	wantPos := []string{"file1.txt", "file2.txt"}
+  	if !reflect.DeepEqual(flags, wantFlags) {
+  		t.Errorf("flags: expected %v, got %v", wantFlags, flags)
+  	}
+  	if !reflect.DeepEqual(pos, wantPos) {
+  		t.Errorf("positional: expected %v, got %v", wantPos, pos)
+  	}
+  }
+
+  func TestParseArgsNoFlags(t *testing.T) {
+  	flags, pos := parseArgs([]string{"hello", "world"})
+  	if len(flags) != 0 {
+  		t.Errorf("expected no flags, got %v", flags)
+  	}
+  	if !reflect.DeepEqual(pos, []string{"hello", "world"}) {
+  		t.Errorf("expected [hello world], got %v", pos)
+  	}
+  }
+
+  func TestParseArgsOnlyFlags(t *testing.T) {
+  	flags, pos := parseArgs([]string{"-host", "localhost", "-port", "8080"})
+  	wantFlags := map[string]string{"host": "localhost", "port": "8080"}
+  	if !reflect.DeepEqual(flags, wantFlags) {
+  		t.Errorf("flags: expected %v, got %v", wantFlags, flags)
+  	}
+  	if len(pos) != 0 {
+  		t.Errorf("expected no positional, got %v", pos)
+  	}
+  }
+
+  func TestParseArgsEmpty(t *testing.T) {
+  	flags, pos := parseArgs([]string{})
+  	if len(flags) != 0 {
+  		t.Errorf("expected no flags, got %v", flags)
+  	}
+  	if len(pos) != 0 {
+  		t.Errorf("expected no positional, got %v", pos)
+  	}
+  }
+
+  func TestParseArgsTrailingFlag(t *testing.T) {
+  	flags, pos := parseArgs([]string{"file.txt", "-verbose"})
+  	wantFlags := map[string]string{"verbose": ""}
+  	wantPos := []string{"file.txt"}
+  	if !reflect.DeepEqual(flags, wantFlags) {
+  		t.Errorf("flags: expected %v, got %v", wantFlags, flags)
+  	}
+  	if !reflect.DeepEqual(pos, wantPos) {
+  		t.Errorf("positional: expected %v, got %v", wantPos, pos)
+  	}
+  }
+
+  func TestParseArgsDoubleDash(t *testing.T) {
+  	flags, _ := parseArgs([]string{"--name", "Alice"})
+  	if flags["name"] != "Alice" {
+  		t.Errorf("expected name=Alice, got name=%q", flags["name"])
+  	}
+  }
+hint: "Use strings.TrimLeft(arg, \"-\") to strip prefixes. Track index manually so you can skip the value arg after consuming a flag."
+solution: |
+  package main
+
+  import "strings"
+
+  func parseArgs(args []string) (flags map[string]string, positional []string) {
+  	flags = make(map[string]string)
+  	i := 0
+  	for i < len(args) {
+  		if strings.HasPrefix(args[i], "-") {
+  			key := strings.TrimLeft(args[i], "-")
+  			if i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") {
+  				flags[key] = args[i+1]
+  				i += 2
+  			} else {
+  				flags[key] = ""
+  				i++
+  			}
+  		} else {
+  			positional = append(positional, args[i])
+  			i++
+  		}
+  	}
+  	return flags, positional
+  }
+explanation: |
+  At runtime, os.Args holds command-line arguments:
+    os.Args[0] — program name
+    os.Args[1:] — user arguments
+  Manual parsing uses index-based iteration so you can skip ahead
+  when consuming a flag's value. strings.TrimLeft removes all leading
+  dashes, handling both -flag and --flag styles.
+  For production use, prefer the flag package or libraries like cobra,
+  but understanding manual parsing clarifies what those tools do.
+reference: "https://gobyexample.com/command-line-arguments"

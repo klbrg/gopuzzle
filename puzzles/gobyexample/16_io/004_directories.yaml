@@ -1,0 +1,99 @@
+id: "16-004"
+title: "Directories"
+concept: "io"
+difficulty: 4
+description: |
+  Write listDir(path string) ([]string, error) that returns the names of all entries
+  in a directory, sorted alphabetically.
+  Write makeTree(base string) error that creates base/subdir/file.txt containing "hello".
+template: |
+  package main
+
+  import (
+  	"os"
+  	"slices"
+  )
+
+  func listDir(path string) ([]string, error) {
+  	// TODO
+  }
+
+  func makeTree(base string) error {
+  	// TODO
+  }
+test_code: |
+  package main
+
+  import (
+  	"os"
+  	"path/filepath"
+  	"testing"
+  )
+
+  func TestListDir(t *testing.T) {
+  	dir := t.TempDir()
+  	os.WriteFile(filepath.Join(dir, "b.txt"), nil, 0644)
+  	os.WriteFile(filepath.Join(dir, "a.txt"), nil, 0644)
+  	os.Mkdir(filepath.Join(dir, "subdir"), 0755)
+
+  	names, err := listDir(dir)
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if len(names) != 3 || names[0] != "a.txt" || names[1] != "b.txt" || names[2] != "subdir" {
+  		t.Errorf("unexpected: %v", names)
+  	}
+  }
+
+  func TestMakeTree(t *testing.T) {
+  	base := t.TempDir()
+  	if err := makeTree(base); err != nil {
+  		t.Fatal(err)
+  	}
+  	data, err := os.ReadFile(filepath.Join(base, "subdir", "file.txt"))
+  	if err != nil || string(data) != "hello" {
+  		t.Errorf("unexpected: data=%q err=%v", string(data), err)
+  	}
+  }
+hint: "os.ReadDir returns sorted []DirEntry; os.MkdirAll creates nested directories."
+solution: |
+  package main
+
+  import (
+  	"os"
+  	"path/filepath"
+  	"slices"
+  )
+
+  func listDir(path string) ([]string, error) {
+  	entries, err := os.ReadDir(path)
+  	if err != nil {
+  		return nil, err
+  	}
+  	names := make([]string, 0, len(entries))
+  	for _, e := range entries {
+  		names = append(names, e.Name())
+  	}
+  	slices.Sort(names)
+  	return names, nil
+  }
+
+  func makeTree(base string) error {
+  	dir := filepath.Join(base, "subdir")
+  	if err := os.MkdirAll(dir, 0755); err != nil {
+  		return err
+  	}
+  	return os.WriteFile(filepath.Join(dir, "file.txt"), []byte("hello"), 0644)
+  }
+explanation: |
+  os.ReadDir lists a directory:
+    entries, err := os.ReadDir(path)
+    for _, e := range entries {
+        names = append(names, e.Name())  // e.IsDir() for type check
+    }
+  os.ReadDir returns entries sorted by name already.
+  Create directories:
+    os.Mkdir(path, 0755)       // single dir
+    os.MkdirAll(path, 0755)    // create all missing parents
+  t.TempDir() in tests creates a temp dir that's auto-cleaned after the test.
+reference: "https://gobyexample.com/directories"

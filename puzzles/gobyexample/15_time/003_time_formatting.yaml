@@ -1,0 +1,117 @@
+id: "15-003"
+title: "Time Formatting / Parsing"
+concept: "time"
+difficulty: 4
+description: |
+  Write normalizeDate(input string) (string, error) that accepts a date string in any
+  of these three formats:
+    - "2006-01-02"       (ISO style)
+    - "Jan 2, 2006"      (month name style)
+    - "02/01/2006"       (DD/MM/YYYY style)
+  and returns the date in canonical "2006-01-02" format.
+
+  If the input does not match any of the three formats, return an error.
+template: |
+  package main
+
+  import (
+  	"fmt"
+  	"time"
+  )
+
+  func normalizeDate(input string) (string, error) {
+  	// TODO: try parsing input against each accepted layout.
+  	// Return the date formatted as "2006-01-02", or an error
+  	// if none of the layouts match.
+  }
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestNormalizeDateISO(t *testing.T) {
+  	got, err := normalizeDate("2024-03-15")
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if got != "2024-03-15" {
+  		t.Errorf("expected %q, got %q", "2024-03-15", got)
+  	}
+  }
+
+  func TestNormalizeDateMonthName(t *testing.T) {
+  	got, err := normalizeDate("Mar 15, 2024")
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if got != "2024-03-15" {
+  		t.Errorf("expected %q, got %q", "2024-03-15", got)
+  	}
+  }
+
+  func TestNormalizeDateDDMMYYYY(t *testing.T) {
+  	got, err := normalizeDate("15/03/2024")
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if got != "2024-03-15" {
+  		t.Errorf("expected %q, got %q", "2024-03-15", got)
+  	}
+  }
+
+  func TestNormalizeDateJanuary(t *testing.T) {
+  	got, err := normalizeDate("Jan 1, 2000")
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if got != "2000-01-01" {
+  		t.Errorf("expected %q, got %q", "2000-01-01", got)
+  	}
+  }
+
+  func TestNormalizeDateInvalid(t *testing.T) {
+  	_, err := normalizeDate("not-a-date")
+  	if err == nil {
+  		t.Error("expected error for invalid input")
+  	}
+  }
+
+  func TestNormalizeDateEmpty(t *testing.T) {
+  	_, err := normalizeDate("")
+  	if err == nil {
+  		t.Error("expected error for empty input")
+  	}
+  }
+hint: "Define a slice of layout strings and loop over them, calling time.Parse for each. Return on the first successful parse."
+solution: |
+  package main
+
+  import (
+  	"fmt"
+  	"time"
+  )
+
+  func normalizeDate(input string) (string, error) {
+  	layouts := []string{
+  		"2006-01-02",
+  		"Jan 2, 2006",
+  		"02/01/2006",
+  	}
+  	for _, layout := range layouts {
+  		t, err := time.Parse(layout, input)
+  		if err == nil {
+  			return t.Format("2006-01-02"), nil
+  		}
+  	}
+  	return "", fmt.Errorf("unrecognized date format: %q", input)
+  }
+explanation: |
+  Go uses a reference time for formatting: Mon Jan 2 15:04:05 MST 2006.
+  Each component maps to a specific number:
+    2006 = year, 01 = month, 02 = day
+    15 = hour (24h), 04 = minute, 05 = second
+  time.Parse returns an error when the layout does not match, so you can
+  try multiple layouts in sequence and use the first that succeeds.
+  This "try-each" pattern is common when accepting multiple input formats.
+  Common predefined layouts: time.RFC3339, time.DateOnly (Go 1.20+).
+reference: "https://gobyexample.com/time-formatting-parsing"

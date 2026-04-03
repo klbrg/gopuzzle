@@ -1,0 +1,74 @@
+id: "18-001"
+title: "HTTP Server"
+concept: "http"
+difficulty: 6
+description: |
+  Write helloHandler that responds with "Hello, <name>!" when a "name" query parameter
+  is present, or "Hello, World!" when it is absent.
+template: |
+  package main
+
+  import (
+  	"fmt"
+  	"net/http"
+  )
+
+  func helloHandler(w http.ResponseWriter, r *http.Request) {
+  	// TODO
+  }
+test_code: |
+  package main
+
+  import (
+  	"net/http"
+  	"net/http/httptest"
+  	"testing"
+  )
+
+  func TestHelloHandler(t *testing.T) {
+  	req := httptest.NewRequest(http.MethodGet, "/hello?name=Alice", nil)
+  	w := httptest.NewRecorder()
+  	helloHandler(w, req)
+  	if w.Code != 200 {
+  		t.Errorf("expected 200, got %d", w.Code)
+  	}
+  	if body := w.Body.String(); body != "Hello, Alice!" {
+  		t.Errorf("expected %q, got %q", "Hello, Alice!", body)
+  	}
+
+  	req2 := httptest.NewRequest(http.MethodGet, "/hello", nil)
+  	w2 := httptest.NewRecorder()
+  	helloHandler(w2, req2)
+  	if w2.Body.String() != "Hello, World!" {
+  		t.Errorf("expected %q, got %q", "Hello, World!", w2.Body.String())
+  	}
+  }
+hint: "r.URL.Query().Get(\"name\") reads a query parameter; fmt.Fprintf(w, ...) writes the response."
+solution: |
+  package main
+
+  import (
+  	"fmt"
+  	"net/http"
+  )
+
+  func helloHandler(w http.ResponseWriter, r *http.Request) {
+  	name := r.URL.Query().Get("name")
+  	if name == "" {
+  		name = "World"
+  	}
+  	fmt.Fprintf(w, "Hello, %s!", name)
+  }
+explanation: |
+  HTTP handlers have the signature func(http.ResponseWriter, *http.Request).
+    func helloHandler(w http.ResponseWriter, r *http.Request) {
+        name := r.URL.Query().Get("name")
+        if name == "" { name = "World" }
+        fmt.Fprintf(w, "Hello, %s!", name)
+    }
+  Register with: http.HandleFunc("/hello", helloHandler)
+  Start server: http.ListenAndServe(":8080", nil)
+  httptest.NewRecorder() captures response for testing — no real HTTP needed.
+  Set status: w.WriteHeader(http.StatusNotFound)
+  Set headers: w.Header().Set("Content-Type", "application/json")
+reference: "https://gobyexample.com/http-server"

@@ -1,0 +1,125 @@
+id: "09-004"
+title: "Text Templates"
+concept: "strings"
+difficulty: 5
+description: |
+  Define an Item struct with Name (string) and InStock (bool).
+  Write renderReport(items []Item) string that uses text/template to produce a
+  plain-text report listing only in-stock items, one per line as "- <Name>".
+  If no items are in stock, the output should be the single line "No items available".
+  The template must use {{range}} and {{if}} — do not filter in Go code.
+template: |
+  package main
+
+  // TODO: define Item struct
+
+  // TODO: write renderReport using text/template with range and if
+test_code: |
+  package main
+
+  import (
+  	"testing"
+  )
+
+  func TestRenderReportMixed(t *testing.T) {
+  	items := []Item{
+  		{Name: "Widget", InStock: true},
+  		{Name: "Gadget", InStock: false},
+  		{Name: "Doohickey", InStock: true},
+  	}
+  	got := renderReport(items)
+  	want := "- Widget\n- Doohickey"
+  	if got != want {
+  		t.Errorf("expected:\n%s\ngot:\n%s", want, got)
+  	}
+  }
+
+  func TestRenderReportAllInStock(t *testing.T) {
+  	items := []Item{
+  		{Name: "Alpha", InStock: true},
+  		{Name: "Beta", InStock: true},
+  	}
+  	got := renderReport(items)
+  	want := "- Alpha\n- Beta"
+  	if got != want {
+  		t.Errorf("expected:\n%s\ngot:\n%s", want, got)
+  	}
+  }
+
+  func TestRenderReportNoneInStock(t *testing.T) {
+  	items := []Item{
+  		{Name: "Alpha", InStock: false},
+  		{Name: "Beta", InStock: false},
+  	}
+  	got := renderReport(items)
+  	want := "No items available"
+  	if got != want {
+  		t.Errorf("expected %q, got %q", want, got)
+  	}
+  }
+
+  func TestRenderReportEmpty(t *testing.T) {
+  	got := renderReport(nil)
+  	want := "No items available"
+  	if got != want {
+  		t.Errorf("expected %q, got %q", want, got)
+  	}
+  }
+
+  func TestRenderReportSingleItem(t *testing.T) {
+  	items := []Item{{Name: "Solo", InStock: true}}
+  	got := renderReport(items)
+  	want := "- Solo"
+  	if got != want {
+  		t.Errorf("expected %q, got %q", want, got)
+  	}
+  }
+hint: "Pre-filter the items into an in-stock slice, then pass that to the template. Use {{if .}} to check if the slice is non-empty, {{range .}} to iterate, and strings.TrimSpace to clean up."
+solution: |
+  package main
+
+  import (
+  	"bytes"
+  	"strings"
+  	"text/template"
+  )
+
+  type Item struct {
+  	Name    string
+  	InStock bool
+  }
+
+  func renderReport(items []Item) string {
+  	var inStock []Item
+  	for _, it := range items {
+  		if it.InStock {
+  			inStock = append(inStock, it)
+  		}
+  	}
+
+  	const tmpl = `{{- if . -}}
+  {{- range $i, $item := . -}}
+  {{- if $i}}
+  {{end -}}
+  - {{$item.Name}}
+  {{- end -}}
+  {{- else -}}
+  No items available
+  {{- end -}}`
+
+  	t := template.Must(template.New("report").Parse(tmpl))
+  	var buf bytes.Buffer
+  	t.Execute(&buf, inStock)
+  	return strings.TrimSpace(buf.String())
+  }
+explanation: |
+  text/template supports control structures beyond simple field substitution:
+    {{range .}} iterates over slices or maps
+    {{if .}} tests truthiness (non-nil, non-empty)
+    {{$i, $item := .}} captures the index and value in range
+  The dash in {{- and -}} trims surrounding whitespace, which is essential
+  for producing clean output. Without trimming, templates tend to add extra
+  blank lines.
+  We pre-filter items into an inStock slice so the template logic stays simple.
+  template.Must wraps Parse and panics on error — safe for hard-coded templates.
+reference: "https://gobyexample.com/text-templates"

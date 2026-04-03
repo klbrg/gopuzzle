@@ -1,0 +1,49 @@
+id: "02-002"
+title: "If/Else"
+concept: "control-flow"
+difficulty: 1
+description: |
+  Classify an integer as "negative", "zero", or "positive".
+template: |
+  package main
+
+  func classify(n int) string {
+  	// TODO
+  }
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestClassify(t *testing.T) {
+  	cases := map[int]string{-5: "negative", 0: "zero", 3: "positive", -1: "negative", 100: "positive"}
+  	for n, want := range cases {
+  		if got := classify(n); got != want {
+  			t.Errorf("classify(%d): expected %q, got %q", n, want, got)
+  		}
+  	}
+  }
+hint: "Go if/else requires no parentheses around conditions: if x { } else if y { } else { }"
+solution: |
+  package main
+
+  func classify(n int) string {
+  	if n < 0 {
+  		return "negative"
+  	} else if n == 0 {
+  		return "zero"
+  	}
+  	return "positive"
+  }
+explanation: |
+  if/else in Go does not require parentheses around the condition:
+    if n < 0 {
+        return "negative"
+    } else if n == 0 {
+        return "zero"
+    } else {
+        return "positive"
+    }
+  Go also supports an init statement: if err := doThing(); err != nil { ... }
+  This is very common for error checking.
+reference: "https://gobyexample.com/if-else"

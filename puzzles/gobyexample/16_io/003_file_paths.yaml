@@ -1,0 +1,113 @@
+id: "16-003"
+title: "File Paths"
+concept: "io"
+difficulty: 3
+description: |
+  Write groupByExtension(paths []string) map[string][]string that takes a list of
+  file paths and groups base filenames by their extension.
+
+  The map keys are extensions (including the dot, e.g. ".txt") and the values are
+  slices of base filenames that have that extension. Files with no extension are
+  grouped under the empty string key "".
+template: |
+  package main
+
+  import "path/filepath"
+
+  func groupByExtension(paths []string) map[string][]string {
+  	// TODO: for each path, extract its base filename and extension,
+  	// then group base filenames by extension in a map.
+  }
+test_code: |
+  package main
+
+  import (
+  	"reflect"
+  	"sort"
+  	"testing"
+  )
+
+  func sortedMap(m map[string][]string) map[string][]string {
+  	for k := range m {
+  		sort.Strings(m[k])
+  	}
+  	return m
+  }
+
+  func TestGroupByExtension(t *testing.T) {
+  	paths := []string{
+  		"/home/user/notes.txt",
+  		"/var/log/app.log",
+  		"/home/user/todo.txt",
+  		"/data/report.csv",
+  		"/data/backup.csv",
+  		"Makefile",
+  	}
+  	got := sortedMap(groupByExtension(paths))
+  	want := map[string][]string{
+  		".txt": {"notes.txt", "todo.txt"},
+  		".log": {"app.log"},
+  		".csv": {"backup.csv", "report.csv"},
+  		"":     {"Makefile"},
+  	}
+  	if !reflect.DeepEqual(got, want) {
+  		t.Errorf("expected %v, got %v", want, got)
+  	}
+  }
+
+  func TestGroupByExtensionEmpty(t *testing.T) {
+  	got := groupByExtension([]string{})
+  	if len(got) != 0 {
+  		t.Errorf("expected empty map, got %v", got)
+  	}
+  }
+
+  func TestGroupByExtensionNoExt(t *testing.T) {
+  	got := groupByExtension([]string{"README", "LICENSE"})
+  	want := map[string][]string{
+  		"": {"LICENSE", "README"},
+  	}
+  	got = sortedMap(got)
+  	if !reflect.DeepEqual(got, want) {
+  		t.Errorf("expected %v, got %v", want, got)
+  	}
+  }
+
+  func TestGroupByExtensionDotfile(t *testing.T) {
+  	got := groupByExtension([]string{"/home/.bashrc", "/home/.gitignore"})
+  	// filepath.Ext(".bashrc") returns "" — these have no extension
+  	want := map[string][]string{
+  		"": {".bashrc", ".gitignore"},
+  	}
+  	got = sortedMap(got)
+  	if !reflect.DeepEqual(got, want) {
+  		t.Errorf("expected %v, got %v", want, got)
+  	}
+  }
+hint: "filepath.Base extracts the filename from a path. filepath.Ext returns the extension including the dot. Append to map slices with m[key] = append(m[key], value)."
+solution: |
+  package main
+
+  import "path/filepath"
+
+  func groupByExtension(paths []string) map[string][]string {
+  	groups := make(map[string][]string)
+  	for _, p := range paths {
+  		base := filepath.Base(p)
+  		ext := filepath.Ext(base)
+  		groups[ext] = append(groups[ext], base)
+  	}
+  	return groups
+  }
+explanation: |
+  path/filepath handles OS-specific path separators:
+    filepath.Base("/a/b/c.txt")    // "c.txt"
+    filepath.Ext("file.txt")       // ".txt"
+    filepath.Ext("Makefile")       // ""
+    filepath.Ext(".bashrc")        // ""  (leading dot is not an extension)
+    filepath.Dir("/a/b/c.txt")     // "/a/b"
+    filepath.Join("a", "b", "c")   // "a/b/c"
+  Building maps of slices uses the append pattern:
+    m[key] = append(m[key], value) — works even if m[key] is nil.
+  Use filepath (not path) for filesystem paths — path is for URL-style paths.
+reference: "https://gobyexample.com/file-paths"

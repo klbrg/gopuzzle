@@ -1,0 +1,63 @@
+id: "02-006"
+title: "Nested Loops"
+concept: "control-flow"
+difficulty: 3
+description: |
+  Find the first pair (i, j) where i*j equals the target.
+  Both i and j start from 2. Return them, or (0, 0) if no pair exists
+  with both values less than 100.
+template: |
+  package main
+
+  func findPair(target int) (int, int) {
+  	// TODO
+  }
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestFindPair(t *testing.T) {
+  	tests := []struct {
+  		target, wantI, wantJ int
+  	}{
+  		{6, 2, 3},
+  		{12, 2, 6},
+  		{49, 7, 7},
+  		{97, 0, 0},
+  		{100, 2, 50},
+  		{4, 2, 2},
+  	}
+  	for _, tt := range tests {
+  		i, j := findPair(tt.target)
+  		if i != tt.wantI || j != tt.wantJ {
+  			t.Errorf("findPair(%d): expected (%d,%d), got (%d,%d)", tt.target, tt.wantI, tt.wantJ, i, j)
+  		}
+  	}
+  }
+hint: "Two nested for loops. Return as soon as you find i*j == target."
+solution: |
+  package main
+
+  func findPair(target int) (int, int) {
+  	for i := 2; i < 100; i++ {
+  		for j := 2; j < 100; j++ {
+  			if i*j == target {
+  				return i, j
+  			}
+  		}
+  	}
+  	return 0, 0
+  }
+explanation: |
+  Nested loops iterate over combinations. Return exits the function immediately,
+  breaking out of both loops at once:
+    for i := 2; i < 100; i++ {
+        for j := 2; j < 100; j++ {
+            if i*j == target {
+                return i, j
+            }
+        }
+    }
+  No need for break or labels — return does the job.
+reference: "https://gobyexample.com/for"

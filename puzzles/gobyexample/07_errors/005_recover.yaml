@@ -1,0 +1,135 @@
+id: "07-005"
+title: "Recover"
+concept: "errors"
+difficulty: 5
+description: |
+  Write runAll(funcs []func()) []error that executes each function in order.
+  If a function panics, recover from the panic, record it as an error with
+  the message "panic: <value>", and continue running the remaining functions.
+  Functions that succeed produce no error entry — only panics appear in the result.
+  If no panics occur, return nil.
+template: |
+  package main
+
+  // TODO: write runAll
+test_code: |
+  package main
+
+  import (
+  	"strings"
+  	"testing"
+  )
+
+  func TestRunAllNoPanics(t *testing.T) {
+  	count := 0
+  	funcs := []func(){
+  		func() { count++ },
+  		func() { count++ },
+  	}
+  	errs := runAll(funcs)
+  	if len(errs) != 0 {
+  		t.Errorf("expected no errors, got %v", errs)
+  	}
+  	if count != 2 {
+  		t.Errorf("expected count 2, got %d", count)
+  	}
+  }
+
+  func TestRunAllWithPanics(t *testing.T) {
+  	count := 0
+  	funcs := []func(){
+  		func() { count++ },
+  		func() { panic("boom") },
+  		func() { count++ },
+  	}
+  	errs := runAll(funcs)
+  	if len(errs) != 1 {
+  		t.Fatalf("expected 1 error, got %d: %v", len(errs), errs)
+  	}
+  	if !strings.Contains(errs[0].Error(), "boom") {
+  		t.Errorf("error should contain panic value: %v", errs[0])
+  	}
+  	if count != 2 {
+  		t.Errorf("expected count 2 (should continue after panic), got %d", count)
+  	}
+  }
+
+  func TestRunAllAllPanic(t *testing.T) {
+  	funcs := []func(){
+  		func() { panic("first") },
+  		func() { panic("second") },
+  		func() { panic("third") },
+  	}
+  	errs := runAll(funcs)
+  	if len(errs) != 3 {
+  		t.Fatalf("expected 3 errors, got %d", len(errs))
+  	}
+  	if !strings.Contains(errs[0].Error(), "first") {
+  		t.Errorf("first error should contain 'first': %v", errs[0])
+  	}
+  	if !strings.Contains(errs[2].Error(), "third") {
+  		t.Errorf("third error should contain 'third': %v", errs[2])
+  	}
+  }
+
+  func TestRunAllEmpty(t *testing.T) {
+  	errs := runAll(nil)
+  	if len(errs) != 0 {
+  		t.Errorf("expected no errors for nil input, got %v", errs)
+  	}
+  }
+
+  func TestRunAllPanicWithInt(t *testing.T) {
+  	funcs := []func(){
+  		func() { panic(42) },
+  	}
+  	errs := runAll(funcs)
+  	if len(errs) != 1 {
+  		t.Fatalf("expected 1 error, got %d", len(errs))
+  	}
+  	if !strings.Contains(errs[0].Error(), "42") {
+  		t.Errorf("error should contain panic value 42: %v", errs[0])
+  	}
+  }
+hint: "Call each function from a helper that uses defer/recover. Use fmt.Sprintf(\"panic: %v\", r) to convert any panic value to an error message."
+solution: |
+  package main
+
+  import "fmt"
+
+  func runAll(funcs []func()) []error {
+  	var errs []error
+  	for _, fn := range funcs {
+  		if err := safeRun(fn); err != nil {
+  			errs = append(errs, err)
+  		}
+  	}
+  	return errs
+  }
+
+  func safeRun(fn func()) (err error) {
+  	defer func() {
+  		if r := recover(); r != nil {
+  			err = fmt.Errorf("panic: %v", r)
+  		}
+  	}()
+  	fn()
+  	return nil
+  }
+explanation: |
+  recover() only works inside a deferred function. To recover from multiple panics
+  in a loop, you need a separate function for each call — the deferred recover
+  catches the panic within that function's scope:
+    func safeRun(fn func()) (err error) {
+        defer func() {
+            if r := recover(); r != nil {
+                err = fmt.Errorf("panic: %v", r)
+            }
+        }()
+        fn()
+        return nil
+    }
+  Named return values (err error) let the deferred function set the return value.
+  The loop in runAll continues after each safeRun returns, even if it recovered
+  from a panic. This pattern is useful for batch processing and plugin systems.
+reference: "https://gobyexample.com/recover"

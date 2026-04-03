@@ -1,0 +1,129 @@
+id: "11-004"
+title: "Channel Directions"
+concept: "channels"
+difficulty: 6
+description: |
+  Build a pipeline combinator. Implement stage(in <-chan int, transform func(int) int) <-chan int
+  that reads every value from in, applies transform, and sends results to a new output channel.
+  The output channel must close when the input is exhausted. Chain multiple stages to form a
+  processing pipeline.
+template: |
+  package main
+
+  func stage(in <-chan int, transform func(int) int) <-chan int {
+  	// TODO: read from in, apply transform, send to output channel
+  	// Close output channel when input is exhausted
+  	return nil
+  }
+test_code: |
+  package main
+
+  import (
+  	"reflect"
+  	"testing"
+  )
+
+  func TestSingleStage(t *testing.T) {
+  	in := make(chan int, 3)
+  	in <- 1
+  	in <- 2
+  	in <- 3
+  	close(in)
+
+  	out := stage(in, func(n int) int { return n * 2 })
+
+  	var got []int
+  	for v := range out {
+  		got = append(got, v)
+  	}
+  	want := []int{2, 4, 6}
+  	if !reflect.DeepEqual(got, want) {
+  		t.Errorf("expected %v, got %v", want, got)
+  	}
+  }
+
+  func TestChainedStages(t *testing.T) {
+  	in := make(chan int, 3)
+  	in <- 5
+  	in <- 10
+  	in <- 15
+  	close(in)
+
+  	double := stage(in, func(n int) int { return n * 2 })
+  	addOne := stage(double, func(n int) int { return n + 1 })
+
+  	var got []int
+  	for v := range addOne {
+  		got = append(got, v)
+  	}
+  	want := []int{11, 21, 31}
+  	if !reflect.DeepEqual(got, want) {
+  		t.Errorf("expected %v, got %v", want, got)
+  	}
+  }
+
+  func TestEmptyInput(t *testing.T) {
+  	in := make(chan int)
+  	close(in)
+
+  	out := stage(in, func(n int) int { return n * 100 })
+  	var got []int
+  	for v := range out {
+  		got = append(got, v)
+  	}
+  	if len(got) != 0 {
+  		t.Errorf("expected empty output, got %v", got)
+  	}
+  }
+
+  func TestThreeStages(t *testing.T) {
+  	in := make(chan int, 2)
+  	in <- 3
+  	in <- 7
+  	close(in)
+
+  	s1 := stage(in, func(n int) int { return n + 1 })   // 4, 8
+  	s2 := stage(s1, func(n int) int { return n * n })    // 16, 64
+  	s3 := stage(s2, func(n int) int { return n - 1 })    // 15, 63
+
+  	var got []int
+  	for v := range s3 {
+  		got = append(got, v)
+  	}
+  	want := []int{15, 63}
+  	if !reflect.DeepEqual(got, want) {
+  		t.Errorf("expected %v, got %v", want, got)
+  	}
+  }
+hint: "Create an output channel, launch a goroutine that ranges over in, transforms each value, sends it to out, and closes out when the loop ends."
+solution: |
+  package main
+
+  func stage(in <-chan int, transform func(int) int) <-chan int {
+  	out := make(chan int)
+  	go func() {
+  		for v := range in {
+  			out <- transform(v)
+  		}
+  		close(out)
+  	}()
+  	return out
+  }
+explanation: |
+  Channel directions make pipeline APIs safe at compile time:
+    func stage(in <-chan int, transform func(int) int) <-chan int
+  in is receive-only (<-chan int), and the return is also receive-only.
+  Inside, we create a bidirectional channel and return it (Go converts
+  automatically):
+    out := make(chan int)
+    go func() {
+        for v := range in {
+            out <- transform(v)
+        }
+        close(out)
+    }()
+    return out
+  Closing out after the loop lets downstream stages use range.
+  Chaining: stage(stage(in, f1), f2) creates a multi-step pipeline
+  where data flows through goroutines connected by channels.
+reference: "https://gobyexample.com/channel-directions"

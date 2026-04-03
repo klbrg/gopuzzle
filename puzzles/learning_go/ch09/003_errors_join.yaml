@@ -1,0 +1,215 @@
+id: "lg09-003"
+title: "Errors Join"
+concept: "errors"
+difficulty: 5
+description: |
+  Go 1.20 introduced errors.Join to combine multiple errors into one.
+  This is useful for validation where you want to report ALL problems
+  at once rather than stopping at the first one.
+
+  Write a function ValidateConfig(cfg Config) error that checks a Config
+  struct and collects all validation errors using errors.Join:
+    - If Host is empty, add: "host is required"
+    - If Port < 1 or Port > 65535, add: "port must be between 1 and 65535"
+    - If MaxConns < 1, add: "max connections must be positive"
+  Return nil if all fields are valid.
+
+  The Config struct has fields:
+    Host     string
+    Port     int
+    MaxConns int
+
+  Write a function CountErrors(err error) int that counts how many
+  individual errors are joined in an error. Use the Unwrap() []error
+  interface to detect joined errors. Return 0 for nil, 1 for a single
+  (non-joined) error.
+
+  Examples:
+    ValidateConfig(Config{Host: "", Port: 0, MaxConns: 0})
+    => error containing all three messages
+
+    ValidateConfig(Config{Host: "localhost", Port: 8080, MaxConns: 10})
+    => nil
+
+    CountErrors(errors.Join(e1, e2, e3)) => 3
+    CountErrors(errors.New("single"))    => 1
+    CountErrors(nil)                     => 0
+template: |
+  package main
+
+  import "errors"
+
+  type Config struct {
+  	Host     string
+  	Port     int
+  	MaxConns int
+  }
+
+  // TODO: implement ValidateConfig
+
+  // TODO: implement CountErrors
+test_code: |
+  package main
+
+  import (
+  	"errors"
+  	"strings"
+  	"testing"
+  )
+
+  func TestValidateConfigAllValid(t *testing.T) {
+  	cfg := Config{Host: "localhost", Port: 8080, MaxConns: 10}
+  	if err := ValidateConfig(cfg); err != nil {
+  		t.Errorf("expected nil, got %v", err)
+  	}
+  }
+
+  func TestValidateConfigEmptyHost(t *testing.T) {
+  	cfg := Config{Host: "", Port: 8080, MaxConns: 10}
+  	err := ValidateConfig(cfg)
+  	if err == nil {
+  		t.Fatal("expected error for empty host")
+  	}
+  	if !strings.Contains(err.Error(), "host is required") {
+  		t.Errorf("expected 'host is required' in error: %v", err)
+  	}
+  }
+
+  func TestValidateConfigBadPort(t *testing.T) {
+  	cfg := Config{Host: "localhost", Port: 0, MaxConns: 10}
+  	err := ValidateConfig(cfg)
+  	if err == nil {
+  		t.Fatal("expected error for port 0")
+  	}
+  	if !strings.Contains(err.Error(), "port must be between") {
+  		t.Errorf("expected port error in: %v", err)
+  	}
+  }
+
+  func TestValidateConfigPortTooHigh(t *testing.T) {
+  	cfg := Config{Host: "localhost", Port: 70000, MaxConns: 10}
+  	err := ValidateConfig(cfg)
+  	if err == nil {
+  		t.Fatal("expected error for port > 65535")
+  	}
+  	if !strings.Contains(err.Error(), "port must be between") {
+  		t.Errorf("expected port error in: %v", err)
+  	}
+  }
+
+  func TestValidateConfigBadMaxConns(t *testing.T) {
+  	cfg := Config{Host: "localhost", Port: 8080, MaxConns: 0}
+  	err := ValidateConfig(cfg)
+  	if err == nil {
+  		t.Fatal("expected error for maxconns 0")
+  	}
+  	if !strings.Contains(err.Error(), "max connections must be positive") {
+  		t.Errorf("expected maxconns error in: %v", err)
+  	}
+  }
+
+  func TestValidateConfigMultipleErrors(t *testing.T) {
+  	cfg := Config{Host: "", Port: 0, MaxConns: -1}
+  	err := ValidateConfig(cfg)
+  	if err == nil {
+  		t.Fatal("expected error")
+  	}
+  	msg := err.Error()
+  	if !strings.Contains(msg, "host is required") {
+  		t.Errorf("missing host error in: %v", err)
+  	}
+  	if !strings.Contains(msg, "port must be between") {
+  		t.Errorf("missing port error in: %v", err)
+  	}
+  	if !strings.Contains(msg, "max connections must be positive") {
+  		t.Errorf("missing maxconns error in: %v", err)
+  	}
+  }
+
+  func TestValidateConfigEdgePorts(t *testing.T) {
+  	cfg1 := Config{Host: "h", Port: 1, MaxConns: 1}
+  	if err := ValidateConfig(cfg1); err != nil {
+  		t.Errorf("port 1 should be valid: %v", err)
+  	}
+  	cfg2 := Config{Host: "h", Port: 65535, MaxConns: 1}
+  	if err := ValidateConfig(cfg2); err != nil {
+  		t.Errorf("port 65535 should be valid: %v", err)
+  	}
+  }
+
+  func TestCountErrorsNil(t *testing.T) {
+  	if got := CountErrors(nil); got != 0 {
+  		t.Errorf("expected 0, got %d", got)
+  	}
+  }
+
+  func TestCountErrorsSingle(t *testing.T) {
+  	if got := CountErrors(errors.New("one")); got != 1 {
+  		t.Errorf("expected 1, got %d", got)
+  	}
+  }
+
+  func TestCountErrorsJoined(t *testing.T) {
+  	err := errors.Join(
+  		errors.New("a"),
+  		errors.New("b"),
+  		errors.New("c"),
+  	)
+  	if got := CountErrors(err); got != 3 {
+  		t.Errorf("expected 3, got %d", got)
+  	}
+  }
+
+  func TestCountErrorsJoinedTwo(t *testing.T) {
+  	err := errors.Join(errors.New("x"), errors.New("y"))
+  	if got := CountErrors(err); got != 2 {
+  		t.Errorf("expected 2, got %d", got)
+  	}
+  }
+hint: "Collect errors in a []error slice and pass them to errors.Join(errs...) at the end. errors.Join returns nil if all errors are nil. For CountErrors, check if the error implements interface{ Unwrap() []error } using a type assertion."
+solution: |
+  package main
+
+  import "errors"
+
+  func ValidateConfig(cfg Config) error {
+  	var errs []error
+  	if cfg.Host == "" {
+  		errs = append(errs, errors.New("host is required"))
+  	}
+  	if cfg.Port < 1 || cfg.Port > 65535 {
+  		errs = append(errs, errors.New("port must be between 1 and 65535"))
+  	}
+  	if cfg.MaxConns < 1 {
+  		errs = append(errs, errors.New("max connections must be positive"))
+  	}
+  	return errors.Join(errs...)
+  }
+
+  func CountErrors(err error) int {
+  	if err == nil {
+  		return 0
+  	}
+  	if joined, ok := err.(interface{ Unwrap() []error }); ok {
+  		return len(joined.Unwrap())
+  	}
+  	return 1
+  }
+explanation: |
+  errors.Join (Go 1.20+) combines multiple errors into a single error
+  whose Error() message joins them with newlines. It returns nil if all
+  inputs are nil, which makes the pattern clean:
+
+    var errs []error
+    // ... append errors as found ...
+    return errors.Join(errs...)  // nil if errs is empty
+
+  The joined error implements Unwrap() []error, which means errors.Is
+  and errors.As check each individual error in the join. This is how
+  you can detect specific sentinel errors inside a joined result.
+
+  CountErrors uses a type assertion to the interface{ Unwrap() []error }
+  interface. This is the standard way to detect multi-errors in Go --
+  any error that returns a slice from Unwrap() is treated as a container
+  of multiple errors.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch9.html"

@@ -1,0 +1,61 @@
+id: "15-001"
+title: "Time"
+concept: "time"
+difficulty: 3
+description: |
+  Return: the current hour (0-23), whether the current year is after 2020, and the
+  number of hours between 2024-01-01 and 2025-01-01 (UTC).
+template: |
+  package main
+
+  import "time"
+
+  func timeDemo() (int, bool, float64) {
+  	// TODO
+  }
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestTimeDemo(t *testing.T) {
+  	hour, afterYear, hours := timeDemo()
+  	if hour < 0 || hour > 23 {
+  		t.Errorf("hour out of range: %d", hour)
+  	}
+  	if !afterYear {
+  		t.Error("2026 should be after 2020")
+  	}
+  	// 2025 is not a leap year; 2024 is. 366 days * 24 hours = 8784
+  	if hours != 8784 {
+  		t.Errorf("expected 8784 hours, got %f", hours)
+  	}
+  }
+hint: "time.Now(), time.Date(year, month, day, ...), and t2.Sub(t1).Hours() are the key calls."
+solution: |
+  package main
+
+  import "time"
+
+  func timeDemo() (int, bool, float64) {
+  	now := time.Now()
+  	hour := now.Hour()
+  	afterYear := now.Year() > 2020
+  	t1 := time.Date(2024, time.January, 1, 0, 0, 0, 0, time.UTC)
+  	t2 := time.Date(2025, time.January, 1, 0, 0, 0, 0, time.UTC)
+  	hours := t2.Sub(t1).Hours()
+  	return hour, afterYear, hours
+  }
+explanation: |
+  The time package handles all time and duration operations.
+    now := time.Now()
+    now.Hour()               // 0-23
+    now.Year()               // 2026
+    now.Format("2006-01-02") // format using reference time
+  time.Date creates a specific time:
+    t := time.Date(2024, time.January, 1, 0, 0, 0, 0, time.UTC)
+  Duration arithmetic:
+    d := t2.Sub(t1)    // returns time.Duration
+    d.Hours()          // convert to float64 hours
+  Go's reference time is: Mon Jan 2 15:04:05 MST 2006 (easy to remember: 1 2 3 4 5 6 7)
+reference: "https://gobyexample.com/time"

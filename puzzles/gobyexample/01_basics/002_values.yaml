@@ -1,0 +1,70 @@
+id: "01-002"
+title: "Values"
+concept: "basics"
+difficulty: 1
+description: |
+  Write a function classify that takes an integer and returns three values:
+  whether the number is even (bool), its absolute value (int), and its sign
+  as a string — "positive", "negative", or "zero".
+template: |
+  package main
+
+  // TODO: implement classify
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestClassify(t *testing.T) {
+  	cases := []struct {
+  		input    int
+  		even     bool
+  		abs      int
+  		sign     string
+  	}{
+  		{7, false, 7, "positive"},
+  		{-4, true, 4, "negative"},
+  		{0, true, 0, "zero"},
+  		{12, true, 12, "positive"},
+  		{-1, false, 1, "negative"},
+  	}
+  	for _, c := range cases {
+  		even, abs, sign := classify(c.input)
+  		if even != c.even {
+  			t.Errorf("classify(%d) even: expected %v, got %v", c.input, c.even, even)
+  		}
+  		if abs != c.abs {
+  			t.Errorf("classify(%d) abs: expected %d, got %d", c.input, c.abs, abs)
+  		}
+  		if sign != c.sign {
+  			t.Errorf("classify(%d) sign: expected %q, got %q", c.input, c.sign, sign)
+  		}
+  	}
+  }
+hint: "Use the modulo operator % to check if a number is even, and comparison operators to determine sign."
+solution: |
+  package main
+
+  func classify(n int) (bool, int, string) {
+  	even := n%2 == 0
+  	abs := n
+  	if abs < 0 {
+  		abs = -abs
+  	}
+  	sign := "zero"
+  	if n > 0 {
+  		sign = "positive"
+  	} else if n < 0 {
+  		sign = "negative"
+  	}
+  	return even, abs, sign
+  }
+explanation: |
+  Go supports multiple return values, which lets a function return
+  several pieces of information at once:
+    func classify(n int) (bool, int, string) { ... }
+  The modulo operator % gives the remainder of division:
+    n%2 == 0  // true when n is even
+  Negative numbers can be negated with the unary minus: -n.
+  String comparisons and boolean expressions work as in most languages.
+reference: "https://gobyexample.com/values"

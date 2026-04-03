@@ -1,0 +1,54 @@
+id: "07-004"
+title: "Defer"
+concept: "errors"
+difficulty: 3
+description: |
+  Write buildLog that returns the slice ["start", "work", "done"] — where "done" is
+  appended by a deferred call that runs when the function returns.
+template: |
+  package main
+
+  func buildLog() []string {
+  	var log []string
+  	// TODO
+  	log = append(log, "start")
+  	log = append(log, "work")
+  	return log
+  }
+test_code: |
+  package main
+
+  import (
+  	"reflect"
+  	"testing"
+  )
+
+  func TestBuildLog(t *testing.T) {
+  	got := buildLog()
+  	want := []string{"start", "work", "done"}
+  	if !reflect.DeepEqual(got, want) {
+  		t.Errorf("expected %v, got %v", want, got)
+  	}
+  }
+hint: "Named return values can be modified by deferred closures before the function actually returns."
+solution: |
+  package main
+
+  func buildLog() (log []string) {
+  	defer func() { log = append(log, "done") }()
+  	log = append(log, "start")
+  	log = append(log, "work")
+  	return
+  }
+explanation: |
+  defer schedules a function call to run when the enclosing function returns.
+  To modify the return value, use a named return and a closure:
+    func buildLog() (log []string) {
+        defer func() { log = append(log, "done") }()
+        log = append(log, "start")
+        log = append(log, "work")
+        return
+    }
+  deferred calls run in LIFO order (last deferred runs first).
+  The most common use is cleanup: defer file.Close(), defer mu.Unlock().
+reference: "https://gobyexample.com/defer"

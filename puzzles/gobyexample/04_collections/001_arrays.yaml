@@ -1,0 +1,52 @@
+id: "04-001"
+title: "Arrays"
+concept: "collections"
+difficulty: 2
+description: |
+  Write a function reverse that takes a [5]int array and returns a
+  new [5]int with the elements in reverse order.
+template: |
+  package main
+
+  // TODO: implement reverse
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestReverse(t *testing.T) {
+  	cases := []struct {
+  		input [5]int
+  		want  [5]int
+  	}{
+  		{[5]int{1, 2, 3, 4, 5}, [5]int{5, 4, 3, 2, 1}},
+  		{[5]int{10, 20, 30, 40, 50}, [5]int{50, 40, 30, 20, 10}},
+  		{[5]int{0, 0, 0, 0, 0}, [5]int{0, 0, 0, 0, 0}},
+  		{[5]int{-1, 0, 1, 0, -1}, [5]int{-1, 0, 1, 0, -1}},
+  	}
+  	for _, c := range cases {
+  		got := reverse(c.input)
+  		if got != c.want {
+  			t.Errorf("reverse(%v): expected %v, got %v", c.input, c.want, got)
+  		}
+  	}
+  }
+hint: "Create a new array and fill it by mapping index i to the element at len-1-i from the original."
+solution: |
+  package main
+
+  func reverse(a [5]int) [5]int {
+  	var result [5]int
+  	for i := 0; i < 5; i++ {
+  		result[i] = a[4-i]
+  	}
+  	return result
+  }
+explanation: |
+  Arrays in Go have a fixed size that is part of the type: [5]int.
+  To reverse, map each index i to the element at position (length - 1 - i):
+    result[i] = a[4-i]
+  Arrays are value types in Go — passing an array to a function copies it,
+  so the original is never modified. This makes it safe to return a new
+  array without worrying about side effects.
+reference: "https://gobyexample.com/arrays"

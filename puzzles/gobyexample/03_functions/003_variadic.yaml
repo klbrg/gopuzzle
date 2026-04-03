@@ -1,0 +1,58 @@
+id: "03-003"
+title: "Variadic Functions"
+concept: "functions"
+difficulty: 2
+description: |
+  Write a variadic function maxOf that accepts any number of integers
+  and returns the largest one. If called with no arguments, return 0.
+template: |
+  package main
+
+  // TODO: implement maxOf
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestMaxOf(t *testing.T) {
+  	if got := maxOf(); got != 0 {
+  		t.Errorf("maxOf(): expected 0, got %d", got)
+  	}
+  	if got := maxOf(42); got != 42 {
+  		t.Errorf("maxOf(42): expected 42, got %d", got)
+  	}
+  	if got := maxOf(3, 7, 2); got != 7 {
+  		t.Errorf("maxOf(3,7,2): expected 7, got %d", got)
+  	}
+  	if got := maxOf(-5, -1, -10); got != -1 {
+  		t.Errorf("maxOf(-5,-1,-10): expected -1, got %d", got)
+  	}
+  	nums := []int{100, 4, 55, 99}
+  	if got := maxOf(nums...); got != 100 {
+  		t.Errorf("maxOf(nums...): expected 100, got %d", got)
+  	}
+  }
+hint: "Use ... to accept any number of ints. Initialize your result with the first element, then compare each subsequent one."
+solution: |
+  package main
+
+  func maxOf(nums ...int) int {
+  	if len(nums) == 0 {
+  		return 0
+  	}
+  	largest := nums[0]
+  	for _, n := range nums {
+  		if n > largest {
+  			largest = n
+  		}
+  	}
+  	return largest
+  }
+explanation: |
+  Variadic parameters (using ...) let a function accept any number of arguments:
+    func maxOf(nums ...int) int { ... }
+  Inside the function, nums is a []int slice. You can check its length
+  with len(nums) and iterate with range. To find the maximum, start
+  with the first element and compare each subsequent one.
+  A slice can be spread into a variadic call: maxOf(nums...)
+reference: "https://gobyexample.com/variadic-functions"

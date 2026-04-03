@@ -1,0 +1,71 @@
+id: "lg02-003"
+title: "Type Conversion"
+concept: "basics"
+difficulty: 2
+description: |
+  Write a function temperatureReport that takes a Fahrenheit temperature
+  as an int and returns three values:
+  1. The Celsius equivalent as a float64 (formula: (F - 32) * 5.0 / 9.0)
+  2. The Celsius value truncated to an int
+  3. Whether the temperature is below freezing (Celsius < 0) as a bool
+
+  For example, temperatureReport(212) returns (100.0, 100, false)
+  and temperatureReport(14) returns (-10.0, -10, true).
+template: |
+  package main
+
+  // TODO: implement temperatureReport
+test_code: |
+  package main
+
+  import (
+  	"math"
+  	"testing"
+  )
+
+  func TestTemperatureReport(t *testing.T) {
+  	cases := []struct {
+  		fahr        int
+  		wantCelsius float64
+  		wantTrunc   int
+  		wantFreeze  bool
+  	}{
+  		{212, 100.0, 100, false},
+  		{32, 0.0, 0, false},
+  		{14, -10.0, -10, true},
+  		{72, 22.222222222222221, 22, false},
+  		{0, -17.77777777777778, -17, true},
+  		{-40, -40.0, -40, true},
+  	}
+  	for _, c := range cases {
+  		gotC, gotT, gotF := temperatureReport(c.fahr)
+  		if math.Abs(gotC-c.wantCelsius) > 0.0001 {
+  			t.Errorf("temperatureReport(%d) celsius: expected %f, got %f", c.fahr, c.wantCelsius, gotC)
+  		}
+  		if gotT != c.wantTrunc {
+  			t.Errorf("temperatureReport(%d) truncated: expected %d, got %d", c.fahr, c.wantTrunc, gotT)
+  		}
+  		if gotF != c.wantFreeze {
+  			t.Errorf("temperatureReport(%d) freezing: expected %v, got %v", c.fahr, c.wantFreeze, gotF)
+  		}
+  	}
+  }
+hint: "Convert the int to float64 before arithmetic to get a float result. Use int() to truncate a float64 back to an integer."
+solution: |
+  package main
+
+  func temperatureReport(fahr int) (float64, int, bool) {
+  	celsius := (float64(fahr) - 32) * 5.0 / 9.0
+  	truncated := int(celsius)
+  	freezing := celsius < 0
+  	return celsius, truncated, freezing
+  }
+explanation: |
+  Go requires explicit type conversions between numeric types:
+    celsius := (float64(fahr) - 32) * 5.0 / 9.0
+  Without float64(fahr), the arithmetic would use integer division
+  and lose precision. Converting back with int(celsius) truncates
+  toward zero (not rounding). This is important: int(-10.7) gives -10,
+  not -11. Type conversions in Go are always explicit — the compiler
+  will never silently convert between int and float64.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch2.html"

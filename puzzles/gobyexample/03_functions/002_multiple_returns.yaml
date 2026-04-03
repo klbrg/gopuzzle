@@ -1,0 +1,46 @@
+id: "03-002"
+title: "Multiple Return Values"
+concept: "functions"
+difficulty: 2
+description: |
+  Return both the minimum and maximum of two integers, with the smaller value first.
+template: |
+  package main
+
+  func minMax(a, b int) (int, int) {
+  	// TODO
+  }
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestMinMax(t *testing.T) {
+  	mn, mx := minMax(3, 7)
+  	if mn != 3 || mx != 7 {
+  		t.Errorf("minMax(3,7): expected (3,7), got (%d,%d)", mn, mx)
+  	}
+  	mn2, mx2 := minMax(9, 2)
+  	if mn2 != 2 || mx2 != 9 {
+  		t.Errorf("minMax(9,2): expected (2,9), got (%d,%d)", mn2, mx2)
+  	}
+  }
+hint: "Go functions can return multiple values: return a, b"
+solution: |
+  package main
+
+  func minMax(a, b int) (int, int) {
+  	if a < b {
+  		return a, b
+  	}
+  	return b, a
+  }
+explanation: |
+  Go functions can return multiple values — a feature used heavily in the standard library.
+  The most common pattern is returning (result, error).
+    if a < b {
+        return a, b
+    }
+    return b, a
+  Callers use multiple assignment: min, max := minMax(3, 7)
+reference: "https://gobyexample.com/multiple-return-values"

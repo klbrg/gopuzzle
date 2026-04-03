@@ -1,0 +1,161 @@
+id: "lg06-003"
+title: "Slice Mutation Through Functions"
+concept: "pointers"
+difficulty: 5
+description: |
+  Go slices contain a pointer to an underlying array, so a function that
+  receives a slice can modify its existing elements -- but appending to
+  it does NOT grow the caller's slice (the header is passed by value).
+
+  Write a function UpperAll(s []string) that uppercases every element of
+  the slice in place. The caller should see the changes without needing a
+  return value.
+
+  Write a function AppendItem(sp *[]string, item string) that appends an
+  item to the caller's slice. Because append may reallocate the backing
+  array, you need a pointer to the slice header.
+
+  Write a function RemoveLast(sp *[]string) (string, bool) that removes
+  and returns the last element. Return ("", false) if the slice is empty.
+
+  Examples:
+    s := []string{"go", "is", "fun"}
+    UpperAll(s)
+    s => ["GO", "IS", "FUN"]
+
+    items := []string{"a"}
+    AppendItem(&items, "b")
+    items => ["a", "b"]
+
+    last, ok := RemoveLast(&items)
+    last => "b", ok => true
+    items => ["a"]
+template: |
+  package main
+
+  // TODO: implement UpperAll (modifies elements in place)
+
+  // TODO: implement AppendItem (needs pointer to slice)
+
+  // TODO: implement RemoveLast (needs pointer to slice)
+test_code: |
+  package main
+
+  import (
+  	"testing"
+  )
+
+  func TestUpperAll(t *testing.T) {
+  	s := []string{"go", "is", "fun"}
+  	UpperAll(s)
+  	expected := []string{"GO", "IS", "FUN"}
+  	for i, v := range s {
+  		if v != expected[i] {
+  			t.Errorf("index %d: expected %q, got %q", i, expected[i], v)
+  		}
+  	}
+  }
+
+  func TestUpperAllEmpty(t *testing.T) {
+  	s := []string{}
+  	UpperAll(s) // should not panic
+  }
+
+  func TestUpperAllSingleElement(t *testing.T) {
+  	s := []string{"hello"}
+  	UpperAll(s)
+  	if s[0] != "HELLO" {
+  		t.Errorf("expected %q, got %q", "HELLO", s[0])
+  	}
+  }
+
+  func TestAppendItem(t *testing.T) {
+  	items := []string{"a"}
+  	AppendItem(&items, "b")
+  	AppendItem(&items, "c")
+  	if len(items) != 3 {
+  		t.Fatalf("expected length 3, got %d", len(items))
+  	}
+  	if items[1] != "b" || items[2] != "c" {
+  		t.Errorf("expected [a b c], got %v", items)
+  	}
+  }
+
+  func TestAppendItemToNilSlice(t *testing.T) {
+  	var items []string
+  	AppendItem(&items, "first")
+  	if len(items) != 1 || items[0] != "first" {
+  		t.Errorf("expected [first], got %v", items)
+  	}
+  }
+
+  func TestRemoveLast(t *testing.T) {
+  	items := []string{"x", "y", "z"}
+  	val, ok := RemoveLast(&items)
+  	if !ok || val != "z" {
+  		t.Errorf("expected (z, true), got (%q, %t)", val, ok)
+  	}
+  	if len(items) != 2 {
+  		t.Errorf("expected length 2, got %d", len(items))
+  	}
+  }
+
+  func TestRemoveLastEmpty(t *testing.T) {
+  	items := []string{}
+  	val, ok := RemoveLast(&items)
+  	if ok || val != "" {
+  		t.Errorf("expected (\"\", false), got (%q, %t)", val, ok)
+  	}
+  }
+
+  func TestRemoveLastAll(t *testing.T) {
+  	items := []string{"only"}
+  	val, ok := RemoveLast(&items)
+  	if !ok || val != "only" {
+  		t.Errorf("expected (only, true), got (%q, %t)", val, ok)
+  	}
+  	if len(items) != 0 {
+  		t.Errorf("expected empty slice, got %v", items)
+  	}
+  }
+
+hint: "Modifying s[i] inside a function changes the caller's data because slices share the backing array. But to grow or shrink a slice, you need a *[]string because append returns a new slice header."
+solution: |
+  package main
+
+  import "strings"
+
+  func UpperAll(s []string) {
+  	for i, v := range s {
+  		s[i] = strings.ToUpper(v)
+  	}
+  }
+
+  func AppendItem(sp *[]string, item string) {
+  	*sp = append(*sp, item)
+  }
+
+  func RemoveLast(sp *[]string) (string, bool) {
+  	s := *sp
+  	if len(s) == 0 {
+  		return "", false
+  	}
+  	last := s[len(s)-1]
+  	*sp = s[:len(s)-1]
+  	return last, true
+  }
+explanation: |
+  Slices are a three-field struct (pointer, length, capacity) passed by
+  value. When you modify s[i], you are writing through the shared pointer
+  to the backing array -- the caller sees it. But append may create a new
+  backing array and always updates the length, so the caller's header
+  becomes stale. To fix this, pass a pointer to the slice:
+
+    func AppendItem(sp *[]string, item string) {
+        *sp = append(*sp, item)
+    }
+
+  This is a common Go pattern when a function needs to grow or shrink
+  the caller's slice. Maps do not have this problem because the map
+  variable is already a pointer to the underlying hash table.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch6.html"

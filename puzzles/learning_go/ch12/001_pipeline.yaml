@@ -1,0 +1,132 @@
+id: "lg12-001"
+title: "Channel Pipeline"
+concept: "concurrency"
+difficulty: 7
+description: |
+  Build a three-stage channel pipeline that processes integers:
+  1. generator(nums ...int) <-chan int — sends each number into a channel, then closes it.
+  2. square(in <-chan int) <-chan int — reads from in, squares each value, sends to output channel.
+  3. sum(in <-chan int) int — reads all values from in and returns their sum.
+
+  Example: generator(2, 3, 4) -> square -> sum => 4 + 9 + 16 = 29
+template: |
+  package main
+
+  func generator(nums ...int) <-chan int {
+  	// TODO: send each num into a channel, then close it
+  	return nil
+  }
+
+  func square(in <-chan int) <-chan int {
+  	// TODO: read from in, square each value, send to output
+  	return nil
+  }
+
+  func sum(in <-chan int) int {
+  	// TODO: read all values and return their sum
+  	return 0
+  }
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestPipelineBasic(t *testing.T) {
+  	ch := generator(2, 3, 4)
+  	sq := square(ch)
+  	got := sum(sq)
+  	if got != 29 {
+  		t.Errorf("expected 29, got %d", got)
+  	}
+  }
+
+  func TestPipelineEmpty(t *testing.T) {
+  	ch := generator()
+  	sq := square(ch)
+  	got := sum(sq)
+  	if got != 0 {
+  		t.Errorf("expected 0, got %d", got)
+  	}
+  }
+
+  func TestPipelineSingle(t *testing.T) {
+  	ch := generator(5)
+  	sq := square(ch)
+  	got := sum(sq)
+  	if got != 25 {
+  		t.Errorf("expected 25, got %d", got)
+  	}
+  }
+
+  func TestPipelineChained(t *testing.T) {
+  	got := sum(square(generator(1, 2, 3, 4, 5)))
+  	want := 1 + 4 + 9 + 16 + 25
+  	if got != want {
+  		t.Errorf("expected %d, got %d", want, got)
+  	}
+  }
+
+  func TestGeneratorCloses(t *testing.T) {
+  	ch := generator(10, 20)
+  	vals := []int{}
+  	for v := range ch {
+  		vals = append(vals, v)
+  	}
+  	if len(vals) != 2 || vals[0] != 10 || vals[1] != 20 {
+  		t.Errorf("expected [10, 20], got %v", vals)
+  	}
+  }
+hint: "Each stage creates a channel and launches a goroutine. The goroutine reads from the input, processes, sends to output, and closes the output channel when done."
+solution: |
+  package main
+
+  func generator(nums ...int) <-chan int {
+  	out := make(chan int)
+  	go func() {
+  		for _, n := range nums {
+  			out <- n
+  		}
+  		close(out)
+  	}()
+  	return out
+  }
+
+  func square(in <-chan int) <-chan int {
+  	out := make(chan int)
+  	go func() {
+  		for n := range in {
+  			out <- n * n
+  		}
+  		close(out)
+  	}()
+  	return out
+  }
+
+  func sum(in <-chan int) int {
+  	total := 0
+  	for n := range in {
+  		total += n
+  	}
+  	return total
+  }
+explanation: |
+  A channel pipeline connects stages where each stage:
+  1. Creates an output channel
+  2. Launches a goroutine that reads from input, processes, and sends to output
+  3. Closes the output channel when input is exhausted
+  4. Returns the output channel
+
+  The key pattern:
+    func stage(in <-chan int) <-chan int {
+        out := make(chan int)
+        go func() {
+            for v := range in {
+                out <- process(v)
+            }
+            close(out)
+        }()
+        return out
+    }
+  Closing channels is critical — it lets downstream stages exit their range loops.
+  Pipelines compose naturally: sum(square(generator(1, 2, 3)))
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch12.html"

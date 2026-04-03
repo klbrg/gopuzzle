@@ -1,0 +1,187 @@
+id: "lg16-002"
+title: "Timed Function Wrapper"
+concept: "advanced"
+difficulty: 8
+description: |
+  Implement TimedCall(f any, args ...any) ([]any, time.Duration, error) that:
+  1. Validates f is a function using reflect
+  2. Validates the number of arguments matches the function signature
+  3. Calls f with the provided arguments
+  4. Returns the results as []any, the elapsed time, and nil error
+
+  If f is not a function, return nil, 0, with an error "not a function".
+  If the argument count is wrong, return nil, 0, with an error "expected N args, got M".
+
+  Example:
+    add := func(a, b int) int { return a + b }
+    results, elapsed, err := TimedCall(add, 3, 4)
+    // results = [7], elapsed = ~0s, err = nil
+
+    results, elapsed, err := TimedCall(strings.Contains, "hello world", "world")
+    // results = [true], elapsed = ~0s, err = nil
+template: |
+  package main
+
+  import (
+  	"fmt"
+  	"reflect"
+  	"time"
+  )
+
+  func TimedCall(f any, args ...any) ([]any, time.Duration, error) {
+  	// TODO: validate f is a function
+  	// TODO: validate argument count
+  	// TODO: call f with args using reflect, measure elapsed time
+  	// TODO: collect return values as []any
+  	_ = reflect.ValueOf // delete this line
+  	_ = fmt.Errorf      // delete this line
+  	_ = time.Now()       // delete this line
+  	return nil, 0, nil
+  }
+test_code: |
+  package main
+
+  import (
+  	"strings"
+  	"testing"
+  	"time"
+  )
+
+  func TestTimedCallAdd(t *testing.T) {
+  	add := func(a, b int) int { return a + b }
+  	results, elapsed, err := TimedCall(add, 3, 4)
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if len(results) != 1 || results[0] != 7 {
+  		t.Errorf("expected [7], got %v", results)
+  	}
+  	if elapsed < 0 {
+  		t.Error("elapsed should be non-negative")
+  	}
+  }
+
+  func TestTimedCallStringFunc(t *testing.T) {
+  	results, _, err := TimedCall(strings.Contains, "hello world", "world")
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if len(results) != 1 || results[0] != true {
+  		t.Errorf("expected [true], got %v", results)
+  	}
+  }
+
+  func TestTimedCallMultiReturn(t *testing.T) {
+  	divide := func(a, b int) (int, bool) {
+  		if b == 0 {
+  			return 0, false
+  		}
+  		return a / b, true
+  	}
+  	results, _, err := TimedCall(divide, 10, 2)
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if len(results) != 2 {
+  		t.Fatalf("expected 2 results, got %d", len(results))
+  	}
+  	if results[0] != 5 || results[1] != true {
+  		t.Errorf("expected [5, true], got %v", results)
+  	}
+  }
+
+  func TestTimedCallNoReturn(t *testing.T) {
+  	called := false
+  	f := func() { called = true }
+  	results, _, err := TimedCall(f)
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if len(results) != 0 {
+  		t.Errorf("expected 0 results, got %d", len(results))
+  	}
+  	if !called {
+  		t.Error("function was not called")
+  	}
+  }
+
+  func TestTimedCallNotAFunction(t *testing.T) {
+  	_, _, err := TimedCall(42)
+  	if err == nil {
+  		t.Fatal("expected error for non-function")
+  	}
+  }
+
+  func TestTimedCallWrongArgCount(t *testing.T) {
+  	f := func(a int) int { return a }
+  	_, _, err := TimedCall(f, 1, 2)
+  	if err == nil {
+  		t.Fatal("expected error for wrong arg count")
+  	}
+  }
+
+  func TestTimedCallMeasuresTime(t *testing.T) {
+  	slow := func() { time.Sleep(50 * time.Millisecond) }
+  	_, elapsed, err := TimedCall(slow)
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if elapsed < 40*time.Millisecond {
+  		t.Errorf("expected at least 40ms, got %v", elapsed)
+  	}
+  }
+hint: "Use reflect.TypeOf(f).Kind() to check for reflect.Func. Convert args to []reflect.Value, call reflect.ValueOf(f).Call(in), and convert results back with .Interface()."
+solution: |
+  package main
+
+  import (
+  	"fmt"
+  	"reflect"
+  	"time"
+  )
+
+  func TimedCall(f any, args ...any) ([]any, time.Duration, error) {
+  	fv := reflect.ValueOf(f)
+  	if fv.Kind() != reflect.Func {
+  		return nil, 0, fmt.Errorf("not a function")
+  	}
+
+  	ft := fv.Type()
+  	if ft.NumIn() != len(args) {
+  		return nil, 0, fmt.Errorf("expected %d args, got %d", ft.NumIn(), len(args))
+  	}
+
+  	in := make([]reflect.Value, len(args))
+  	for i, a := range args {
+  		in[i] = reflect.ValueOf(a)
+  	}
+
+  	start := time.Now()
+  	out := fv.Call(in)
+  	elapsed := time.Since(start)
+
+  	results := make([]any, len(out))
+  	for i, v := range out {
+  		results[i] = v.Interface()
+  	}
+
+  	return results, elapsed, nil
+  }
+explanation: |
+  The reflect package allows calling arbitrary functions dynamically:
+
+  1. reflect.ValueOf(f) gets the function as a reflect.Value
+  2. fv.Type().NumIn() checks the expected parameter count
+  3. Convert []any args to []reflect.Value for the call
+  4. fv.Call(in) invokes the function and returns []reflect.Value
+  5. Convert results back to []any with .Interface()
+
+  This is the foundation of the MakeTimedFunction pattern from the book, but
+  simplified: instead of creating a new function with reflect.MakeFunc, we
+  directly call and measure. The tradeoff is that the caller gets []any back
+  instead of typed return values.
+
+  reflect.MakeFunc (used in the book) is more powerful -- it creates a new
+  function value with the same signature that can be type-asserted back. But
+  it requires more ceremony and is harder to use correctly.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch16.html"

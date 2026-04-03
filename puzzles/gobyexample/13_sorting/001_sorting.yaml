@@ -1,0 +1,111 @@
+id: "13-001"
+title: "Sorting"
+concept: "sorting"
+difficulty: 4
+description: |
+  Implement topN(nums []int, n int) []int that returns the n largest elements from
+  nums in descending order. If n is greater than the length of nums, return all
+  elements in descending order. The input slice must not be modified.
+template: |
+  package main
+
+  func topN(nums []int, n int) []int {
+  	// TODO: return the n largest elements in descending order
+  	// Do not modify the input slice
+  	return nil
+  }
+test_code: |
+  package main
+
+  import (
+  	"reflect"
+  	"testing"
+  )
+
+  func TestTopNBasic(t *testing.T) {
+  	got := topN([]int{3, 1, 4, 1, 5, 9, 2, 6}, 3)
+  	want := []int{9, 6, 5}
+  	if !reflect.DeepEqual(got, want) {
+  		t.Errorf("expected %v, got %v", want, got)
+  	}
+  }
+
+  func TestTopNAll(t *testing.T) {
+  	got := topN([]int{5, 3, 1}, 5) // n > len
+  	want := []int{5, 3, 1}
+  	if !reflect.DeepEqual(got, want) {
+  		t.Errorf("expected %v, got %v", want, got)
+  	}
+  }
+
+  func TestTopNOne(t *testing.T) {
+  	got := topN([]int{7, 2, 9, 4}, 1)
+  	want := []int{9}
+  	if !reflect.DeepEqual(got, want) {
+  		t.Errorf("expected %v, got %v", want, got)
+  	}
+  }
+
+  func TestTopNEmpty(t *testing.T) {
+  	got := topN([]int{}, 3)
+  	if len(got) != 0 {
+  		t.Errorf("expected empty, got %v", got)
+  	}
+  }
+
+  func TestTopNZero(t *testing.T) {
+  	got := topN([]int{1, 2, 3}, 0)
+  	if len(got) != 0 {
+  		t.Errorf("expected empty, got %v", got)
+  	}
+  }
+
+  func TestTopNDoesNotModifyInput(t *testing.T) {
+  	input := []int{5, 3, 8, 1}
+  	original := make([]int, len(input))
+  	copy(original, input)
+  	topN(input, 2)
+  	if !reflect.DeepEqual(input, original) {
+  		t.Errorf("input was modified: expected %v, got %v", original, input)
+  	}
+  }
+
+  func TestTopNDuplicates(t *testing.T) {
+  	got := topN([]int{4, 4, 4, 2, 2}, 3)
+  	want := []int{4, 4, 4}
+  	if !reflect.DeepEqual(got, want) {
+  		t.Errorf("expected %v, got %v", want, got)
+  	}
+  }
+hint: "Copy the slice to avoid mutating the input. Use slices.SortFunc with a descending comparator, then take the first n elements."
+solution: |
+  package main
+
+  import "slices"
+
+  func topN(nums []int, n int) []int {
+  	if len(nums) == 0 || n <= 0 {
+  		return []int{}
+  	}
+  	sorted := make([]int, len(nums))
+  	copy(sorted, nums)
+  	slices.SortFunc(sorted, func(a, b int) int { return b - a })
+  	if n > len(sorted) {
+  		n = len(sorted)
+  	}
+  	return sorted[:n]
+  }
+explanation: |
+  The slices package provides generic sorting:
+    slices.SortFunc(s, cmp)   // sort with custom comparator
+  A descending comparator reverses the order:
+    func(a, b int) int { return b - a }
+  Copy first to avoid mutating the input:
+    sorted := make([]int, len(nums))
+    copy(sorted, nums)
+  Then slice the top n elements:
+    return sorted[:n]
+  slices.Sort sorts in ascending order by default. SortFunc gives
+  full control. Both sort in-place and are not stable; use
+  slices.SortStableFunc when stability matters.
+reference: "https://gobyexample.com/sorting"

@@ -1,0 +1,95 @@
+id: "19-001"
+title: "Context"
+concept: "advanced"
+difficulty: 7
+description: |
+  Fetch a URL's body as a string, respecting context cancellation.
+template: |
+  package main
+
+  import (
+  	"context"
+  	"io"
+  	"net/http"
+  )
+
+  func fetchWithContext(ctx context.Context, url string) (string, error) {
+  	// TODO
+  }
+test_code: |
+  package main
+
+  import (
+  	"context"
+  	"net/http"
+  	"net/http/httptest"
+  	"testing"
+  	"time"
+  )
+
+  func TestFetchWithContext(t *testing.T) {
+  	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+  		w.Write([]byte("ok"))
+  	}))
+  	defer server.Close()
+
+  	ctx := context.Background()
+  	body, err := fetchWithContext(ctx, server.URL)
+  	if err != nil || body != "ok" {
+  		t.Errorf("expected ok, got %q %v", body, err)
+  	}
+
+  	ctx2, cancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
+  	defer cancel()
+  	slowServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+  		time.Sleep(100 * time.Millisecond)
+  		w.Write([]byte("too slow"))
+  	}))
+  	defer slowServer.Close()
+  	_, err2 := fetchWithContext(ctx2, slowServer.URL)
+  	if err2 == nil {
+  		t.Error("expected context timeout error")
+  	}
+  }
+hint: "http.NewRequestWithContext attaches a context to an HTTP request."
+solution: |
+  package main
+
+  import (
+  	"context"
+  	"io"
+  	"net/http"
+  )
+
+  func fetchWithContext(ctx context.Context, url string) (string, error) {
+  	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+  	if err != nil {
+  		return "", err
+  	}
+  	resp, err := http.DefaultClient.Do(req)
+  	if err != nil {
+  		return "", err
+  	}
+  	defer resp.Body.Close()
+  	data, err := io.ReadAll(resp.Body)
+  	if err != nil {
+  		return "", err
+  	}
+  	return string(data), nil
+  }
+explanation: |
+  context.Context carries cancellation, deadlines, and request-scoped values.
+    req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+    if err != nil { return "", err }
+    resp, err := http.DefaultClient.Do(req)
+    if err != nil { return "", err }  // includes context cancellation
+    defer resp.Body.Close()
+    data, _ := io.ReadAll(resp.Body)
+    return string(data), nil
+  Create contexts:
+    context.Background()                    // root, never cancelled
+    context.WithTimeout(parent, d)          // auto-cancel after duration
+    context.WithCancel(parent)              // manual cancel()
+    context.WithValue(parent, key, val)     // add request-scoped data
+  Pass context as the first argument to all functions — this is a Go convention.
+reference: "https://gobyexample.com/context"

@@ -1,0 +1,63 @@
+id: "07-001"
+title: "Errors"
+concept: "errors"
+difficulty: 3
+description: |
+  Write sqrt(x float64) that returns the square root, or an error if the input is negative.
+template: |
+  package main
+
+  import (
+  	"errors"
+  	"math"
+  )
+
+  func sqrt(x float64) (float64, error) {
+  	// TODO
+  }
+test_code: |
+  package main
+
+  import (
+  	"math"
+  	"testing"
+  )
+
+  func TestSqrt(t *testing.T) {
+  	got, err := sqrt(4.0)
+  	if err != nil || math.Abs(got-2.0) > 0.0001 {
+  		t.Errorf("sqrt(4): expected (2, nil), got (%f, %v)", got, err)
+  	}
+  	_, err2 := sqrt(-1.0)
+  	if err2 == nil {
+  		t.Error("expected error for negative input")
+  	}
+  }
+hint: "errors.New() creates an error value; return it alongside a zero result."
+solution: |
+  package main
+
+  import (
+  	"errors"
+  	"math"
+  )
+
+  func sqrt(x float64) (float64, error) {
+  	if x < 0 {
+  		return 0, errors.New("cannot sqrt negative number")
+  	}
+  	return math.Sqrt(x), nil
+  }
+explanation: |
+  Go's error handling is explicit — functions return (result, error) and callers check it.
+    if x < 0 {
+        return 0, errors.New("cannot sqrt negative number")
+    }
+    return math.Sqrt(x), nil
+  The caller pattern is:
+    result, err := sqrt(x)
+    if err != nil {
+        // handle error
+    }
+  This makes error handling visible and impossible to accidentally ignore.
+reference: "https://gobyexample.com/errors"

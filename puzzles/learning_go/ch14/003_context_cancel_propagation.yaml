@@ -1,0 +1,187 @@
+id: "lg14-003"
+title: "Cancellation Propagation"
+concept: "advanced"
+difficulty: 7
+description: |
+  Implement firstResult(ctx context.Context, fns ...func(context.Context) (string, error)) (string, error)
+  that runs all functions concurrently, returns the FIRST successful result, and
+  cancels the remaining functions via context.
+
+  Rules:
+  - Each function receives a derived context that is cancelled once a result is chosen.
+  - If a function returns an error, ignore it (unless all functions error).
+  - If ALL functions return errors, return "", with an error message "all failed".
+  - If the parent ctx is cancelled before any function succeeds, return "", ctx.Err().
+
+  Example:
+    fast := func(ctx context.Context) (string, error) { return "fast", nil }
+    slow := func(ctx context.Context) (string, error) {
+        time.Sleep(time.Second); return "slow", nil
+    }
+    result, _ := firstResult(context.Background(), fast, slow) // "fast"
+template: |
+  package main
+
+  import (
+  	"context"
+  	"errors"
+  )
+
+  func firstResult(ctx context.Context, fns ...func(context.Context) (string, error)) (string, error) {
+  	// TODO: run all fns concurrently, return first success, cancel the rest
+  	_ = errors.New  // delete this line
+  	return "", nil
+  }
+test_code: |
+  package main
+
+  import (
+  	"context"
+  	"errors"
+  	"testing"
+  	"time"
+  )
+
+  func TestFirstResultFastest(t *testing.T) {
+  	fast := func(ctx context.Context) (string, error) {
+  		return "fast", nil
+  	}
+  	slow := func(ctx context.Context) (string, error) {
+  		time.Sleep(500 * time.Millisecond)
+  		return "slow", nil
+  	}
+  	got, err := firstResult(context.Background(), fast, slow)
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if got != "fast" {
+  		t.Errorf("expected 'fast', got '%s'", got)
+  	}
+  }
+
+  func TestFirstResultSkipsErrors(t *testing.T) {
+  	failing := func(ctx context.Context) (string, error) {
+  		return "", errors.New("fail")
+  	}
+  	ok := func(ctx context.Context) (string, error) {
+  		time.Sleep(50 * time.Millisecond)
+  		return "ok", nil
+  	}
+  	got, err := firstResult(context.Background(), failing, ok)
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if got != "ok" {
+  		t.Errorf("expected 'ok', got '%s'", got)
+  	}
+  }
+
+  func TestFirstResultAllFail(t *testing.T) {
+  	f1 := func(ctx context.Context) (string, error) {
+  		return "", errors.New("err1")
+  	}
+  	f2 := func(ctx context.Context) (string, error) {
+  		return "", errors.New("err2")
+  	}
+  	_, err := firstResult(context.Background(), f1, f2)
+  	if err == nil {
+  		t.Fatal("expected error when all fail")
+  	}
+  }
+
+  func TestFirstResultCancelsOthers(t *testing.T) {
+  	cancelled := make(chan struct{})
+  	fast := func(ctx context.Context) (string, error) {
+  		return "done", nil
+  	}
+  	waiter := func(ctx context.Context) (string, error) {
+  		<-ctx.Done()
+  		close(cancelled)
+  		return "", ctx.Err()
+  	}
+  	got, err := firstResult(context.Background(), fast, waiter)
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if got != "done" {
+  		t.Errorf("expected 'done', got '%s'", got)
+  	}
+  	select {
+  	case <-cancelled:
+  		// success: the other goroutine was cancelled
+  	case <-time.After(time.Second):
+  		t.Fatal("other goroutine was not cancelled")
+  	}
+  }
+
+  func TestFirstResultParentCancel(t *testing.T) {
+  	ctx, cancel := context.WithCancel(context.Background())
+  	cancel() // cancel immediately
+  	blocker := func(ctx context.Context) (string, error) {
+  		<-ctx.Done()
+  		return "", ctx.Err()
+  	}
+  	_, err := firstResult(ctx, blocker)
+  	if err == nil {
+  		t.Fatal("expected error from cancelled parent context")
+  	}
+  }
+hint: "Create a derived context with cancel. Launch goroutines that send results on a channel. In a loop, receive results: if success, cancel and return. Count errors; if all errored, return error. Also select on ctx.Done()."
+solution: |
+  package main
+
+  import (
+  	"context"
+  	"errors"
+  )
+
+  type result struct {
+  	val string
+  	err error
+  }
+
+  func firstResult(ctx context.Context, fns ...func(context.Context) (string, error)) (string, error) {
+  	ctx, cancel := context.WithCancel(ctx)
+  	defer cancel()
+
+  	ch := make(chan result, len(fns))
+  	for _, fn := range fns {
+  		go func(f func(context.Context) (string, error)) {
+  			v, err := f(ctx)
+  			ch <- result{v, err}
+  		}(fn)
+  	}
+
+  	errCount := 0
+  	for range fns {
+  		select {
+  		case r := <-ch:
+  			if r.err == nil {
+  				return r.val, nil
+  			}
+  			errCount++
+  			if errCount == len(fns) {
+  				return "", errors.New("all failed")
+  			}
+  		case <-ctx.Done():
+  			return "", ctx.Err()
+  		}
+  	}
+  	return "", errors.New("all failed")
+  }
+explanation: |
+  This implements the "first success" race pattern using context cancellation:
+
+  1. Derive a cancellable context from the parent
+  2. Launch all functions as goroutines with the derived context
+  3. Collect results on a buffered channel
+  4. Return the first success and cancel the derived context (via defer)
+  5. The cancel propagates to all still-running goroutines
+
+  The buffered channel (capacity = len(fns)) is critical: it prevents goroutine
+  leaks. Without buffering, goroutines that finish after we return would block
+  forever trying to send their result.
+
+  defer cancel() ensures cleanup happens regardless of which path we return on.
+  This is a core context pattern: always defer the cancel function.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch14.html"

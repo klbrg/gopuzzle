@@ -1,0 +1,81 @@
+id: "15-004"
+title: "Random Numbers"
+concept: "time"
+difficulty: 2
+description: |
+  Write randInRange(min, max int) int that returns a random integer in [min, max).
+  Write shuffle(s []int) []int that returns a new shuffled copy of the slice.
+template: |
+  package main
+
+  import "math/rand"
+
+  func randInRange(min, max int) int {
+  	// TODO
+  }
+
+  func shuffle(s []int) []int {
+  	// TODO
+  }
+test_code: |
+  package main
+
+  import (
+  	"sort"
+  	"testing"
+  )
+
+  func TestRandInRange(t *testing.T) {
+  	for i := 0; i < 100; i++ {
+  		n := randInRange(5, 10)
+  		if n < 5 || n >= 10 {
+  			t.Errorf("out of range [5,10): %d", n)
+  		}
+  	}
+  }
+
+  func TestShuffle(t *testing.T) {
+  	s := []int{1, 2, 3, 4, 5}
+  	got := shuffle(s)
+  	if len(got) != 5 {
+  		t.Errorf("expected 5 elements, got %d", len(got))
+  	}
+  	sorted := make([]int, len(got))
+  	copy(sorted, got)
+  	sort.Ints(sorted)
+  	for i, v := range sorted {
+  		if v != i+1 {
+  			t.Errorf("shuffled slice missing elements: %v", got)
+  		}
+  	}
+  }
+hint: "rand.Intn(n) returns [0, n); rand.Shuffle(len, swap) randomizes in place."
+solution: |
+  package main
+
+  import "math/rand"
+
+  func randInRange(min, max int) int {
+  	return rand.Intn(max-min) + min
+  }
+
+  func shuffle(s []int) []int {
+  	result := make([]int, len(s))
+  	copy(result, s)
+  	rand.Shuffle(len(result), func(i, j int) {
+  		result[i], result[j] = result[j], result[i]
+  	})
+  	return result
+  }
+explanation: |
+  math/rand provides pseudo-random numbers. Go 1.20+ auto-seeds the global RNG.
+    rand.Intn(n) returns [0, n) so add min for a range:
+    return rand.Intn(max-min) + min
+  For shuffling, use rand.Shuffle:
+    result := make([]int, len(s))
+    copy(result, s)
+    rand.Shuffle(len(result), func(i, j int) {
+        result[i], result[j] = result[j], result[i]
+    })
+  For cryptographic randomness, use crypto/rand — never math/rand for security.
+reference: "https://gobyexample.com/random-numbers"

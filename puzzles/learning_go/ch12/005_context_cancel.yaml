@@ -1,0 +1,171 @@
+id: "lg12-005"
+title: "Cancellable Generator"
+concept: "concurrency"
+difficulty: 7
+description: |
+  Implement countUp(ctx context.Context) <-chan int that emits sequential integers
+  (0, 1, 2, ...) on a channel until the context is cancelled. When cancelled, the
+  goroutine must exit cleanly and close the channel.
+
+  Also implement takeN(ctx context.Context, in <-chan int, n int) []int that
+  reads at most n values from the channel, respecting context cancellation.
+  The caller is responsible for cancelling the context to stop the producer.
+
+  Example:
+    ctx, cancel := context.WithCancel(context.Background())
+    ch := countUp(ctx)
+    // read 3 values: [0, 1, 2]
+    cancel() // goroutine exits, channel closes
+template: |
+  package main
+
+  import "context"
+
+  func countUp(ctx context.Context) <-chan int {
+  	// TODO: emit 0, 1, 2, ... until ctx is cancelled
+  	// Close the channel on exit
+  	return nil
+  }
+
+  func takeN(ctx context.Context, in <-chan int, n int) []int {
+  	// TODO: read at most n values from in, then return them
+  	return nil
+  }
+test_code: |
+  package main
+
+  import (
+  	"context"
+  	"testing"
+  	"time"
+  )
+
+  func TestCountUpTakeThree(t *testing.T) {
+  	ctx, cancel := context.WithCancel(context.Background())
+  	defer cancel()
+  	ch := countUp(ctx)
+  	got := takeN(ctx, ch, 3)
+  	cancel()
+  	if len(got) != 3 {
+  		t.Fatalf("expected 3 values, got %d", len(got))
+  	}
+  	for i, v := range got {
+  		if v != i {
+  			t.Errorf("index %d: expected %d, got %d", i, i, v)
+  		}
+  	}
+  }
+
+  func TestCountUpCloses(t *testing.T) {
+  	ctx, cancel := context.WithCancel(context.Background())
+  	ch := countUp(ctx)
+  	<-ch // read one value
+  	cancel()
+  	// channel should eventually close
+  	timeout := time.After(time.Second)
+  	for {
+  		select {
+  		case _, ok := <-ch:
+  			if !ok {
+  				return // success: channel closed
+  			}
+  		case <-timeout:
+  			t.Fatal("channel did not close after cancel")
+  		}
+  	}
+  }
+
+  func TestCountUpZero(t *testing.T) {
+  	ctx, cancel := context.WithCancel(context.Background())
+  	defer cancel()
+  	ch := countUp(ctx)
+  	got := takeN(ctx, ch, 0)
+  	cancel()
+  	if len(got) != 0 {
+  		t.Errorf("expected 0 values, got %d", len(got))
+  	}
+  }
+
+  func TestCountUpMany(t *testing.T) {
+  	ctx, cancel := context.WithCancel(context.Background())
+  	defer cancel()
+  	ch := countUp(ctx)
+  	got := takeN(ctx, ch, 100)
+  	cancel()
+  	if len(got) != 100 {
+  		t.Fatalf("expected 100 values, got %d", len(got))
+  	}
+  	for i, v := range got {
+  		if v != i {
+  			t.Errorf("index %d: expected %d, got %d", i, i, v)
+  		}
+  	}
+  }
+
+  func TestTakeNStopsReading(t *testing.T) {
+  	ctx, cancel := context.WithCancel(context.Background())
+  	defer cancel()
+  	ch := countUp(ctx)
+  	got := takeN(ctx, ch, 5)
+  	cancel()
+  	if len(got) != 5 {
+  		t.Fatalf("expected 5 values, got %d", len(got))
+  	}
+  }
+hint: "In countUp, use select with ctx.Done() and ch <- i to either send or stop. In takeN, simply read n values from the channel into a slice."
+solution: |
+  package main
+
+  import "context"
+
+  func countUp(ctx context.Context) <-chan int {
+  	ch := make(chan int)
+  	go func() {
+  		defer close(ch)
+  		i := 0
+  		for {
+  			select {
+  			case <-ctx.Done():
+  				return
+  			case ch <- i:
+  				i++
+  			}
+  		}
+  	}()
+  	return ch
+  }
+
+  func takeN(ctx context.Context, in <-chan int, n int) []int {
+  	result := make([]int, 0, n)
+  	for i := 0; i < n; i++ {
+  		select {
+  		case v, ok := <-in:
+  			if !ok {
+  				return result
+  			}
+  			result = append(result, v)
+  		case <-ctx.Done():
+  			return result
+  		}
+  	}
+  	return result
+  }
+explanation: |
+  The select statement with ctx.Done() is the standard pattern for cancellable
+  goroutines in Go:
+
+    select {
+    case <-ctx.Done():
+        return  // context cancelled, clean up
+    case ch <- value:
+        // sent successfully
+    }
+
+  This prevents goroutine leaks: without checking ctx.Done(), the goroutine
+  would block on ch <- value forever if nobody reads from the channel.
+
+  The defer close(ch) ensures downstream consumers (using range) will exit
+  when the producer stops.
+
+  takeN uses the same select pattern to handle early cancellation while reading.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch12.html"

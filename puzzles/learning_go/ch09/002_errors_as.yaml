@@ -1,0 +1,165 @@
+id: "lg09-002"
+title: "Errors As"
+concept: "errors"
+difficulty: 6
+description: |
+  Define a custom error type ValidationError with fields:
+    Field   string
+    Message string
+  Its Error() method returns "<Field>: <Message>".
+
+  Write a function validateAge(age int) error that returns a
+  *ValidationError if age is negative (Field: "age", Message: "must not
+  be negative") or greater than 150 (Field: "age", Message: "unrealistic
+  value"). Return nil for valid ages.
+
+  Write a function checkAge(age int) string that calls validateAge and
+  uses errors.As to extract the ValidationError. Return:
+    - "ok"                          if no error
+    - "validation: <Field>: <Message>" if a ValidationError
+    - "error: <err>"                for any other error
+
+  Examples:
+    checkAge(25)  => "ok"
+    checkAge(-1)  => "validation: age: must not be negative"
+    checkAge(200) => "validation: age: unrealistic value"
+template: |
+  package main
+
+  // TODO: define ValidationError struct and Error() method
+
+  // TODO: implement validateAge
+
+  // TODO: implement checkAge using errors.As
+test_code: |
+  package main
+
+  import (
+  	"errors"
+  	"testing"
+  )
+
+  func TestValidateAgeValid(t *testing.T) {
+  	if err := validateAge(25); err != nil {
+  		t.Errorf("expected nil, got %v", err)
+  	}
+  }
+
+  func TestValidateAgeNegative(t *testing.T) {
+  	err := validateAge(-1)
+  	if err == nil {
+  		t.Fatal("expected error for negative age")
+  	}
+  	var ve *ValidationError
+  	if !errors.As(err, &ve) {
+  		t.Fatalf("expected *ValidationError, got %T", err)
+  	}
+  	if ve.Field != "age" {
+  		t.Errorf("expected field 'age', got %q", ve.Field)
+  	}
+  	if ve.Message != "must not be negative" {
+  		t.Errorf("unexpected message: %q", ve.Message)
+  	}
+  }
+
+  func TestValidateAgeTooHigh(t *testing.T) {
+  	err := validateAge(200)
+  	if err == nil {
+  		t.Fatal("expected error for age > 150")
+  	}
+  	var ve *ValidationError
+  	if !errors.As(err, &ve) {
+  		t.Fatalf("expected *ValidationError, got %T", err)
+  	}
+  	if ve.Message != "unrealistic value" {
+  		t.Errorf("unexpected message: %q", ve.Message)
+  	}
+  }
+
+  func TestValidateAgeZero(t *testing.T) {
+  	if err := validateAge(0); err != nil {
+  		t.Errorf("expected nil for age 0, got %v", err)
+  	}
+  }
+
+  func TestValidateAge150(t *testing.T) {
+  	if err := validateAge(150); err != nil {
+  		t.Errorf("expected nil for age 150, got %v", err)
+  	}
+  }
+
+  func TestCheckAgeOk(t *testing.T) {
+  	got := checkAge(25)
+  	if got != "ok" {
+  		t.Errorf("expected %q, got %q", "ok", got)
+  	}
+  }
+
+  func TestCheckAgeNegative(t *testing.T) {
+  	got := checkAge(-5)
+  	if got != "validation: age: must not be negative" {
+  		t.Errorf("expected %q, got %q", "validation: age: must not be negative", got)
+  	}
+  }
+
+  func TestCheckAgeTooHigh(t *testing.T) {
+  	got := checkAge(200)
+  	if got != "validation: age: unrealistic value" {
+  		t.Errorf("expected %q, got %q", "validation: age: unrealistic value", got)
+  	}
+  }
+hint: "errors.As takes a pointer to the target type: var ve *ValidationError; errors.As(err, &ve). If it matches, ve is populated with the error's data."
+solution: |
+  package main
+
+  import (
+  	"errors"
+  	"fmt"
+  )
+
+  type ValidationError struct {
+  	Field   string
+  	Message string
+  }
+
+  func (ve *ValidationError) Error() string {
+  	return ve.Field + ": " + ve.Message
+  }
+
+  func validateAge(age int) error {
+  	if age < 0 {
+  		return &ValidationError{Field: "age", Message: "must not be negative"}
+  	}
+  	if age > 150 {
+  		return &ValidationError{Field: "age", Message: "unrealistic value"}
+  	}
+  	return nil
+  }
+
+  func checkAge(age int) string {
+  	err := validateAge(age)
+  	if err == nil {
+  		return "ok"
+  	}
+  	var ve *ValidationError
+  	if errors.As(err, &ve) {
+  		return fmt.Sprintf("validation: %s", ve.Error())
+  	}
+  	return fmt.Sprintf("error: %v", err)
+  }
+explanation: |
+  errors.As checks whether an error (or any error in its chain) matches
+  a target type, and populates the target variable if it does:
+    var ve *ValidationError
+    if errors.As(err, &ve) {
+        // ve is now set to the matched *ValidationError
+        fmt.Println(ve.Field, ve.Message)
+    }
+  This is more powerful than a simple type assertion because it works
+  through wrapped errors -- even if the error was wrapped with
+  fmt.Errorf("context: %w", err), errors.As still finds the inner
+  ValidationError.
+
+  Use errors.Is for sentinel errors (fixed values like ErrNotFound).
+  Use errors.As for custom error types where you need to inspect fields.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch9.html"

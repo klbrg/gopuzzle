@@ -1,0 +1,139 @@
+id: "lg03-002"
+title: "Struct Composition"
+concept: "structs"
+difficulty: 3
+description: |
+  Model a simple inventory system. Define:
+
+  1. An Item struct with Name (string) and Price (float64) fields.
+  2. An Inventory struct with an Items field ([]Item).
+  3. A method AddItem(item Item) on Inventory that returns a new Inventory
+     with the item appended (do not modify the original).
+  4. A method Total() float64 on Inventory that returns the sum of all item prices.
+  5. A method MostExpensive() string that returns the Name of the highest-priced
+     item, or "" if the inventory is empty.
+
+  For example:
+    inv := Inventory{}
+    inv = inv.AddItem(Item{"Keyboard", 75.00})
+    inv = inv.AddItem(Item{"Mouse", 25.00})
+    inv.Total()          returns 100.00
+    inv.MostExpensive()  returns "Keyboard"
+template: |
+  package main
+
+  // TODO: define Item struct
+
+  // TODO: define Inventory struct
+
+  // TODO: implement AddItem, Total, MostExpensive methods
+test_code: |
+  package main
+
+  import (
+  	"math"
+  	"testing"
+  )
+
+  func TestAddItemAndTotal(t *testing.T) {
+  	inv := Inventory{}
+  	inv = inv.AddItem(Item{"Keyboard", 75.00})
+  	inv = inv.AddItem(Item{"Mouse", 25.50})
+  	inv = inv.AddItem(Item{"Monitor", 299.99})
+
+  	want := 400.49
+  	got := inv.Total()
+  	if math.Abs(got-want) > 0.001 {
+  		t.Errorf("Total(): expected %.2f, got %.2f", want, got)
+  	}
+  }
+
+  func TestEmptyInventory(t *testing.T) {
+  	inv := Inventory{}
+  	if got := inv.Total(); got != 0 {
+  		t.Errorf("empty Total(): expected 0, got %.2f", got)
+  	}
+  	if got := inv.MostExpensive(); got != "" {
+  		t.Errorf("empty MostExpensive(): expected %q, got %q", "", got)
+  	}
+  }
+
+  func TestMostExpensive(t *testing.T) {
+  	inv := Inventory{}
+  	inv = inv.AddItem(Item{"Pencil", 1.50})
+  	inv = inv.AddItem(Item{"Notebook", 12.00})
+  	inv = inv.AddItem(Item{"Pen", 3.75})
+
+  	if got := inv.MostExpensive(); got != "Notebook" {
+  		t.Errorf("MostExpensive(): expected %q, got %q", "Notebook", got)
+  	}
+  }
+
+  func TestAddItemDoesNotMutate(t *testing.T) {
+  	inv1 := Inventory{}
+  	inv1 = inv1.AddItem(Item{"A", 10.00})
+  	inv2 := inv1.AddItem(Item{"B", 20.00})
+
+  	if len(inv1.Items) != 1 {
+  		t.Errorf("inv1 should still have 1 item, got %d", len(inv1.Items))
+  	}
+  	if len(inv2.Items) != 2 {
+  		t.Errorf("inv2 should have 2 items, got %d", len(inv2.Items))
+  	}
+  }
+hint: "In AddItem, create a new slice with make/copy or append to a fresh copy, then return a new Inventory. For MostExpensive, iterate Items tracking the highest price."
+solution: |
+  package main
+
+  type Item struct {
+  	Name  string
+  	Price float64
+  }
+
+  type Inventory struct {
+  	Items []Item
+  }
+
+  func (inv Inventory) AddItem(item Item) Inventory {
+  	newItems := make([]Item, len(inv.Items), len(inv.Items)+1)
+  	copy(newItems, inv.Items)
+  	newItems = append(newItems, item)
+  	return Inventory{Items: newItems}
+  }
+
+  func (inv Inventory) Total() float64 {
+  	total := 0.0
+  	for _, item := range inv.Items {
+  		total += item.Price
+  	}
+  	return total
+  }
+
+  func (inv Inventory) MostExpensive() string {
+  	if len(inv.Items) == 0 {
+  		return ""
+  	}
+  	best := inv.Items[0]
+  	for _, item := range inv.Items[1:] {
+  		if item.Price > best.Price {
+  			best = item
+  		}
+  	}
+  	return best.Name
+  }
+explanation: |
+  This puzzle combines structs, methods, slices, and value semantics:
+
+  AddItem returns a new Inventory to avoid mutating the original. Since
+  slices share underlying arrays, we must copy before appending:
+    newItems := make([]Item, len(inv.Items), len(inv.Items)+1)
+    copy(newItems, inv.Items)
+    newItems = append(newItems, item)
+
+  Total iterates with range, summing prices. MostExpensive tracks the
+  best item seen so far. Both use value receivers, meaning the Inventory
+  is copied on each method call.
+
+  Composing structs (Inventory holding []Item) is Go's primary way to
+  build complex data models without inheritance.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch3.html"

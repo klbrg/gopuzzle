@@ -1,0 +1,163 @@
+id: "18-002"
+title: "HTTP Client"
+concept: "http"
+difficulty: 6
+description: |
+  Write postJSON(url string, data any) (int, string, error) that sends an HTTP POST
+  request with JSON-encoded data to the given URL.
+
+  The function should:
+    - JSON-encode data into the request body.
+    - Set the Content-Type header to "application/json".
+    - Return the response status code, body as a string, and any error.
+template: |
+  package main
+
+  import (
+  	"bytes"
+  	"encoding/json"
+  	"io"
+  	"net/http"
+  )
+
+  func postJSON(url string, data any) (int, string, error) {
+  	// TODO: marshal data to JSON, create a POST request with
+  	// http.NewRequest, set Content-Type, execute with
+  	// http.DefaultClient.Do, and return status code + body.
+  }
+test_code: |
+  package main
+
+  import (
+  	"encoding/json"
+  	"io"
+  	"net/http"
+  	"net/http/httptest"
+  	"testing"
+  )
+
+  func TestPostJSONSuccess(t *testing.T) {
+  	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+  		if r.Method != http.MethodPost {
+  			t.Errorf("expected POST, got %s", r.Method)
+  		}
+  		if ct := r.Header.Get("Content-Type"); ct != "application/json" {
+  			t.Errorf("Content-Type: expected %q, got %q", "application/json", ct)
+  		}
+  		body, _ := io.ReadAll(r.Body)
+  		var payload map[string]any
+  		if err := json.Unmarshal(body, &payload); err != nil {
+  			t.Fatalf("invalid JSON body: %v", err)
+  		}
+  		if payload["name"] != "Alice" {
+  			t.Errorf("expected name=Alice, got %v", payload["name"])
+  		}
+  		w.WriteHeader(http.StatusCreated)
+  		w.Write([]byte(`{"id": 1}`))
+  	}))
+  	defer server.Close()
+
+  	status, body, err := postJSON(server.URL, map[string]string{"name": "Alice"})
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if status != 201 {
+  		t.Errorf("status: expected 201, got %d", status)
+  	}
+  	if body != `{"id": 1}` {
+  		t.Errorf("body: expected %q, got %q", `{"id": 1}`, body)
+  	}
+  }
+
+  func TestPostJSONStruct(t *testing.T) {
+  	type payload struct {
+  		X int `json:"x"`
+  		Y int `json:"y"`
+  	}
+  	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+  		body, _ := io.ReadAll(r.Body)
+  		var p payload
+  		json.Unmarshal(body, &p)
+  		if p.X != 10 || p.Y != 20 {
+  			t.Errorf("expected {10 20}, got %+v", p)
+  		}
+  		w.Write([]byte("ok"))
+  	}))
+  	defer server.Close()
+
+  	status, body, err := postJSON(server.URL, payload{X: 10, Y: 20})
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if status != 200 {
+  		t.Errorf("status: expected 200, got %d", status)
+  	}
+  	if body != "ok" {
+  		t.Errorf("body: expected %q, got %q", "ok", body)
+  	}
+  }
+
+  func TestPostJSONServerError(t *testing.T) {
+  	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+  		w.WriteHeader(http.StatusInternalServerError)
+  		w.Write([]byte("internal error"))
+  	}))
+  	defer server.Close()
+
+  	status, body, err := postJSON(server.URL, nil)
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if status != 500 {
+  		t.Errorf("status: expected 500, got %d", status)
+  	}
+  	if body != "internal error" {
+  		t.Errorf("body: expected %q, got %q", "internal error", body)
+  	}
+  }
+hint: "json.Marshal encodes data to []byte. Use http.NewRequest(\"POST\", url, bytes.NewReader(jsonBytes)) and set req.Header.Set(\"Content-Type\", \"application/json\")."
+solution: |
+  package main
+
+  import (
+  	"bytes"
+  	"encoding/json"
+  	"io"
+  	"net/http"
+  )
+
+  func postJSON(url string, data any) (int, string, error) {
+  	jsonBytes, err := json.Marshal(data)
+  	if err != nil {
+  		return 0, "", err
+  	}
+  	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(jsonBytes))
+  	if err != nil {
+  		return 0, "", err
+  	}
+  	req.Header.Set("Content-Type", "application/json")
+
+  	resp, err := http.DefaultClient.Do(req)
+  	if err != nil {
+  		return 0, "", err
+  	}
+  	defer resp.Body.Close()
+
+  	body, err := io.ReadAll(resp.Body)
+  	if err != nil {
+  		return resp.StatusCode, "", err
+  	}
+  	return resp.StatusCode, string(body), nil
+  }
+explanation: |
+  Sending a JSON POST request requires several steps:
+    1. json.Marshal(data) — encode the payload to []byte
+    2. http.NewRequest("POST", url, bytes.NewReader(body)) — create request
+    3. req.Header.Set("Content-Type", "application/json") — set header
+    4. http.DefaultClient.Do(req) — execute the request
+    5. io.ReadAll(resp.Body) — read the response
+  Always defer resp.Body.Close() to release the connection.
+  http.NewRequest gives full control over method, headers, and body,
+  unlike the simpler http.Get/http.Post convenience functions.
+  httptest.NewServer is ideal for testing HTTP clients without external dependencies.
+reference: "https://gobyexample.com/http-client"

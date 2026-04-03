@@ -1,0 +1,48 @@
+id: "07-003"
+title: "Panic"
+concept: "errors"
+difficulty: 4
+description: |
+  Write mustPositive that panics with the message "value must be positive"
+  when given a non-positive integer, and returns the value otherwise.
+template: |
+  package main
+
+  func mustPositive(n int) int {
+  	// TODO
+  }
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestMustPositive(t *testing.T) {
+  	if got := mustPositive(5); got != 5 {
+  		t.Errorf("expected 5, got %d", got)
+  	}
+  	defer func() {
+  		if r := recover(); r == nil {
+  			t.Error("expected panic for non-positive input")
+  		}
+  	}()
+  	mustPositive(-1)
+  }
+hint: "panic(msg) stops execution and unwinds the stack."
+solution: |
+  package main
+
+  func mustPositive(n int) int {
+  	if n <= 0 {
+  		panic("value must be positive")
+  	}
+  	return n
+  }
+explanation: |
+  panic stops normal execution and starts unwinding the call stack.
+    if n <= 0 {
+        panic("value must be positive")
+    }
+  Use panic only for unrecoverable programming errors, not for normal error handling.
+  For expected errors (bad input, file not found), return an error instead.
+  Panics can be recovered with recover() inside a deferred function.
+reference: "https://gobyexample.com/panic"

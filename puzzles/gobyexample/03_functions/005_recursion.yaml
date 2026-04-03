@@ -1,0 +1,55 @@
+id: "03-005"
+title: "Recursion"
+concept: "functions"
+difficulty: 3
+description: |
+  Write a recursive function power that computes base raised to the
+  exponent exp (base^exp). The exponent will always be >= 0.
+  For example, power(2, 10) should return 1024.
+template: |
+  package main
+
+  // TODO: implement power
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestPower(t *testing.T) {
+  	cases := []struct {
+  		base, exp, want int
+  	}{
+  		{2, 0, 1},
+  		{2, 1, 2},
+  		{2, 10, 1024},
+  		{3, 3, 27},
+  		{5, 4, 625},
+  		{1, 100, 1},
+  		{7, 0, 1},
+  	}
+  	for _, c := range cases {
+  		got := power(c.base, c.exp)
+  		if got != c.want {
+  			t.Errorf("power(%d, %d): expected %d, got %d",
+  				c.base, c.exp, c.want, got)
+  		}
+  	}
+  }
+hint: "The base case is when exp is 0 — any number to the power of 0 is 1. Otherwise, multiply base by power(base, exp-1)."
+solution: |
+  package main
+
+  func power(base, exp int) int {
+  	if exp == 0 {
+  		return 1
+  	}
+  	return base * power(base, exp-1)
+  }
+explanation: |
+  Recursion means a function calls itself with a smaller input.
+  For exponentiation:
+    base case: power(base, 0) = 1 (anything to the 0th power is 1)
+    recursive step: power(base, exp) = base * power(base, exp-1)
+  This reduces the exponent by 1 each time until it reaches 0.
+  For example: power(2, 3) = 2 * 2 * 2 * 1 = 8.
+reference: "https://gobyexample.com/recursion"

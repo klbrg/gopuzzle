@@ -1,0 +1,149 @@
+id: "11-009"
+title: "Range over Channels"
+concept: "channels"
+difficulty: 6
+description: |
+  Implement merge(ch1, ch2 <-chan int) <-chan int that combines two input channels into
+  a single output channel (fan-in). The output channel must close automatically when
+  both inputs are closed. Values should appear as soon as they are available from
+  either input.
+template: |
+  package main
+
+  func merge(ch1, ch2 <-chan int) <-chan int {
+  	// TODO: read from both channels concurrently
+  	// Send all values to a single output channel
+  	// Close output when both inputs are exhausted
+  	return nil
+  }
+test_code: |
+  package main
+
+  import (
+  	"sort"
+  	"testing"
+  )
+
+  func TestMergeBasic(t *testing.T) {
+  	ch1 := make(chan int, 3)
+  	ch2 := make(chan int, 3)
+  	ch1 <- 1
+  	ch1 <- 3
+  	ch1 <- 5
+  	close(ch1)
+  	ch2 <- 2
+  	ch2 <- 4
+  	close(ch2)
+
+  	out := merge(ch1, ch2)
+  	var got []int
+  	for v := range out {
+  		got = append(got, v)
+  	}
+  	sort.Ints(got)
+  	want := []int{1, 2, 3, 4, 5}
+  	for i, v := range want {
+  		if got[i] != v {
+  			t.Errorf("expected %v, got %v", want, got)
+  			break
+  		}
+  	}
+  }
+
+  func TestMergeBothEmpty(t *testing.T) {
+  	ch1 := make(chan int)
+  	ch2 := make(chan int)
+  	close(ch1)
+  	close(ch2)
+
+  	out := merge(ch1, ch2)
+  	var got []int
+  	for v := range out {
+  		got = append(got, v)
+  	}
+  	if len(got) != 0 {
+  		t.Errorf("expected empty, got %v", got)
+  	}
+  }
+
+  func TestMergeOneEmpty(t *testing.T) {
+  	ch1 := make(chan int, 2)
+  	ch1 <- 10
+  	ch1 <- 20
+  	close(ch1)
+
+  	ch2 := make(chan int)
+  	close(ch2)
+
+  	out := merge(ch1, ch2)
+  	var got []int
+  	for v := range out {
+  		got = append(got, v)
+  	}
+  	sort.Ints(got)
+  	if len(got) != 2 || got[0] != 10 || got[1] != 20 {
+  		t.Errorf("expected [10, 20], got %v", got)
+  	}
+  }
+
+  func TestMergeCloses(t *testing.T) {
+  	ch1 := make(chan int, 1)
+  	ch2 := make(chan int, 1)
+  	ch1 <- 42
+  	close(ch1)
+  	close(ch2)
+
+  	out := merge(ch1, ch2)
+  	count := 0
+  	for range out {
+  		count++
+  	}
+  	if count != 1 {
+  		t.Errorf("expected 1 value, got %d", count)
+  	}
+  	// Verify out is closed by trying to receive
+  	_, open := <-out
+  	if open {
+  		t.Error("output channel should be closed")
+  	}
+  }
+hint: "Launch two goroutines, one per input channel, each ranging over its input and forwarding to the output. Use a third goroutine or a counter channel to close output when both are done."
+solution: |
+  package main
+
+  func merge(ch1, ch2 <-chan int) <-chan int {
+  	out := make(chan int)
+  	go func() {
+  		done := make(chan struct{}, 2)
+  		forward := func(ch <-chan int) {
+  			for v := range ch {
+  				out <- v
+  			}
+  			done <- struct{}{}
+  		}
+  		go forward(ch1)
+  		go forward(ch2)
+  		<-done
+  		<-done
+  		close(out)
+  	}()
+  	return out
+  }
+explanation: |
+  Fan-in merges multiple channels into one. Each input gets its own
+  goroutine that ranges over it and forwards values:
+    forward := func(ch <-chan int) {
+        for v := range ch {
+            out <- v
+        }
+        done <- struct{}{}
+    }
+  range over a channel iterates until the channel is closed, making
+  it the idiomatic way to consume all values.
+  A coordination channel counts completions:
+    <-done  // wait for ch1's goroutine
+    <-done  // wait for ch2's goroutine
+    close(out)
+  Closing out lets downstream consumers use range too.
+  This pattern generalizes to N inputs for fan-in multiplexing.
+reference: "https://gobyexample.com/range-over-channels"

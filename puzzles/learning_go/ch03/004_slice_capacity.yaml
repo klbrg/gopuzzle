@@ -1,0 +1,106 @@
+id: "lg03-004"
+title: "Slice Capacity and Full Slice Expressions"
+concept: "collections"
+difficulty: 3
+description: |
+  Write a function safeAppend that takes a []int slice and an int value,
+  and returns a new slice with the value appended. The returned slice
+  must never share underlying storage with the input, so that future
+  appends to either slice cannot affect the other.
+
+  Use a full slice expression (three-index slice) to limit the capacity
+  of the new slice before appending.
+
+  Also write a function sliceInfo that returns (length, capacity) of a
+  []int as two ints.
+
+  For example:
+    original := []int{1, 2, 3, 4, 5}
+    sub := original[1:3]             // [2, 3], len=2, cap=4
+    result := safeAppend(sub, 99)    // [2, 3, 99]
+    // original is still [1, 2, 3, 4, 5] (not [1, 2, 3, 99, 5])
+    sliceInfo(sub) returns (2, 4)
+template: |
+  package main
+
+  // TODO: implement safeAppend
+
+  // TODO: implement sliceInfo
+test_code: |
+  package main
+
+  import (
+  	"reflect"
+  	"testing"
+  )
+
+  func TestSafeAppendDoesNotModifyOriginal(t *testing.T) {
+  	original := []int{1, 2, 3, 4, 5}
+  	sub := original[1:3]
+  	result := safeAppend(sub, 99)
+
+  	expectedOriginal := []int{1, 2, 3, 4, 5}
+  	expectedResult := []int{2, 3, 99}
+
+  	if !reflect.DeepEqual(original, expectedOriginal) {
+  		t.Errorf("original was modified: expected %v, got %v", expectedOriginal, original)
+  	}
+  	if !reflect.DeepEqual(result, expectedResult) {
+  		t.Errorf("result: expected %v, got %v", expectedResult, result)
+  	}
+  }
+
+  func TestSafeAppendIndependence(t *testing.T) {
+  	base := make([]int, 3, 10)
+  	base[0], base[1], base[2] = 10, 20, 30
+  	safe := safeAppend(base, 40)
+
+  	base = append(base, 999)
+
+  	if safe[len(safe)-1] != 40 {
+  		t.Errorf("safeAppend result was affected by later append to base: %v", safe)
+  	}
+  }
+
+  func TestSafeAppendEmpty(t *testing.T) {
+  	var empty []int
+  	result := safeAppend(empty, 1)
+  	if !reflect.DeepEqual(result, []int{1}) {
+  		t.Errorf("safeAppend(nil, 1): expected [1], got %v", result)
+  	}
+  }
+
+  func TestSliceInfo(t *testing.T) {
+  	s := make([]int, 3, 7)
+  	l, c := sliceInfo(s)
+  	if l != 3 || c != 7 {
+  		t.Errorf("sliceInfo: expected (3, 7), got (%d, %d)", l, c)
+  	}
+  }
+hint: "Use a full slice expression s[:len(s):len(s)] to set capacity equal to length, forcing append to allocate new storage."
+solution: |
+  package main
+
+  func safeAppend(s []int, val int) []int {
+  	capped := s[:len(s):len(s)]
+  	return append(capped, val)
+  }
+
+  func sliceInfo(s []int) (int, int) {
+  	return len(s), cap(s)
+  }
+explanation: |
+  A slice has three components: pointer, length, and capacity. When
+  you take a sub-slice like original[1:3], it shares the same
+  underlying array. Appending to that sub-slice can overwrite
+  elements in the original if there is spare capacity.
+
+  The full slice expression s[low:high:max] sets the capacity of
+  the new slice to (max - low). Using s[:len(s):len(s)] creates a
+  slice whose capacity equals its length. Any append to this slice
+  must allocate a new underlying array, breaking the shared storage.
+
+  This is a critical pattern when you want to safely pass slices
+  around without worrying about unexpected mutations through
+  shared backing arrays.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch3.html"

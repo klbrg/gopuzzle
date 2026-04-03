@@ -1,0 +1,92 @@
+id: "lg05-003"
+title: "Defer Ordering"
+concept: "functions"
+difficulty: 3
+description: |
+  Write a function buildLog that demonstrates defer ordering. It should
+  return a []string showing the order that operations happen.
+
+  The function must:
+  1. Append "start" to the log.
+  2. Defer appending "deferred-1" to the log.
+  3. Append "middle" to the log.
+  4. Defer appending "deferred-2" to the log.
+  5. Append "end" to the log.
+  6. Return the log.
+
+  The trick: deferred functions run LIFO (last in, first out) after
+  the function returns, but they capture variable state at defer time
+  unless they use a pointer/closure. Use a pointer to a slice (or a
+  closure over a slice variable) so the deferred functions can append
+  to the same log.
+
+  Since deferred calls run after the return statement, they can modify
+  the result only through named return values or pointers. Use a named
+  return value for the log slice.
+
+  Expected result: ["start", "middle", "end", "deferred-2", "deferred-1"]
+template: |
+  package main
+
+  // TODO: implement buildLog
+  // Hint: use a named return value so deferred functions can modify it
+test_code: |
+  package main
+
+  import (
+  	"reflect"
+  	"testing"
+  )
+
+  func TestBuildLog(t *testing.T) {
+  	got := buildLog()
+  	want := []string{"start", "middle", "end", "deferred-2", "deferred-1"}
+  	if !reflect.DeepEqual(got, want) {
+  		t.Errorf("buildLog():\n  expected %v\n  got      %v", want, got)
+  	}
+  }
+
+  func TestBuildLogLength(t *testing.T) {
+  	got := buildLog()
+  	if len(got) != 5 {
+  		t.Errorf("buildLog() should return 5 entries, got %d: %v", len(got), got)
+  	}
+  }
+hint: "Use a named return value (log []string) and defer func() { log = append(log, ...) }(). Deferred functions with closures over named returns can modify the return value. They run in LIFO order."
+solution: |
+  package main
+
+  func buildLog() (log []string) {
+  	log = append(log, "start")
+  	defer func() {
+  		log = append(log, "deferred-1")
+  	}()
+  	log = append(log, "middle")
+  	defer func() {
+  		log = append(log, "deferred-2")
+  	}()
+  	log = append(log, "end")
+  	return log
+  }
+explanation: |
+  Deferred function calls are executed in LIFO (last in, first out)
+  order when the surrounding function returns. In this example:
+
+  1. "start" is appended normally.
+  2. A defer to append "deferred-1" is registered (runs last).
+  3. "middle" is appended normally.
+  4. A defer to append "deferred-2" is registered (runs second-to-last).
+  5. "end" is appended normally.
+  6. The function returns, triggering defers in reverse order:
+     - "deferred-2" is appended (most recently deferred runs first).
+     - "deferred-1" is appended.
+
+  The named return value (log []string) is crucial. Deferred closures
+  can read and modify named return values because they share the same
+  variable. Without a named return, the deferred functions would have
+  no way to modify the returned slice.
+
+  Key takeaway: defer runs LIFO, and arguments to deferred function
+  calls are evaluated immediately, but closures capture variables
+  by reference.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch5.html"

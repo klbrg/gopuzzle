@@ -1,0 +1,147 @@
+id: "lg06-002"
+title: "Pointer Functions"
+concept: "pointers"
+difficulty: 5
+description: |
+  Write a function SetDefault(p *string, fallback string) that sets the
+  value at p to fallback only if the current value is the empty string.
+  If p is nil, do nothing.
+
+  Write a helper function StringPtr(s string) *string that returns a
+  pointer to a new copy of the given string. This is useful when you need
+  to pass a pointer to a literal or expression (Go does not allow &"hello").
+
+  Write a function Coalesce(ptrs ...*string) string that returns the first
+  non-nil, non-empty string value found among the pointers. If all are nil
+  or point to empty strings, return "".
+
+  Examples:
+    s := ""; SetDefault(&s, "default"); s => "default"
+    s := "hello"; SetDefault(&s, "default"); s => "hello"
+    SetDefault(nil, "safe") => does nothing, no panic
+
+    p := StringPtr("hello"); *p => "hello"
+
+    a, b := "first", ""; Coalesce(nil, &b, &a) => "first"
+    Coalesce(nil, nil) => ""
+template: |
+  package main
+
+  // TODO: implement SetDefault
+
+  // TODO: implement StringPtr
+
+  // TODO: implement Coalesce
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestSetDefaultEmpty(t *testing.T) {
+  	s := ""
+  	SetDefault(&s, "fallback")
+  	if s != "fallback" {
+  		t.Errorf("expected %q, got %q", "fallback", s)
+  	}
+  }
+
+  func TestSetDefaultNonEmpty(t *testing.T) {
+  	s := "original"
+  	SetDefault(&s, "fallback")
+  	if s != "original" {
+  		t.Errorf("expected %q, got %q", "original", s)
+  	}
+  }
+
+  func TestSetDefaultNil(t *testing.T) {
+  	SetDefault(nil, "safe") // should not panic
+  }
+
+  func TestStringPtr(t *testing.T) {
+  	p := StringPtr("hello")
+  	if p == nil {
+  		t.Fatal("expected non-nil pointer")
+  	}
+  	if *p != "hello" {
+  		t.Errorf("expected %q, got %q", "hello", *p)
+  	}
+  }
+
+  func TestStringPtrUniqueCopy(t *testing.T) {
+  	p1 := StringPtr("test")
+  	p2 := StringPtr("test")
+  	if p1 == p2 {
+  		t.Error("expected different pointers for separate calls")
+  	}
+  }
+
+  func TestCoalesceFirst(t *testing.T) {
+  	a := "first"
+  	got := Coalesce(&a)
+  	if got != "first" {
+  		t.Errorf("expected %q, got %q", "first", got)
+  	}
+  }
+
+  func TestCoalesceSkipsNilAndEmpty(t *testing.T) {
+  	empty := ""
+  	value := "found"
+  	got := Coalesce(nil, &empty, &value)
+  	if got != "found" {
+  		t.Errorf("expected %q, got %q", "found", got)
+  	}
+  }
+
+  func TestCoalesceAllNil(t *testing.T) {
+  	got := Coalesce(nil, nil, nil)
+  	if got != "" {
+  		t.Errorf("expected empty string, got %q", got)
+  	}
+  }
+
+  func TestCoalesceEmpty(t *testing.T) {
+  	got := Coalesce()
+  	if got != "" {
+  		t.Errorf("expected empty string, got %q", got)
+  	}
+  }
+hint: "Check for nil before dereferencing: if p == nil { return }. StringPtr works by taking the address of the parameter: return &s. Coalesce iterates the variadic slice and checks each pointer."
+solution: |
+  package main
+
+  func SetDefault(p *string, fallback string) {
+  	if p == nil {
+  		return
+  	}
+  	if *p == "" {
+  		*p = fallback
+  	}
+  }
+
+  func StringPtr(s string) *string {
+  	return &s
+  }
+
+  func Coalesce(ptrs ...*string) string {
+  	for _, p := range ptrs {
+  		if p != nil && *p != "" {
+  			return *p
+  		}
+  	}
+  	return ""
+  }
+explanation: |
+  Pointer-accepting functions must guard against nil:
+    if p == nil { return }
+  Dereferencing a nil pointer causes a panic.
+
+  StringPtr demonstrates a common Go pattern -- a helper that returns a
+  pointer to a value. Go does not allow taking the address of literals
+  (&"hello" is a compile error), but function parameters are addressable:
+    func StringPtr(s string) *string { return &s }
+  This pattern appears frequently in APIs that use *string to distinguish
+  "not set" (nil) from "set to empty string".
+
+  Coalesce shows practical pointer usage: iterating through optional
+  values to find the first one that is present and non-empty.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch6.html"

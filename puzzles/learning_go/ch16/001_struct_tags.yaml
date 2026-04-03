@@ -1,0 +1,121 @@
+id: "lg16-001"
+title: "Struct Tags with Reflect"
+concept: "advanced"
+difficulty: 7
+description: |
+  Write structToMap(v any, tagName string) map[string]any that takes a struct value and
+  returns a map where keys come from the specified struct tag, and values are the field values.
+  Fields without the tag should be skipped. Only exported fields need to be handled.
+
+  Example:
+    type User struct {
+        Name  string `api:"username"`
+        Age   int    `api:"age"`
+        Email string // no tag, skip
+    }
+    structToMap(User{"Alice", 30, "a@b.com"}, "api")
+    // returns map[string]any{"username": "Alice", "age": 30}
+template: |
+  package main
+
+  import "reflect"
+
+  func structToMap(v any, tagName string) map[string]any {
+  	// TODO: use reflect to read struct tags and field values
+  	return nil
+  }
+test_code: |
+  package main
+
+  import "testing"
+
+  type User struct {
+  	Name  string `api:"username"`
+  	Age   int    `api:"age"`
+  	Email string
+  }
+
+  type Product struct {
+  	ID    int     `db:"id"`
+  	Title string  `db:"title"`
+  	Price float64 `db:"price"`
+  }
+
+  func TestStructToMapBasic(t *testing.T) {
+  	got := structToMap(User{"Alice", 30, "a@b.com"}, "api")
+  	if got["username"] != "Alice" {
+  		t.Errorf("expected username=Alice, got %v", got["username"])
+  	}
+  	if got["age"] != 30 {
+  		t.Errorf("expected age=30, got %v", got["age"])
+  	}
+  	if _, exists := got["Email"]; exists {
+  		t.Error("Email has no tag and should be skipped")
+  	}
+  	if len(got) != 2 {
+  		t.Errorf("expected 2 entries, got %d", len(got))
+  	}
+  }
+
+  func TestStructToMapDifferentTag(t *testing.T) {
+  	got := structToMap(Product{1, "Widget", 9.99}, "db")
+  	if got["id"] != 1 {
+  		t.Errorf("expected id=1, got %v", got["id"])
+  	}
+  	if got["title"] != "Widget" {
+  		t.Errorf("expected title=Widget, got %v", got["title"])
+  	}
+  	if got["price"] != 9.99 {
+  		t.Errorf("expected price=9.99, got %v", got["price"])
+  	}
+  }
+
+  func TestStructToMapWrongTag(t *testing.T) {
+  	got := structToMap(User{"Alice", 30, "a@b.com"}, "db")
+  	if len(got) != 0 {
+  		t.Errorf("expected empty map for wrong tag, got %v", got)
+  	}
+  }
+
+  func TestStructToMapEmpty(t *testing.T) {
+  	type Empty struct{}
+  	got := structToMap(Empty{}, "api")
+  	if len(got) != 0 {
+  		t.Errorf("expected empty map, got %v", got)
+  	}
+  }
+hint: "reflect.TypeOf gives you field metadata including tags. reflect.ValueOf gives field values. Use field.Tag.Get(tagName) and check if the result is empty."
+solution: |
+  package main
+
+  import "reflect"
+
+  func structToMap(v any, tagName string) map[string]any {
+  	result := make(map[string]any)
+  	val := reflect.ValueOf(v)
+  	typ := val.Type()
+  	for i := 0; i < typ.NumField(); i++ {
+  		field := typ.Field(i)
+  		tag := field.Tag.Get(tagName)
+  		if tag == "" {
+  			continue
+  		}
+  		result[tag] = val.Field(i).Interface()
+  	}
+  	return result
+  }
+explanation: |
+  The reflect package inspects types and values at runtime:
+    typ := reflect.TypeOf(v)     // struct type metadata
+    val := reflect.ValueOf(v)    // struct field values
+  Iterate over fields:
+    for i := 0; i < typ.NumField(); i++ {
+        field := typ.Field(i)
+        tag := field.Tag.Get("api")   // read struct tag
+        value := val.Field(i).Interface()  // get field value as any
+    }
+  Struct tags are string annotations on fields: `tagName:"value"`.
+  The standard library uses this pattern extensively — encoding/json reads
+  `json:"name"`, database/sql reads `db:"column"`. Using an unexported
+  tag name avoids conflicts with standard tags.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch16.html"

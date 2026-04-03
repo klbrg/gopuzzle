@@ -1,0 +1,85 @@
+id: "lg05-004"
+title: "Named Return Values"
+concept: "functions"
+difficulty: 2
+description: |
+  Write a function divmod that takes two integers (a, b) and returns
+  three named values: quotient int, remainder int, ok bool.
+
+  If b is zero, return the zero values with ok = false (do not panic).
+  Otherwise, compute quotient = a / b and remainder = a % b, with
+  ok = true.
+
+  Use named return values in the function signature. You may use a
+  bare return or explicit return -- either is fine.
+
+  For example:
+    divmod(17, 5) returns (3, 2, true)
+    divmod(10, 0) returns (0, 0, false)
+    divmod(-7, 2) returns (-3, -1, true)
+template: |
+  package main
+
+  // TODO: implement divmod with named return values
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestDivmod(t *testing.T) {
+  	cases := []struct {
+  		a, b      int
+  		wantQ     int
+  		wantR     int
+  		wantOk    bool
+  	}{
+  		{17, 5, 3, 2, true},
+  		{10, 3, 3, 1, true},
+  		{10, 0, 0, 0, false},
+  		{0, 5, 0, 0, true},
+  		{-7, 2, -3, -1, true},
+  		{100, 10, 10, 0, true},
+  		{7, 7, 1, 0, true},
+  		{0, 0, 0, 0, false},
+  	}
+  	for _, c := range cases {
+  		q, r, ok := divmod(c.a, c.b)
+  		if q != c.wantQ || r != c.wantR || ok != c.wantOk {
+  			t.Errorf("divmod(%d, %d): expected (%d, %d, %v), got (%d, %d, %v)",
+  				c.a, c.b, c.wantQ, c.wantR, c.wantOk, q, r, ok)
+  		}
+  	}
+  }
+hint: "Declare the function as func divmod(a, b int) (quotient int, remainder int, ok bool). Named returns start at their zero values. Return early for the zero case."
+solution: |
+  package main
+
+  func divmod(a, b int) (quotient int, remainder int, ok bool) {
+  	if b == 0 {
+  		return quotient, remainder, ok
+  	}
+  	quotient = a / b
+  	remainder = a % b
+  	ok = true
+  	return quotient, remainder, ok
+  }
+explanation: |
+  Named return values serve two purposes in Go:
+
+  1. Documentation: the names appear in godoc, making the function
+     signature self-documenting. Callers can see what each return
+     value means without reading the implementation.
+
+  2. Zero-value defaults: named returns are initialized to their
+     zero values (0 for int, false for bool). In the error case,
+     you can simply return without setting them:
+       if b == 0 { return quotient, remainder, ok }
+     This returns (0, 0, false) automatically.
+
+  Learning Go recommends always using explicit returns (listing the
+  values) rather than bare returns (just "return" with no values),
+  because bare returns can be confusing -- the reader has to look
+  back at the signature to know what is returned. Named returns
+  are most valuable when combined with defer to modify return
+  values.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch5.html"

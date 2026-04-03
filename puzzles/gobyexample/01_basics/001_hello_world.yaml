@@ -1,0 +1,46 @@
+id: "01-001"
+title: "Hello, World!"
+concept: "basics"
+difficulty: 1
+description: |
+  Write a function greet that takes a name (string) and returns a
+  personalized greeting. For example, greet("Alice") should return
+  "Hello, Alice!".
+template: |
+  package main
+
+  // TODO: implement greet
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestGreet(t *testing.T) {
+  	cases := []struct {
+  		name string
+  		want string
+  	}{
+  		{"Alice", "Hello, Alice!"},
+  		{"Go", "Hello, Go!"},
+  		{"World", "Hello, World!"},
+  	}
+  	for _, c := range cases {
+  		if got := greet(c.name); got != c.want {
+  			t.Errorf("greet(%q): expected %q, got %q", c.name, c.want, got)
+  		}
+  	}
+  }
+hint: "You can build strings by concatenating parts with the + operator."
+solution: |
+  package main
+
+  func greet(name string) string {
+  	return "Hello, " + name + "!"
+  }
+explanation: |
+  Go functions declare their parameter types and return type after the name:
+    func greet(name string) string { ... }
+  Strings can be concatenated with +:
+    "Hello, " + name + "!"
+  This builds a new string from the parts.
+reference: "https://gobyexample.com/hello-world"

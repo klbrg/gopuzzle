@@ -1,0 +1,90 @@
+id: "08-001"
+title: "Pointers"
+concept: "pointers"
+difficulty: 3
+description: |
+  Write SwapInts(a, b *int) that swaps the values at two int pointers.
+  Write Triple(n *int) that triples the value pointed to by n in place.
+template: |
+  package main
+
+  // TODO: write SwapInts
+
+  // TODO: write Triple
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestSwapInts(t *testing.T) {
+  	a, b := 3, 7
+  	SwapInts(&a, &b)
+  	if a != 7 || b != 3 {
+  		t.Errorf("after swap: expected (7, 3), got (%d, %d)", a, b)
+  	}
+  }
+
+  func TestSwapIntsSameValue(t *testing.T) {
+  	a, b := 5, 5
+  	SwapInts(&a, &b)
+  	if a != 5 || b != 5 {
+  		t.Errorf("after swap of equal values: expected (5, 5), got (%d, %d)", a, b)
+  	}
+  }
+
+  func TestSwapIntsNegative(t *testing.T) {
+  	a, b := -1, 10
+  	SwapInts(&a, &b)
+  	if a != 10 || b != -1 {
+  		t.Errorf("after swap: expected (10, -1), got (%d, %d)", a, b)
+  	}
+  }
+
+  func TestTriple(t *testing.T) {
+  	n := 4
+  	Triple(&n)
+  	if n != 12 {
+  		t.Errorf("expected 12 after triple, got %d", n)
+  	}
+  }
+
+  func TestTripleZero(t *testing.T) {
+  	n := 0
+  	Triple(&n)
+  	if n != 0 {
+  		t.Errorf("expected 0 after tripling zero, got %d", n)
+  	}
+  }
+
+  func TestTripleNegative(t *testing.T) {
+  	n := -3
+  	Triple(&n)
+  	if n != -9 {
+  		t.Errorf("expected -9 after tripling -3, got %d", n)
+  	}
+  }
+hint: "Dereference with * to read or write through a pointer: *a, *b = *b, *a swaps values. *n = *n * 3 triples in place."
+solution: |
+  package main
+
+  func SwapInts(a, b *int) {
+  	*a, *b = *b, *a
+  }
+
+  func Triple(n *int) {
+  	*n *= 3
+  }
+explanation: |
+  Pointers hold the memory address of a value. * dereferences a pointer
+  to read or write the value it points to:
+    func SwapInts(a, b *int) {
+        *a, *b = *b, *a   // Go's tuple assignment makes swapping clean
+    }
+    func Triple(n *int) {
+        *n *= 3            // modify the value at the pointer's address
+    }
+  The caller passes addresses with &:
+    x, y := 3, 7
+    SwapInts(&x, &y)      // x is now 7, y is now 3
+  Unlike C, Go has no pointer arithmetic — pointers are safe and garbage-collected.
+reference: "https://gobyexample.com/pointers"

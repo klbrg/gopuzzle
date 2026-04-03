@@ -1,0 +1,76 @@
+id: "06-003"
+title: "Range over Iterators"
+concept: "interfaces"
+difficulty: 7
+description: |
+  Go 1.23 introduced range-over-function iterators. Write fibUpTo(max int) that
+  returns an iter.Seq[int] yielding Fibonacci numbers up to max. Write collectFib
+  that uses range over the iterator to collect results into a slice.
+template: |
+  package main
+
+  import "iter"
+
+  // fibUpTo returns an iterator that yields Fibonacci numbers <= max
+  func fibUpTo(max int) iter.Seq[int] {
+  	// TODO
+  }
+
+  func collectFib(max int) []int {
+  	// TODO
+  }
+test_code: |
+  package main
+
+  import (
+  	"reflect"
+  	"testing"
+  )
+
+  func TestCollectFib(t *testing.T) {
+  	got := collectFib(20)
+  	want := []int{1, 1, 2, 3, 5, 8, 13}
+  	if !reflect.DeepEqual(got, want) {
+  		t.Errorf("expected %v, got %v", want, got)
+  	}
+  }
+hint: "iter.Seq[int] is func(yield func(int) bool). Call yield(n) and stop if it returns false."
+solution: |
+  package main
+
+  import "iter"
+
+  func fibUpTo(max int) iter.Seq[int] {
+  	return func(yield func(int) bool) {
+  		a, b := 1, 1
+  		for a <= max {
+  			if !yield(a) {
+  				return
+  			}
+  			a, b = b, a+b
+  		}
+  	}
+  }
+
+  func collectFib(max int) []int {
+  	var result []int
+  	for n := range fibUpTo(max) {
+  		result = append(result, n)
+  	}
+  	return result
+  }
+explanation: |
+  Go 1.23 lets you use range over functions with this signature: func(yield func(V) bool)
+  iter.Seq[V] is an alias for that function type.
+    func fibUpTo(max int) iter.Seq[int] {
+        return func(yield func(int) bool) {
+            a, b := 1, 1
+            for a <= max {
+                if !yield(a) { return }
+                a, b = b, a+b
+            }
+        }
+    }
+  Collect with range:
+    for n := range fibUpTo(max) { result = append(result, n) }
+reference: "https://gobyexample.com/range-over-iterators"

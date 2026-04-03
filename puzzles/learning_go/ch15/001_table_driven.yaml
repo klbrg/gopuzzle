@@ -1,0 +1,114 @@
+id: "lg15-001"
+title: "Table-Driven Test Helper"
+concept: "testing"
+difficulty: 5
+description: |
+  Write a calculator function Calc(a int, op string, b int) (int, error) that supports
+  "+", "-", "*", "/" operations. Division by zero returns an error.
+
+  The focus of this puzzle is the TEST code: you must also write a table-driven test
+  using t.Run subtests, covering all four operations plus division by zero.
+
+  Implement Calc:
+    Calc(10, "+", 5) => 15, nil
+    Calc(10, "-", 3) => 7, nil
+    Calc(4, "*", 5)  => 20, nil
+    Calc(10, "/", 2) => 5, nil
+    Calc(10, "/", 0) => 0, error
+    Calc(1, "%", 2)  => 0, error (unknown operator)
+template: |
+  package main
+
+  import "errors"
+
+  func Calc(a int, op string, b int) (int, error) {
+  	// TODO: implement calculator supporting +, -, *, /
+  	_ = errors.New // delete this line
+  	return 0, nil
+  }
+test_code: |
+  package main
+
+  import "testing"
+
+  // TODO: This test is intentionally incomplete. The puzzle asks you to
+  // implement Calc such that these table-driven tests pass.
+
+  func TestCalcTableDriven(t *testing.T) {
+  	tests := []struct {
+  		name    string
+  		a       int
+  		op      string
+  		b       int
+  		want    int
+  		wantErr bool
+  	}{
+  		{"addition", 10, "+", 5, 15, false},
+  		{"subtraction", 10, "-", 3, 7, false},
+  		{"multiplication", 4, "*", 5, 20, false},
+  		{"division", 10, "/", 2, 5, false},
+  		{"division by zero", 10, "/", 0, 0, true},
+  		{"unknown operator", 1, "%", 2, 0, true},
+  		{"negative result", 3, "-", 10, -7, false},
+  		{"multiply by zero", 5, "*", 0, 0, false},
+  	}
+  	for _, tt := range tests {
+  		t.Run(tt.name, func(t *testing.T) {
+  			got, err := Calc(tt.a, tt.op, tt.b)
+  			if (err != nil) != tt.wantErr {
+  				t.Errorf("Calc(%d, %q, %d) error = %v, wantErr %v",
+  					tt.a, tt.op, tt.b, err, tt.wantErr)
+  				return
+  			}
+  			if got != tt.want {
+  				t.Errorf("Calc(%d, %q, %d) = %d, want %d",
+  					tt.a, tt.op, tt.b, got, tt.want)
+  			}
+  		})
+  	}
+  }
+hint: "Use a switch statement on op. Return fmt.Errorf or errors.New for unknown operators and division by zero."
+solution: |
+  package main
+
+  import "errors"
+
+  func Calc(a int, op string, b int) (int, error) {
+  	switch op {
+  	case "+":
+  		return a + b, nil
+  	case "-":
+  		return a - b, nil
+  	case "*":
+  		return a * b, nil
+  	case "/":
+  		if b == 0 {
+  			return 0, errors.New("division by zero")
+  		}
+  		return a / b, nil
+  	default:
+  		return 0, errors.New("unknown operator: " + op)
+  	}
+  }
+explanation: |
+  Table-driven tests are the idiomatic Go testing pattern. The structure:
+
+    tests := []struct {
+        name string
+        // inputs and expected outputs
+    }{ ... }
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            // test logic
+        })
+    }
+
+  Benefits over individual test functions:
+  1. Adding cases is just adding a struct literal -- no new code
+  2. t.Run creates named subtests visible in output: TestCalc/addition
+  3. Each subtest can be run independently: go test -run TestCalc/division
+  4. The pattern naturally documents all the cases being tested
+
+  The (err != nil) != tt.wantErr idiom is a concise way to check whether
+  an error was expected without caring about the exact error message.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch15.html"

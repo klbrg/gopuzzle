@@ -1,0 +1,66 @@
+id: "03-004"
+title: "Closures"
+concept: "functions"
+difficulty: 4
+description: |
+  Write accumulator(initial int) that takes a starting value and returns
+  a function. The returned function takes an int, adds it to the running
+  total, and returns the new total. For example:
+    a := accumulator(10)
+    a(5)  → 15
+    a(3)  → 18
+  Each accumulator tracks its own total independently.
+template: |
+  package main
+
+  // TODO: implement accumulator
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestAccumulator(t *testing.T) {
+  	a1 := accumulator(10)
+  	if got := a1(5); got != 15 {
+  		t.Errorf("expected 15, got %d", got)
+  	}
+  	if got := a1(3); got != 18 {
+  		t.Errorf("expected 18, got %d", got)
+  	}
+  	if got := a1(-8); got != 10 {
+  		t.Errorf("expected 10, got %d", got)
+  	}
+
+  	a2 := accumulator(0)
+  	if got := a2(100); got != 100 {
+  		t.Errorf("expected 100, got %d", got)
+  	}
+  	// a1 should still be independent
+  	if got := a1(0); got != 10 {
+  		t.Errorf("expected a1 still at 10, got %d", got)
+  	}
+  }
+hint: "A function can return another function. Variables declared in the outer function persist across calls."
+solution: |
+  package main
+
+  func accumulator(initial int) func(int) int {
+  	total := initial
+  	return func(n int) int {
+  		total += n
+  		return total
+  	}
+  }
+explanation: |
+  A closure captures variables from its enclosing scope. Here, total lives
+  in accumulator's scope but survives after accumulator returns:
+    func accumulator(initial int) func(int) int {
+        total := initial
+        return func(n int) int {
+            total += n
+            return total
+        }
+    }
+  Each call to accumulator creates a new total — closures are independent.
+  This pattern is useful for building stateful callbacks, middleware, and iterators.
+reference: "https://gobyexample.com/closures"

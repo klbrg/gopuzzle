@@ -1,0 +1,74 @@
+id: "12-005"
+title: "Atomic Counters"
+concept: "concurrency"
+difficulty: 6
+description: |
+  Implement a SafeCounter that is safe to use from multiple goroutines simultaneously.
+  It must have Inc() to increment and Value() to read the current count.
+template: |
+  package main
+
+  import "sync/atomic"
+
+  type SafeCounter struct {
+  	// TODO
+  }
+
+  func (c *SafeCounter) Inc() {
+  	// TODO
+  }
+
+  func (c *SafeCounter) Value() int64 {
+  	// TODO
+  }
+test_code: |
+  package main
+
+  import (
+  	"sync"
+  	"testing"
+  )
+
+  func TestSafeCounter(t *testing.T) {
+  	var c SafeCounter
+  	var wg sync.WaitGroup
+  	for i := 0; i < 1000; i++ {
+  		wg.Add(1)
+  		go func() {
+  			defer wg.Done()
+  			c.Inc()
+  		}()
+  	}
+  	wg.Wait()
+  	if got := c.Value(); got != 1000 {
+  		t.Errorf("expected 1000, got %d", got)
+  	}
+  }
+hint: "sync/atomic provides atomic.Int64 with .Add() and .Load() methods (Go 1.19+)."
+solution: |
+  package main
+
+  import "sync/atomic"
+
+  type SafeCounter struct {
+  	n atomic.Int64
+  }
+
+  func (c *SafeCounter) Inc() {
+  	c.n.Add(1)
+  }
+
+  func (c *SafeCounter) Value() int64 {
+  	return c.n.Load()
+  }
+explanation: |
+  sync/atomic provides lock-free atomic operations on primitive types.
+  Go 1.19 added typed atomic types (atomic.Int64, atomic.Bool, etc.):
+    type SafeCounter struct {
+        n atomic.Int64
+    }
+    func (c *SafeCounter) Inc()        { c.n.Add(1) }
+    func (c *SafeCounter) Value() int64 { return c.n.Load() }
+  Atomics are faster than mutexes for simple increment/read patterns.
+  Use mutexes when you need to protect more complex operations.
+reference: "https://gobyexample.com/atomic-counters"

@@ -1,0 +1,166 @@
+id: "lg06-004"
+title: "Map Pointer Semantics"
+concept: "pointers"
+difficulty: 4
+description: |
+  Maps in Go are reference types -- passing a map to a function lets that
+  function modify the original map without needing a pointer. However, you
+  cannot assign a new map to the caller's variable through a plain parameter.
+
+  Write a function PopulateDefaults(m map[string]int) that adds default
+  entries to the map. If a key does not already exist, set it:
+    "timeout"  => 30
+    "retries"  => 3
+    "port"     => 8080
+  Do not overwrite existing keys.
+
+  Write a function MergeInto(dst, src map[string]int) that copies all
+  key-value pairs from src into dst. If a key exists in both, the src
+  value wins.
+
+  Write a function Keys(m map[string]int) []string that returns a sorted
+  slice of all keys in the map.
+
+  Examples:
+    m := map[string]int{"timeout": 60}
+    PopulateDefaults(m)
+    m => {"timeout": 60, "retries": 3, "port": 8080}
+
+    dst := map[string]int{"a": 1}
+    MergeInto(dst, map[string]int{"a": 99, "b": 2})
+    dst => {"a": 99, "b": 2}
+
+    Keys(map[string]int{"c": 3, "a": 1, "b": 2}) => ["a", "b", "c"]
+template: |
+  package main
+
+  // TODO: implement PopulateDefaults
+
+  // TODO: implement MergeInto
+
+  // TODO: implement Keys (return sorted)
+test_code: |
+  package main
+
+  import (
+  	"testing"
+  )
+
+  func TestPopulateDefaultsEmpty(t *testing.T) {
+  	m := map[string]int{}
+  	PopulateDefaults(m)
+  	if m["timeout"] != 30 {
+  		t.Errorf("expected timeout=30, got %d", m["timeout"])
+  	}
+  	if m["retries"] != 3 {
+  		t.Errorf("expected retries=3, got %d", m["retries"])
+  	}
+  	if m["port"] != 8080 {
+  		t.Errorf("expected port=8080, got %d", m["port"])
+  	}
+  }
+
+  func TestPopulateDefaultsNoOverwrite(t *testing.T) {
+  	m := map[string]int{"timeout": 60, "retries": 5}
+  	PopulateDefaults(m)
+  	if m["timeout"] != 60 {
+  		t.Errorf("should not overwrite timeout: got %d", m["timeout"])
+  	}
+  	if m["retries"] != 5 {
+  		t.Errorf("should not overwrite retries: got %d", m["retries"])
+  	}
+  	if m["port"] != 8080 {
+  		t.Errorf("expected port=8080, got %d", m["port"])
+  	}
+  }
+
+  func TestMergeInto(t *testing.T) {
+  	dst := map[string]int{"a": 1, "b": 2}
+  	src := map[string]int{"b": 20, "c": 30}
+  	MergeInto(dst, src)
+  	if dst["a"] != 1 {
+  		t.Errorf("expected a=1, got %d", dst["a"])
+  	}
+  	if dst["b"] != 20 {
+  		t.Errorf("expected b=20 (overwritten), got %d", dst["b"])
+  	}
+  	if dst["c"] != 30 {
+  		t.Errorf("expected c=30, got %d", dst["c"])
+  	}
+  }
+
+  func TestMergeIntoEmptySrc(t *testing.T) {
+  	dst := map[string]int{"x": 1}
+  	MergeInto(dst, map[string]int{})
+  	if len(dst) != 1 {
+  		t.Errorf("expected 1 entry, got %d", len(dst))
+  	}
+  }
+
+  func TestKeysOrder(t *testing.T) {
+  	m := map[string]int{"c": 3, "a": 1, "b": 2}
+  	got := Keys(m)
+  	expected := []string{"a", "b", "c"}
+  	if len(got) != len(expected) {
+  		t.Fatalf("expected %d keys, got %d", len(expected), len(got))
+  	}
+  	for i, v := range expected {
+  		if got[i] != v {
+  			t.Errorf("index %d: expected %q, got %q", i, v, got[i])
+  		}
+  	}
+  }
+
+  func TestKeysEmpty(t *testing.T) {
+  	got := Keys(map[string]int{})
+  	if len(got) != 0 {
+  		t.Errorf("expected empty slice, got %v", got)
+  	}
+  }
+hint: "Maps are reference types -- functions receive a reference to the same underlying data. Use the comma-ok idiom (_, ok := m[key]) to check if a key exists before setting it. Use sort.Strings to sort the keys."
+solution: |
+  package main
+
+  import "sort"
+
+  func PopulateDefaults(m map[string]int) {
+  	defaults := map[string]int{
+  		"timeout": 30,
+  		"retries": 3,
+  		"port":    8080,
+  	}
+  	for k, v := range defaults {
+  		if _, ok := m[k]; !ok {
+  			m[k] = v
+  		}
+  	}
+  }
+
+  func MergeInto(dst, src map[string]int) {
+  	for k, v := range src {
+  		dst[k] = v
+  	}
+  }
+
+  func Keys(m map[string]int) []string {
+  	keys := make([]string, 0, len(m))
+  	for k := range m {
+  		keys = append(keys, k)
+  	}
+  	sort.Strings(keys)
+  	return keys
+  }
+explanation: |
+  Maps in Go are implemented as pointers to hash tables. When you pass a
+  map to a function, the function receives a copy of the pointer -- both
+  the caller and the function see the same underlying data. This is why
+  PopulateDefaults and MergeInto can modify the caller's map directly
+  without needing a *map[string]int parameter.
+
+  This is different from slices, where append can change the slice header
+  (length, capacity, pointer) and the caller would not see the new header
+  without a pointer parameter.
+
+  The comma-ok idiom (_, ok := m[key]) is used to check whether a key
+  exists without confusing a missing key with a zero value.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch6.html"

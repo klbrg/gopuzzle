@@ -1,0 +1,244 @@
+id: "lg16-004"
+title: "CSV Marshal with Reflect"
+concept: "advanced"
+difficulty: 8
+description: |
+  Implement MarshalCSV(slice any) (string, error) that takes a slice of structs and
+  returns CSV text. Column names come from `csv` struct tags. Fields without a `csv`
+  tag are skipped. The first row is the header.
+
+  Supported field types: string, int, bool. Return an error for unsupported types.
+  Return an error if the input is not a slice of structs.
+
+  Example:
+    type Person struct {
+        Name string `csv:"name"`
+        Age  int    `csv:"age"`
+        Pet  bool   `csv:"has_pet"`
+        Nick string // no tag, skip
+    }
+    people := []Person{
+        {"Alice", 30, true, "Al"},
+        {"Bob", 25, false, "Bobby"},
+    }
+    MarshalCSV(people) =>
+      "name,age,has_pet\nAlice,30,true\nBob,25,false\n"
+template: |
+  package main
+
+  import (
+  	"fmt"
+  	"reflect"
+  	"strconv"
+  	"strings"
+  )
+
+  func MarshalCSV(slice any) (string, error) {
+  	// TODO: validate input is a slice of structs
+  	// TODO: build header from csv struct tags
+  	// TODO: marshal each struct into a CSV row
+  	_ = reflect.ValueOf   // delete these lines
+  	_ = strconv.Itoa      // delete these lines
+  	_ = strings.Builder{} // delete these lines
+  	_ = fmt.Errorf        // delete these lines
+  	return "", nil
+  }
+test_code: |
+  package main
+
+  import (
+  	"strings"
+  	"testing"
+  )
+
+  type Person struct {
+  	Name string `csv:"name"`
+  	Age  int    `csv:"age"`
+  	Pet  bool   `csv:"has_pet"`
+  	Nick string
+  }
+
+  func TestMarshalCSVBasic(t *testing.T) {
+  	people := []Person{
+  		{"Alice", 30, true, "Al"},
+  		{"Bob", 25, false, "Bobby"},
+  	}
+  	got, err := MarshalCSV(people)
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	lines := strings.Split(strings.TrimSpace(got), "\n")
+  	if len(lines) != 3 {
+  		t.Fatalf("expected 3 lines (header + 2 rows), got %d: %q", len(lines), got)
+  	}
+  	if lines[0] != "name,age,has_pet" {
+  		t.Errorf("header: expected 'name,age,has_pet', got %q", lines[0])
+  	}
+  	if lines[1] != "Alice,30,true" {
+  		t.Errorf("row 1: expected 'Alice,30,true', got %q", lines[1])
+  	}
+  	if lines[2] != "Bob,25,false" {
+  		t.Errorf("row 2: expected 'Bob,25,false', got %q", lines[2])
+  	}
+  }
+
+  func TestMarshalCSVEmpty(t *testing.T) {
+  	got, err := MarshalCSV([]Person{})
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	lines := strings.Split(strings.TrimSpace(got), "\n")
+  	if len(lines) != 1 {
+  		t.Fatalf("expected 1 line (header only), got %d", len(lines))
+  	}
+  	if lines[0] != "name,age,has_pet" {
+  		t.Errorf("expected header 'name,age,has_pet', got %q", lines[0])
+  	}
+  }
+
+  func TestMarshalCSVNotSlice(t *testing.T) {
+  	_, err := MarshalCSV("not a slice")
+  	if err == nil {
+  		t.Fatal("expected error for non-slice input")
+  	}
+  }
+
+  func TestMarshalCSVNotStructSlice(t *testing.T) {
+  	_, err := MarshalCSV([]int{1, 2, 3})
+  	if err == nil {
+  		t.Fatal("expected error for slice of non-structs")
+  	}
+  }
+
+  type Simple struct {
+  	X string `csv:"x"`
+  }
+
+  func TestMarshalCSVSingleField(t *testing.T) {
+  	got, err := MarshalCSV([]Simple{{"hello"}, {"world"}})
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	lines := strings.Split(strings.TrimSpace(got), "\n")
+  	if lines[0] != "x" {
+  		t.Errorf("header: expected 'x', got %q", lines[0])
+  	}
+  	if lines[1] != "hello" {
+  		t.Errorf("row 1: expected 'hello', got %q", lines[1])
+  	}
+  }
+
+  type AllTypes struct {
+  	S string `csv:"s"`
+  	I int    `csv:"i"`
+  	B bool   `csv:"b"`
+  }
+
+  func TestMarshalCSVAllTypes(t *testing.T) {
+  	got, err := MarshalCSV([]AllTypes{{"go", -7, true}})
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	lines := strings.Split(strings.TrimSpace(got), "\n")
+  	if lines[1] != "go,-7,true" {
+  		t.Errorf("expected 'go,-7,true', got %q", lines[1])
+  	}
+  }
+
+  type UnsupportedField struct {
+  	Score float64 `csv:"score"`
+  }
+
+  func TestMarshalCSVUnsupportedType(t *testing.T) {
+  	_, err := MarshalCSV([]UnsupportedField{{3.14}})
+  	if err == nil {
+  		t.Fatal("expected error for unsupported field type float64")
+  	}
+  }
+hint: "Use reflect.TypeOf to get the struct type from the slice. Iterate fields, check for csv tags with field.Tag.Lookup(\"csv\"). For values, switch on field.Kind() to format ints/bools/strings."
+solution: |
+  package main
+
+  import (
+  	"fmt"
+  	"reflect"
+  	"strconv"
+  	"strings"
+  )
+
+  func MarshalCSV(slice any) (string, error) {
+  	sv := reflect.ValueOf(slice)
+  	if sv.Kind() != reflect.Slice {
+  		return "", fmt.Errorf("must be a slice of structs")
+  	}
+  	st := sv.Type().Elem()
+  	if st.Kind() != reflect.Struct {
+  		return "", fmt.Errorf("must be a slice of structs")
+  	}
+
+  	// Find tagged fields
+  	type fieldInfo struct {
+  		index int
+  		name  string
+  	}
+  	var fields []fieldInfo
+  	for i := 0; i < st.NumField(); i++ {
+  		tag, ok := st.Field(i).Tag.Lookup("csv")
+  		if ok {
+  			fields = append(fields, fieldInfo{i, tag})
+  		}
+  	}
+
+  	var sb strings.Builder
+
+  	// Header
+  	names := make([]string, len(fields))
+  	for i, f := range fields {
+  		names[i] = f.name
+  	}
+  	sb.WriteString(strings.Join(names, ","))
+  	sb.WriteString("\n")
+
+  	// Rows
+  	for i := 0; i < sv.Len(); i++ {
+  		row := make([]string, len(fields))
+  		for j, f := range fields {
+  			fv := sv.Index(i).Field(f.index)
+  			switch fv.Kind() {
+  			case reflect.String:
+  				row[j] = fv.String()
+  			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+  				row[j] = strconv.FormatInt(fv.Int(), 10)
+  			case reflect.Bool:
+  				row[j] = strconv.FormatBool(fv.Bool())
+  			default:
+  				return "", fmt.Errorf("unsupported field type: %v", fv.Kind())
+  			}
+  		}
+  		sb.WriteString(strings.Join(row, ","))
+  		sb.WriteString("\n")
+  	}
+
+  	return sb.String(), nil
+  }
+explanation: |
+  This is a simplified version of the book's CSV Marshal example. The key
+  reflection techniques:
+
+  1. Type validation: check slice kind, then element kind
+  2. Tag discovery: iterate struct fields, use Tag.Lookup("csv") to find
+     tagged fields and their column names
+  3. Value extraction: for each struct in the slice, read field values using
+     the stored field indices, and format based on Kind()
+
+  The two-pass approach (discover fields once, then iterate rows) avoids
+  repeated tag lookups. Storing field indices instead of names makes value
+  access O(1).
+
+  The switch on Kind() handles type families: reflect.Int covers int, and
+  the Int8-Int64 variants cover all signed integer types through a single
+  fv.Int() call that returns int64.
+
+  Real CSV libraries handle quoting, escaping, and more types, but this
+  demonstrates the core reflection pattern.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch16.html"

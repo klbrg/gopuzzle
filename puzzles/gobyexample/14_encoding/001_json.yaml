@@ -1,0 +1,140 @@
+id: "14-001"
+title: "JSON"
+concept: "encoding"
+difficulty: 5
+description: |
+  Implement mergeJSON(base, override string) (string, error) that takes two JSON object
+  strings, merges them into one object where override's keys win on conflict, and returns
+  the merged JSON string. Both inputs are flat JSON objects (no nesting required).
+  Return an error if either input is invalid JSON.
+template: |
+  package main
+
+  import "encoding/json"
+
+  func mergeJSON(base, override string) (string, error) {
+  	// TODO: unmarshal both JSON strings into maps
+  	// Merge override into base (override wins)
+  	// Re-marshal and return
+  	return "", nil
+  }
+test_code: |
+  package main
+
+  import (
+  	"encoding/json"
+  	"testing"
+  )
+
+  func TestMergeJSONBasic(t *testing.T) {
+  	result, err := mergeJSON(
+  		`{"name":"Alice","age":30}`,
+  		`{"age":31,"city":"NYC"}`,
+  	)
+  	if err != nil {
+  		t.Fatalf("unexpected error: %v", err)
+  	}
+  	var m map[string]any
+  	if err := json.Unmarshal([]byte(result), &m); err != nil {
+  		t.Fatalf("result is not valid JSON: %v", err)
+  	}
+  	if m["name"] != "Alice" {
+  		t.Errorf("expected name=Alice, got %v", m["name"])
+  	}
+  	if m["age"] != float64(31) {
+  		t.Errorf("expected age=31 (override wins), got %v", m["age"])
+  	}
+  	if m["city"] != "NYC" {
+  		t.Errorf("expected city=NYC, got %v", m["city"])
+  	}
+  }
+
+  func TestMergeJSONNoOverlap(t *testing.T) {
+  	result, err := mergeJSON(`{"a":1}`, `{"b":2}`)
+  	if err != nil {
+  		t.Fatalf("unexpected error: %v", err)
+  	}
+  	var m map[string]any
+  	json.Unmarshal([]byte(result), &m)
+  	if m["a"] != float64(1) || m["b"] != float64(2) {
+  		t.Errorf("expected {a:1, b:2}, got %v", m)
+  	}
+  }
+
+  func TestMergeJSONEmptyOverride(t *testing.T) {
+  	result, err := mergeJSON(`{"x":"keep"}`, `{}`)
+  	if err != nil {
+  		t.Fatalf("unexpected error: %v", err)
+  	}
+  	var m map[string]any
+  	json.Unmarshal([]byte(result), &m)
+  	if m["x"] != "keep" {
+  		t.Errorf("expected x=keep, got %v", m["x"])
+  	}
+  }
+
+  func TestMergeJSONEmptyBase(t *testing.T) {
+  	result, err := mergeJSON(`{}`, `{"y":"new"}`)
+  	if err != nil {
+  		t.Fatalf("unexpected error: %v", err)
+  	}
+  	var m map[string]any
+  	json.Unmarshal([]byte(result), &m)
+  	if m["y"] != "new" {
+  		t.Errorf("expected y=new, got %v", m["y"])
+  	}
+  }
+
+  func TestMergeJSONInvalidBase(t *testing.T) {
+  	_, err := mergeJSON(`not json`, `{"a":1}`)
+  	if err == nil {
+  		t.Error("expected error for invalid base JSON")
+  	}
+  }
+
+  func TestMergeJSONInvalidOverride(t *testing.T) {
+  	_, err := mergeJSON(`{"a":1}`, `{bad}`)
+  	if err == nil {
+  		t.Error("expected error for invalid override JSON")
+  	}
+  }
+hint: "Unmarshal both strings into map[string]any. Iterate over the override map and set its keys on the base map. Marshal the result back."
+solution: |
+  package main
+
+  import "encoding/json"
+
+  func mergeJSON(base, override string) (string, error) {
+  	var baseMap, overrideMap map[string]any
+
+  	if err := json.Unmarshal([]byte(base), &baseMap); err != nil {
+  		return "", err
+  	}
+  	if err := json.Unmarshal([]byte(override), &overrideMap); err != nil {
+  		return "", err
+  	}
+
+  	for k, v := range overrideMap {
+  		baseMap[k] = v
+  	}
+
+  	result, err := json.Marshal(baseMap)
+  	if err != nil {
+  		return "", err
+  	}
+  	return string(result), nil
+  }
+explanation: |
+  json.Unmarshal into map[string]any handles arbitrary JSON objects:
+    var m map[string]any
+    json.Unmarshal([]byte(s), &m)
+  Numbers become float64, strings stay strings, booleans stay bool.
+  Merging is a simple map iteration:
+    for k, v := range overrideMap {
+        baseMap[k] = v
+    }
+  Then json.Marshal converts back to a JSON string.
+  This pattern is common for configuration merging — defaults from
+  base, user overrides on top. For nested merging, you'd recursively
+  handle map[string]any values.
+reference: "https://gobyexample.com/json"

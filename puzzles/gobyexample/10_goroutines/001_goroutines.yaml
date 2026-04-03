@@ -1,0 +1,71 @@
+id: "10-001"
+title: "Goroutines"
+concept: "goroutines"
+difficulty: 5
+description: |
+  Compute the sum of a slice by splitting the work across two goroutines.
+  One sums the first half, the other sums the second half.
+  Combine the results and return the total.
+template: |
+  package main
+
+  func concurrentSum(nums []int) int {
+  	// TODO
+  }
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestConcurrentSum(t *testing.T) {
+  	tests := []struct {
+  		in   []int
+  		want int
+  	}{
+  		{[]int{1, 2, 3, 4}, 10},
+  		{[]int{10, 20, 30, 40, 50, 60}, 210},
+  		{[]int{1, 1}, 2},
+  		{[]int{5}, 5},
+  		{[]int{}, 0},
+  	}
+  	for _, tt := range tests {
+  		if got := concurrentSum(tt.in); got != tt.want {
+  			t.Errorf("concurrentSum(%v): expected %d, got %d", tt.in, tt.want, got)
+  		}
+  	}
+  }
+hint: "Launch two goroutines that each send their partial sum to a channel."
+solution: |
+  package main
+
+  func concurrentSum(nums []int) int {
+  	if len(nums) == 0 {
+  		return 0
+  	}
+
+  	ch := make(chan int, 2)
+  	mid := len(nums) / 2
+
+  	sum := func(s []int) {
+  		total := 0
+  		for _, n := range s {
+  			total += n
+  		}
+  		ch <- total
+  	}
+
+  	go sum(nums[:mid])
+  	go sum(nums[mid:])
+
+  	return <-ch + <-ch
+  }
+explanation: |
+  The go keyword launches a goroutine — a lightweight concurrent function:
+    go sum(nums[:mid])
+    go sum(nums[mid:])
+  Each goroutine sends its result to a channel. Reading from the channel
+  twice collects both results:
+    return <-ch + <-ch
+  Goroutines are multiplexed onto OS threads by the Go runtime —
+  thousands can run concurrently with minimal overhead.
+reference: "https://gobyexample.com/goroutines"

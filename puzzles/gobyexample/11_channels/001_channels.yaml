@@ -1,0 +1,49 @@
+id: "11-001"
+title: "Channels"
+concept: "channels"
+difficulty: 5
+description: |
+  Write double(n int) <-chan int that launches a goroutine sending n*2 on the returned channel.
+  The caller receives from the channel to get the result.
+template: |
+  package main
+
+  func double(n int) <-chan int {
+  	// TODO
+  }
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestDouble(t *testing.T) {
+  	ch := double(5)
+  	got := <-ch
+  	if got != 10 {
+  		t.Errorf("expected 10, got %d", got)
+  	}
+  }
+hint: "make(chan int) creates a channel; send with ch <- value, receive with <-ch."
+solution: |
+  package main
+
+  func double(n int) <-chan int {
+  	ch := make(chan int)
+  	go func() {
+  		ch <- n * 2
+  		close(ch)
+  	}()
+  	return ch
+  }
+explanation: |
+  Channels are typed conduits for goroutine communication.
+    ch := make(chan int)        // unbuffered channel
+    go func() {
+        ch <- n * 2            // send
+        close(ch)              // close after sending
+    }()
+    return ch
+  <-chan int is a receive-only channel type — good for public APIs.
+  The caller receives with: result := <-ch
+  Sending on a closed channel panics; receiving from a closed empty channel returns the zero value.
+reference: "https://gobyexample.com/channels"

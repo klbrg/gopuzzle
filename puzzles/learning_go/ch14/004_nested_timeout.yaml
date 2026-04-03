@@ -1,0 +1,162 @@
+id: "lg14-004"
+title: "Nested Timeouts"
+concept: "advanced"
+difficulty: 6
+description: |
+  Implement effectiveTimeout(parent, child time.Duration) time.Duration that determines
+  how long a child context will actually live, given a parent timeout and a child timeout.
+
+  Also implement timedWork(ctx context.Context, timeout time.Duration, work func(context.Context) string) (string, bool)
+  that runs work with a nested timeout derived from ctx. Returns the result and true if
+  work completed, or ("", false) if the timeout or parent cancellation fired first.
+
+  Key insight: a child context timeout CANNOT extend the parent's deadline. If the parent
+  expires in 1s and you request a 5s child timeout, the effective timeout is 1s.
+
+  Example:
+    effectiveTimeout(2*time.Second, 5*time.Second) => 2*time.Second
+    effectiveTimeout(5*time.Second, 2*time.Second) => 2*time.Second
+template: |
+  package main
+
+  import (
+  	"context"
+  	"time"
+  )
+
+  func effectiveTimeout(parent, child time.Duration) time.Duration {
+  	// TODO: return the shorter of the two durations
+  	return 0
+  }
+
+  func timedWork(ctx context.Context, timeout time.Duration, work func(context.Context) string) (string, bool) {
+  	// TODO: create a child context with timeout, run work, return result
+  	// Return ("", false) if the context expires before work completes
+  	return "", false
+  }
+test_code: |
+  package main
+
+  import (
+  	"context"
+  	"testing"
+  	"time"
+  )
+
+  func TestEffectiveTimeoutParentShorter(t *testing.T) {
+  	got := effectiveTimeout(1*time.Second, 5*time.Second)
+  	if got != 1*time.Second {
+  		t.Errorf("expected 1s, got %v", got)
+  	}
+  }
+
+  func TestEffectiveTimeoutChildShorter(t *testing.T) {
+  	got := effectiveTimeout(5*time.Second, 2*time.Second)
+  	if got != 2*time.Second {
+  		t.Errorf("expected 2s, got %v", got)
+  	}
+  }
+
+  func TestEffectiveTimeoutEqual(t *testing.T) {
+  	got := effectiveTimeout(3*time.Second, 3*time.Second)
+  	if got != 3*time.Second {
+  		t.Errorf("expected 3s, got %v", got)
+  	}
+  }
+
+  func TestTimedWorkCompletes(t *testing.T) {
+  	ctx := context.Background()
+  	result, ok := timedWork(ctx, time.Second, func(ctx context.Context) string {
+  		return "done"
+  	})
+  	if !ok || result != "done" {
+  		t.Errorf("expected (done, true), got (%s, %v)", result, ok)
+  	}
+  }
+
+  func TestTimedWorkTimesOut(t *testing.T) {
+  	ctx := context.Background()
+  	result, ok := timedWork(ctx, 50*time.Millisecond, func(ctx context.Context) string {
+  		time.Sleep(500 * time.Millisecond)
+  		return "late"
+  	})
+  	if ok {
+  		t.Errorf("expected timeout, got result: %s", result)
+  	}
+  }
+
+  func TestTimedWorkParentCancels(t *testing.T) {
+  	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+  	defer cancel()
+  	result, ok := timedWork(ctx, 5*time.Second, func(ctx context.Context) string {
+  		time.Sleep(500 * time.Millisecond)
+  		return "late"
+  	})
+  	if ok {
+  		t.Errorf("expected parent cancel, got result: %s", result)
+  	}
+  }
+
+  func TestTimedWorkRespectsContext(t *testing.T) {
+  	ctx := context.Background()
+  	_, ok := timedWork(ctx, 100*time.Millisecond, func(ctx context.Context) string {
+  		<-ctx.Done()
+  		time.Sleep(50 * time.Millisecond) // delay so select sees Done() first
+  		return "cancelled"
+  	})
+  	if ok {
+  		t.Error("work that waits for cancel should timeout")
+  	}
+  }
+hint: "effectiveTimeout returns min(parent, child). In timedWork, use context.WithTimeout to create a child context, run work in a goroutine, and select on the result channel vs childCtx.Done()."
+solution: |
+  package main
+
+  import (
+  	"context"
+  	"time"
+  )
+
+  func effectiveTimeout(parent, child time.Duration) time.Duration {
+  	if parent < child {
+  		return parent
+  	}
+  	return child
+  }
+
+  func timedWork(ctx context.Context, timeout time.Duration, work func(context.Context) string) (string, bool) {
+  	childCtx, cancel := context.WithTimeout(ctx, timeout)
+  	defer cancel()
+
+  	ch := make(chan string, 1)
+  	go func() {
+  		ch <- work(childCtx)
+  	}()
+
+  	select {
+  	case result := <-ch:
+  		return result, true
+  	case <-childCtx.Done():
+  		return "", false
+  	}
+  }
+explanation: |
+  Context timeouts in Go are hierarchical. A child context inherits the parent's
+  deadline, and context.WithTimeout uses whichever deadline is earlier:
+
+    parent has 2s remaining, child requests 5s => effective is 2s
+    parent has 5s remaining, child requests 2s => effective is 2s
+
+  This means you can never EXTEND a deadline with a child context, only shorten it.
+  This is by design: an outer caller sets the maximum time, and inner calls can
+  only be more restrictive.
+
+  The timedWork function shows the standard pattern:
+  1. Create a child context with timeout
+  2. Defer the cancel function
+  3. Run work in a goroutine, sending result on a buffered channel
+  4. Select on the result channel vs context done
+
+  The buffered channel (capacity 1) prevents the goroutine from leaking if we
+  exit via the timeout path.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch14.html"

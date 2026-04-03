@@ -1,0 +1,60 @@
+id: "11-005"
+title: "Select"
+concept: "channels"
+difficulty: 6
+description: |
+  Write firstReady(ch1, ch2 <-chan string) string that returns the value from whichever
+  channel sends first.
+template: |
+  package main
+
+  func firstReady(ch1, ch2 <-chan string) string {
+  	// TODO
+  }
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestFirstReady(t *testing.T) {
+  	ch1 := make(chan string, 1)
+  	ch2 := make(chan string, 1)
+  	ch2 <- "from ch2"
+  	got := firstReady(ch1, ch2)
+  	if got != "from ch2" {
+  		t.Errorf("expected %q, got %q", "from ch2", got)
+  	}
+
+  	ch3 := make(chan string, 1)
+  	ch4 := make(chan string, 1)
+  	ch3 <- "from ch3"
+  	got2 := firstReady(ch3, ch4)
+  	if got2 != "from ch3" {
+  		t.Errorf("expected %q, got %q", "from ch3", got2)
+  	}
+  }
+hint: "select waits on multiple channel operations and proceeds with whichever is ready."
+solution: |
+  package main
+
+  func firstReady(ch1, ch2 <-chan string) string {
+  	select {
+  	case v := <-ch1:
+  		return v
+  	case v := <-ch2:
+  		return v
+  	}
+  }
+explanation: |
+  select waits on multiple channel operations and picks whichever is ready first.
+  If multiple are ready simultaneously, one is chosen at random:
+    select {
+    case v := <-ch1:
+        return v
+    case v := <-ch2:
+        return v
+    }
+  Add a default: case to make it non-blocking.
+  Add a time.After case for timeouts:
+    case <-time.After(time.Second): return "timeout"
+reference: "https://gobyexample.com/select"

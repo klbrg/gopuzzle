@@ -1,0 +1,176 @@
+id: "lg08-002"
+title: "Generic Stack"
+concept: "generics"
+difficulty: 5
+description: |
+  Implement a generic Stack data structure using a type parameter.
+
+  Define a struct Stack[T any] backed by a []T slice.
+
+  Implement these methods:
+    Push(val T)         - add val to the top of the stack
+    Pop() (T, bool)     - remove and return the top element; return
+                          (zero value, false) if the stack is empty
+    Peek() (T, bool)    - return the top element without removing it;
+                          return (zero value, false) if empty
+    Len() int           - return the number of elements
+    IsEmpty() bool      - return true if the stack has no elements
+
+  Examples:
+    var s Stack[int]
+    s.IsEmpty()   => true
+    s.Push(10)
+    s.Push(20)
+    s.Len()       => 2
+    s.Peek()      => (20, true)
+    s.Pop()       => (20, true)
+    s.Pop()       => (10, true)
+    s.Pop()       => (0, false)
+template: |
+  package main
+
+  // TODO: define Stack[T any] struct
+
+  // TODO: implement Push, Pop, Peek, Len, IsEmpty
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestStackPushPop(t *testing.T) {
+  	var s Stack[int]
+  	s.Push(10)
+  	s.Push(20)
+  	s.Push(30)
+  	val, ok := s.Pop()
+  	if !ok || val != 30 {
+  		t.Errorf("expected (30, true), got (%d, %t)", val, ok)
+  	}
+  	val, ok = s.Pop()
+  	if !ok || val != 20 {
+  		t.Errorf("expected (20, true), got (%d, %t)", val, ok)
+  	}
+  }
+
+  func TestStackPopEmpty(t *testing.T) {
+  	var s Stack[string]
+  	val, ok := s.Pop()
+  	if ok || val != "" {
+  		t.Errorf("expected (\"\", false), got (%q, %t)", val, ok)
+  	}
+  }
+
+  func TestStackPeek(t *testing.T) {
+  	var s Stack[int]
+  	s.Push(42)
+  	val, ok := s.Peek()
+  	if !ok || val != 42 {
+  		t.Errorf("expected (42, true), got (%d, %t)", val, ok)
+  	}
+  	// peek should not remove the element
+  	if s.Len() != 1 {
+  		t.Errorf("expected length 1 after peek, got %d", s.Len())
+  	}
+  }
+
+  func TestStackPeekEmpty(t *testing.T) {
+  	var s Stack[float64]
+  	val, ok := s.Peek()
+  	if ok || val != 0 {
+  		t.Errorf("expected (0, false), got (%f, %t)", val, ok)
+  	}
+  }
+
+  func TestStackLen(t *testing.T) {
+  	var s Stack[int]
+  	if s.Len() != 0 {
+  		t.Errorf("expected 0, got %d", s.Len())
+  	}
+  	s.Push(1)
+  	s.Push(2)
+  	if s.Len() != 2 {
+  		t.Errorf("expected 2, got %d", s.Len())
+  	}
+  	s.Pop()
+  	if s.Len() != 1 {
+  		t.Errorf("expected 1, got %d", s.Len())
+  	}
+  }
+
+  func TestStackIsEmpty(t *testing.T) {
+  	var s Stack[int]
+  	if !s.IsEmpty() {
+  		t.Error("expected empty stack")
+  	}
+  	s.Push(1)
+  	if s.IsEmpty() {
+  		t.Error("expected non-empty stack")
+  	}
+  	s.Pop()
+  	if !s.IsEmpty() {
+  		t.Error("expected empty stack after pop")
+  	}
+  }
+
+  func TestStackWithStrings(t *testing.T) {
+  	var s Stack[string]
+  	s.Push("hello")
+  	s.Push("world")
+  	val, ok := s.Pop()
+  	if !ok || val != "world" {
+  		t.Errorf("expected (world, true), got (%q, %t)", val, ok)
+  	}
+  }
+hint: "Use a slice as the backing store. Push appends to the slice. Pop reads the last element and reslices. Use var zero T to get the zero value for the type parameter when the stack is empty."
+solution: |
+  package main
+
+  type Stack[T any] struct {
+  	vals []T
+  }
+
+  func (s *Stack[T]) Push(val T) {
+  	s.vals = append(s.vals, val)
+  }
+
+  func (s *Stack[T]) Pop() (T, bool) {
+  	if len(s.vals) == 0 {
+  		var zero T
+  		return zero, false
+  	}
+  	top := s.vals[len(s.vals)-1]
+  	s.vals = s.vals[:len(s.vals)-1]
+  	return top, true
+  }
+
+  func (s *Stack[T]) Peek() (T, bool) {
+  	if len(s.vals) == 0 {
+  		var zero T
+  		return zero, false
+  	}
+  	return s.vals[len(s.vals)-1], true
+  }
+
+  func (s *Stack[T]) Len() int {
+  	return len(s.vals)
+  }
+
+  func (s *Stack[T]) IsEmpty() bool {
+  	return len(s.vals) == 0
+  }
+explanation: |
+  Generic types in Go use type parameters in brackets after the type name:
+    type Stack[T any] struct { vals []T }
+
+  Methods on generic types must include the type parameter:
+    func (s *Stack[T]) Push(val T) { ... }
+
+  Key patterns demonstrated:
+  - var zero T gives the zero value for any type parameter (0 for int,
+    "" for string, nil for pointers, etc.)
+  - Pointer receivers (*Stack[T]) are needed because Push and Pop modify
+    the slice
+  - The same Stack works for any type: Stack[int], Stack[string], etc.
+  - Go enforces type safety at compile time -- you cannot push a string
+    onto a Stack[int]
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch8.html"

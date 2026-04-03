@@ -1,0 +1,115 @@
+id: "11-002"
+title: "Channel Buffering"
+concept: "channels"
+difficulty: 5
+description: |
+  Build a mailbox system using a buffered channel. Implement mailbox(capacity int)
+  that returns two closures: send(msg string) which delivers a message (dropping it
+  silently if the mailbox is full), and receive() []string which drains and returns
+  all pending messages.
+template: |
+  package main
+
+  func mailbox(capacity int) (send func(string), receive func() []string) {
+  	// TODO: create a buffered channel and return two closures
+  	// send: non-blocking send (drop if full)
+  	// receive: drain all pending messages into a slice
+  	return nil, nil
+  }
+test_code: |
+  package main
+
+  import (
+  	"reflect"
+  	"testing"
+  )
+
+  func TestMailboxBasic(t *testing.T) {
+  	send, receive := mailbox(3)
+  	send("hello")
+  	send("world")
+  	got := receive()
+  	want := []string{"hello", "world"}
+  	if !reflect.DeepEqual(got, want) {
+  		t.Errorf("expected %v, got %v", want, got)
+  	}
+  }
+
+  func TestMailboxEmpty(t *testing.T) {
+  	_, receive := mailbox(2)
+  	got := receive()
+  	if len(got) != 0 {
+  		t.Errorf("expected empty slice, got %v", got)
+  	}
+  }
+
+  func TestMailboxOverflow(t *testing.T) {
+  	send, receive := mailbox(2)
+  	send("a")
+  	send("b")
+  	send("c") // should be dropped
+  	got := receive()
+  	want := []string{"a", "b"}
+  	if !reflect.DeepEqual(got, want) {
+  		t.Errorf("expected %v, got %v", want, got)
+  	}
+  }
+
+  func TestMailboxMultipleDrains(t *testing.T) {
+  	send, receive := mailbox(5)
+  	send("x")
+  	_ = receive()
+  	send("y")
+  	send("z")
+  	got := receive()
+  	want := []string{"y", "z"}
+  	if !reflect.DeepEqual(got, want) {
+  		t.Errorf("expected %v, got %v", want, got)
+  	}
+  }
+hint: "A buffered channel of the given capacity stores messages. Use select with default to avoid blocking on send. Loop with select/default to drain without blocking on receive."
+solution: |
+  package main
+
+  func mailbox(capacity int) (send func(string), receive func() []string) {
+  	ch := make(chan string, capacity)
+  	send = func(msg string) {
+  		select {
+  		case ch <- msg:
+  		default:
+  			// mailbox full, drop message
+  		}
+  	}
+  	receive = func() []string {
+  		var msgs []string
+  		for {
+  			select {
+  			case m := <-ch:
+  				msgs = append(msgs, m)
+  			default:
+  				return msgs
+  			}
+  		}
+  	}
+  	return send, receive
+  }
+explanation: |
+  Buffered channels act like fixed-size queues:
+    ch := make(chan string, capacity)
+  A select with default makes send non-blocking (drops if full):
+    select {
+    case ch <- msg:
+    default:
+    }
+  Draining uses the same pattern in a loop:
+    for {
+        select {
+        case m := <-ch:
+            msgs = append(msgs, m)
+        default:
+            return msgs
+        }
+    }
+  Closures capture the channel, providing a clean send/receive API
+  without exposing the channel directly.
+reference: "https://gobyexample.com/channel-buffering"

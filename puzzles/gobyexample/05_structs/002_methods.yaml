@@ -1,0 +1,122 @@
+id: "05-002"
+title: "Methods"
+concept: "structs"
+difficulty: 3
+description: |
+  Model a BankAccount with a Balance (float64) field. Since we use value receivers only
+  (no pointers yet), Deposit and Withdraw return a new BankAccount instead of mutating.
+  Deposit(amount) returns a new account with the added amount.
+  Withdraw(amount) returns a new account and an error — if amount exceeds balance,
+  return the original account and an error "insufficient funds".
+  Statement() returns a string like "balance: 150.00".
+template: |
+  package main
+
+  import "fmt"
+
+  // TODO: define BankAccount struct
+
+  // TODO: Deposit method — returns new BankAccount
+
+  // TODO: Withdraw method — returns (BankAccount, error)
+
+  // TODO: Statement method — returns string
+test_code: |
+  package main
+
+  import (
+  	"testing"
+  )
+
+  func TestDeposit(t *testing.T) {
+  	a := BankAccount{Balance: 100}
+  	b := a.Deposit(50)
+  	if b.Balance != 150 {
+  		t.Errorf("expected 150 after deposit, got %.2f", b.Balance)
+  	}
+  	if a.Balance != 100 {
+  		t.Errorf("original should be unchanged, got %.2f", a.Balance)
+  	}
+  }
+
+  func TestWithdraw(t *testing.T) {
+  	a := BankAccount{Balance: 100}
+  	b, err := a.Withdraw(40)
+  	if err != nil {
+  		t.Fatalf("unexpected error: %v", err)
+  	}
+  	if b.Balance != 60 {
+  		t.Errorf("expected 60 after withdraw, got %.2f", b.Balance)
+  	}
+  	if a.Balance != 100 {
+  		t.Errorf("original should be unchanged, got %.2f", a.Balance)
+  	}
+  }
+
+  func TestWithdrawInsufficientFunds(t *testing.T) {
+  	a := BankAccount{Balance: 30}
+  	b, err := a.Withdraw(50)
+  	if err == nil {
+  		t.Fatal("expected error for insufficient funds")
+  	}
+  	if err.Error() != "insufficient funds" {
+  		t.Errorf("expected %q, got %q", "insufficient funds", err.Error())
+  	}
+  	if b.Balance != 30 {
+  		t.Errorf("balance should be unchanged on error, got %.2f", b.Balance)
+  	}
+  }
+
+  func TestStatement(t *testing.T) {
+  	a := BankAccount{Balance: 150}
+  	got := a.Statement()
+  	want := "balance: 150.00"
+  	if got != want {
+  		t.Errorf("expected %q, got %q", want, got)
+  	}
+  }
+
+  func TestDepositZero(t *testing.T) {
+  	a := BankAccount{Balance: 100}
+  	b := a.Deposit(0)
+  	if b.Balance != 100 {
+  		t.Errorf("expected 100 after zero deposit, got %.2f", b.Balance)
+  	}
+  }
+hint: "Value receivers get a copy, so return a new BankAccount from Deposit/Withdraw. Use fmt.Sprintf for Statement. Return errors.New for insufficient funds."
+solution: |
+  package main
+
+  import (
+  	"errors"
+  	"fmt"
+  )
+
+  type BankAccount struct {
+  	Balance float64
+  }
+
+  func (a BankAccount) Deposit(amount float64) BankAccount {
+  	return BankAccount{Balance: a.Balance + amount}
+  }
+
+  func (a BankAccount) Withdraw(amount float64) (BankAccount, error) {
+  	if amount > a.Balance {
+  		return a, errors.New("insufficient funds")
+  	}
+  	return BankAccount{Balance: a.Balance - amount}, nil
+  }
+
+  func (a BankAccount) Statement() string {
+  	return fmt.Sprintf("balance: %.2f", a.Balance)
+  }
+explanation: |
+  Methods with value receivers operate on a copy of the struct. This means:
+    func (a BankAccount) Deposit(amount float64) BankAccount {
+        return BankAccount{Balance: a.Balance + amount}
+    }
+  The original account is never modified — you get a new one back.
+  This is a functional style. Later, with pointer receivers, you can mutate in place.
+  Withdraw demonstrates returning multiple values (BankAccount, error), a common Go pattern.
+  Statement uses fmt.Sprintf("balance: %.2f", ...) to format with two decimal places.
+reference: "https://gobyexample.com/methods"

@@ -1,0 +1,155 @@
+id: "lg07-003"
+title: "Dependency Injection via Interfaces"
+concept: "interfaces"
+difficulty: 6
+description: |
+  Go uses implicit interfaces for dependency injection: a struct depends
+  on an interface, and the concrete implementation is provided at
+  construction time.
+
+  Define a Notifier interface with one method:
+    Send(to string, message string) string
+
+  Implement an EmailNotifier struct (no fields needed) whose Send method
+  returns: "email to <to>: <message>"
+
+  Implement an SMSNotifier struct (no fields needed) whose Send method
+  returns: "sms to <to>: <message>"
+
+  Define an AlertService struct that holds a Notifier. Add a method:
+    Alert(to string, subject string) string
+  that calls n.Send(to, "ALERT: "+subject) and returns the result.
+
+  Write a constructor NewAlertService(n Notifier) AlertService.
+
+  The key insight: AlertService does not know or care which Notifier
+  implementation it uses. You can swap EmailNotifier for SMSNotifier
+  (or a mock in tests) without changing AlertService.
+
+  Examples:
+    svc := NewAlertService(EmailNotifier{})
+    svc.Alert("alice@co.com", "server down")
+    => "email to alice@co.com: ALERT: server down"
+
+    svc2 := NewAlertService(SMSNotifier{})
+    svc2.Alert("+1234", "disk full")
+    => "sms to +1234: ALERT: disk full"
+template: |
+  package main
+
+  // TODO: define Notifier interface
+
+  // TODO: implement EmailNotifier
+
+  // TODO: implement SMSNotifier
+
+  // TODO: define AlertService struct and NewAlertService constructor
+
+  // TODO: implement Alert method on AlertService
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestEmailNotifierSend(t *testing.T) {
+  	n := EmailNotifier{}
+  	got := n.Send("alice@co.com", "hello")
+  	if got != "email to alice@co.com: hello" {
+  		t.Errorf("expected %q, got %q", "email to alice@co.com: hello", got)
+  	}
+  }
+
+  func TestSMSNotifierSend(t *testing.T) {
+  	n := SMSNotifier{}
+  	got := n.Send("+1234", "hello")
+  	if got != "sms to +1234: hello" {
+  		t.Errorf("expected %q, got %q", "sms to +1234: hello", got)
+  	}
+  }
+
+  func TestAlertServiceWithEmail(t *testing.T) {
+  	svc := NewAlertService(EmailNotifier{})
+  	got := svc.Alert("bob@co.com", "server down")
+  	expected := "email to bob@co.com: ALERT: server down"
+  	if got != expected {
+  		t.Errorf("expected %q, got %q", expected, got)
+  	}
+  }
+
+  func TestAlertServiceWithSMS(t *testing.T) {
+  	svc := NewAlertService(SMSNotifier{})
+  	got := svc.Alert("+5678", "disk full")
+  	expected := "sms to +5678: ALERT: disk full"
+  	if got != expected {
+  		t.Errorf("expected %q, got %q", expected, got)
+  	}
+  }
+
+  // mock notifier for testing
+  type mockNotifier struct {
+  	lastTo  string
+  	lastMsg string
+  }
+
+  func (m *mockNotifier) Send(to string, message string) string {
+  	m.lastTo = to
+  	m.lastMsg = message
+  	return "mock: " + message
+  }
+
+  func TestAlertServiceWithMock(t *testing.T) {
+  	mock := &mockNotifier{}
+  	svc := NewAlertService(mock)
+  	got := svc.Alert("test@co.com", "test alert")
+  	if got != "mock: ALERT: test alert" {
+  		t.Errorf("expected %q, got %q", "mock: ALERT: test alert", got)
+  	}
+  	if mock.lastTo != "test@co.com" {
+  		t.Errorf("expected to=%q, got %q", "test@co.com", mock.lastTo)
+  	}
+  }
+hint: "Define the Notifier interface with the Send method. AlertService stores a Notifier field and delegates to it. Go interfaces are satisfied implicitly -- no 'implements' keyword needed."
+solution: |
+  package main
+
+  type Notifier interface {
+  	Send(to string, message string) string
+  }
+
+  type EmailNotifier struct{}
+
+  func (e EmailNotifier) Send(to string, message string) string {
+  	return "email to " + to + ": " + message
+  }
+
+  type SMSNotifier struct{}
+
+  func (s SMSNotifier) Send(to string, message string) string {
+  	return "sms to " + to + ": " + message
+  }
+
+  type AlertService struct {
+  	notifier Notifier
+  }
+
+  func NewAlertService(n Notifier) AlertService {
+  	return AlertService{notifier: n}
+  }
+
+  func (a AlertService) Alert(to string, subject string) string {
+  	return a.notifier.Send(to, "ALERT: "+subject)
+  }
+explanation: |
+  This demonstrates Go's approach to dependency injection:
+
+  1. Define a small interface (Notifier) for what you need.
+  2. Struct (AlertService) depends on the interface, not concrete types.
+  3. Concrete implementations (EmailNotifier, SMSNotifier) satisfy the
+     interface implicitly -- no "implements" declaration needed.
+  4. The constructor (NewAlertService) accepts the interface, so you can
+     pass any implementation including mocks for testing.
+
+  This pattern is idiomatic Go: "Accept interfaces, return structs."
+  It keeps dependencies loose and testing easy. The test demonstrates
+  injecting a mockNotifier that records calls for verification.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch7.html"

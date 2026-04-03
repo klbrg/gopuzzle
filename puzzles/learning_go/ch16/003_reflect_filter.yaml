@@ -1,0 +1,183 @@
+id: "lg16-003"
+title: "Reflection-Based Map"
+concept: "advanced"
+difficulty: 8
+description: |
+  Implement MapSlice(slice any, fn any) (any, error) that applies a transformation
+  function to each element of a slice, returning a new slice. Both the input slice
+  and function types are determined at runtime using reflect.
+
+  Validation rules:
+  - slice must be a slice (otherwise return error "first arg must be a slice")
+  - fn must be a function (otherwise return error "second arg must be a function")
+  - fn must take exactly 1 argument matching the slice element type
+  - fn must return exactly 1 value
+
+  Example:
+    MapSlice([]int{1, 2, 3}, func(i int) int { return i * 2 })
+    // => []int{2, 4, 6}, nil
+
+    MapSlice([]string{"a", "b"}, func(s string) int { return len(s) })
+    // => []int{1, 1}, nil
+
+    MapSlice([]int{1, 2}, func(s string) string { return s })
+    // => nil, error (type mismatch)
+template: |
+  package main
+
+  import (
+  	"fmt"
+  	"reflect"
+  )
+
+  func MapSlice(slice any, fn any) (any, error) {
+  	// TODO: validate types using reflect
+  	// TODO: apply fn to each element, build and return result slice
+  	_ = reflect.ValueOf // delete this line
+  	_ = fmt.Errorf      // delete this line
+  	return nil, nil
+  }
+test_code: |
+  package main
+
+  import (
+  	"testing"
+  )
+
+  func TestMapSliceIntDouble(t *testing.T) {
+  	result, err := MapSlice([]int{1, 2, 3}, func(i int) int { return i * 2 })
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	got, ok := result.([]int)
+  	if !ok {
+  		t.Fatalf("expected []int, got %T", result)
+  	}
+  	want := []int{2, 4, 6}
+  	if len(got) != len(want) {
+  		t.Fatalf("expected length %d, got %d", len(want), len(got))
+  	}
+  	for i := range want {
+  		if got[i] != want[i] {
+  			t.Errorf("index %d: expected %d, got %d", i, want[i], got[i])
+  		}
+  	}
+  }
+
+  func TestMapSliceStringToLength(t *testing.T) {
+  	result, err := MapSlice([]string{"go", "rust", "c"}, func(s string) int { return len(s) })
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	got, ok := result.([]int)
+  	if !ok {
+  		t.Fatalf("expected []int, got %T", result)
+  	}
+  	want := []int{2, 4, 1}
+  	for i := range want {
+  		if got[i] != want[i] {
+  			t.Errorf("index %d: expected %d, got %d", i, want[i], got[i])
+  		}
+  	}
+  }
+
+  func TestMapSliceEmpty(t *testing.T) {
+  	result, err := MapSlice([]int{}, func(i int) int { return i })
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	got := result.([]int)
+  	if len(got) != 0 {
+  		t.Errorf("expected empty slice, got %v", got)
+  	}
+  }
+
+  func TestMapSliceNotASlice(t *testing.T) {
+  	_, err := MapSlice(42, func(i int) int { return i })
+  	if err == nil {
+  		t.Fatal("expected error for non-slice input")
+  	}
+  }
+
+  func TestMapSliceNotAFunction(t *testing.T) {
+  	_, err := MapSlice([]int{1}, "not a func")
+  	if err == nil {
+  		t.Fatal("expected error for non-function")
+  	}
+  }
+
+  func TestMapSliceTypeMismatch(t *testing.T) {
+  	_, err := MapSlice([]int{1, 2}, func(s string) string { return s })
+  	if err == nil {
+  		t.Fatal("expected error for type mismatch between slice element and function param")
+  	}
+  }
+
+  func TestMapSliceWrongReturnCount(t *testing.T) {
+  	_, err := MapSlice([]int{1}, func(i int) (int, error) { return i, nil })
+  	if err == nil {
+  		t.Fatal("expected error for function with wrong return count")
+  	}
+  }
+hint: "Use reflect.TypeOf to check kinds. Compare slice element type with fn input type using reflect.Type equality. Use reflect.MakeSlice to create the output slice, then reflect.Append to build it up."
+solution: |
+  package main
+
+  import (
+  	"fmt"
+  	"reflect"
+  )
+
+  func MapSlice(slice any, fn any) (any, error) {
+  	sv := reflect.ValueOf(slice)
+  	if sv.Kind() != reflect.Slice {
+  		return nil, fmt.Errorf("first arg must be a slice")
+  	}
+
+  	fv := reflect.ValueOf(fn)
+  	ft := fv.Type()
+  	if ft.Kind() != reflect.Func {
+  		return nil, fmt.Errorf("second arg must be a function")
+  	}
+  	if ft.NumIn() != 1 {
+  		return nil, fmt.Errorf("function must take exactly 1 argument")
+  	}
+  	if ft.NumOut() != 1 {
+  		return nil, fmt.Errorf("function must return exactly 1 value")
+  	}
+  	if ft.In(0) != sv.Type().Elem() {
+  		return nil, fmt.Errorf("function param type %v does not match slice element type %v",
+  			ft.In(0), sv.Type().Elem())
+  	}
+
+  	outType := reflect.SliceOf(ft.Out(0))
+  	out := reflect.MakeSlice(outType, 0, sv.Len())
+
+  	for i := 0; i < sv.Len(); i++ {
+  		result := fv.Call([]reflect.Value{sv.Index(i)})
+  		out = reflect.Append(out, result[0])
+  	}
+
+  	return out.Interface(), nil
+  }
+explanation: |
+  This implements a generic map operation using reflection, similar to the
+  book's FilterReflection example but for transformation instead of filtering.
+
+  Key reflect operations:
+  - reflect.ValueOf(slice).Kind() == reflect.Slice — type checking
+  - sv.Type().Elem() — gets the element type of a slice
+  - ft.In(0), ft.Out(0) — gets function parameter/return types
+  - reflect.SliceOf(type) — creates a new slice type dynamically
+  - reflect.MakeSlice(type, len, cap) — creates a slice value
+  - fv.Call([]reflect.Value{...}) — calls the function
+
+  Before Go generics (1.18+), reflection was the only way to write type-agnostic
+  collection operations. The book contrasts this with the generic version:
+
+    func MapSlice[T, R any](s []T, f func(T) R) []R
+
+  The generic version is safer (compile-time type checking), faster (no
+  reflection overhead), and clearer. Use reflection only when types are truly
+  unknown at compile time.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch16.html"

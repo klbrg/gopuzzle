@@ -1,0 +1,74 @@
+id: "04-003"
+title: "Maps"
+concept: "collections"
+difficulty: 2
+description: |
+  Write a function wordCount that takes a slice of strings (words) and
+  returns a map[string]int where each key is a word and its value is
+  how many times that word appears in the slice.
+template: |
+  package main
+
+  // TODO: implement wordCount
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestWordCount(t *testing.T) {
+  	cases := []struct {
+  		input []string
+  		want  map[string]int
+  	}{
+  		{
+  			[]string{"go", "is", "go", "fun"},
+  			map[string]int{"go": 2, "is": 1, "fun": 1},
+  		},
+  		{
+  			[]string{"a", "a", "a"},
+  			map[string]int{"a": 3},
+  		},
+  		{
+  			[]string{},
+  			map[string]int{},
+  		},
+  		{
+  			[]string{"one"},
+  			map[string]int{"one": 1},
+  		},
+  	}
+  	for _, c := range cases {
+  		got := wordCount(c.input)
+  		if len(got) != len(c.want) {
+  			t.Errorf("wordCount(%v): expected %v, got %v", c.input, c.want, got)
+  			continue
+  		}
+  		for k, v := range c.want {
+  			if got[k] != v {
+  				t.Errorf("wordCount(%v)[%q]: expected %d, got %d", c.input, k, v, got[k])
+  			}
+  		}
+  	}
+  }
+hint: "Create a map with make, then range over the words, incrementing the count for each one."
+solution: |
+  package main
+
+  func wordCount(words []string) map[string]int {
+  	counts := make(map[string]int)
+  	for _, w := range words {
+  		counts[w]++
+  	}
+  	return counts
+  }
+explanation: |
+  Maps are created with make(map[KeyType]ValueType) or a literal.
+  The zero value for a map's value type is used when a key is absent,
+  so counts[w]++ works even for keys not yet in the map — the int
+  zero value (0) is incremented to 1.
+  This pattern of counting occurrences is idiomatic Go:
+    counts := make(map[string]int)
+    for _, w := range words {
+        counts[w]++
+    }
+reference: "https://gobyexample.com/maps"

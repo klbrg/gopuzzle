@@ -1,0 +1,52 @@
+id: "01-003"
+title: "Variables"
+concept: "basics"
+difficulty: 1
+description: |
+  Write a function swap that takes two integers and returns them in
+  reversed order. Use Go's multiple assignment to perform the swap.
+template: |
+  package main
+
+  // TODO: implement swap
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestSwap(t *testing.T) {
+  	cases := []struct {
+  		a, b     int
+  		wantA, wantB int
+  	}{
+  		{1, 2, 2, 1},
+  		{10, 20, 20, 10},
+  		{-5, 5, 5, -5},
+  		{0, 0, 0, 0},
+  		{42, 42, 42, 42},
+  	}
+  	for _, c := range cases {
+  		gotA, gotB := swap(c.a, c.b)
+  		if gotA != c.wantA || gotB != c.wantB {
+  			t.Errorf("swap(%d, %d): expected (%d, %d), got (%d, %d)",
+  				c.a, c.b, c.wantA, c.wantB, gotA, gotB)
+  		}
+  	}
+  }
+hint: "Go supports multiple assignment: a, b = b, a swaps two variables in one statement."
+solution: |
+  package main
+
+  func swap(a, b int) (int, int) {
+  	a, b = b, a
+  	return a, b
+  }
+explanation: |
+  Go lets you assign multiple variables in a single statement:
+    a, b = b, a
+  The right-hand side is fully evaluated before assignment, so this
+  swaps the values without needing a temporary variable.
+  Functions can return multiple values:
+    func swap(a, b int) (int, int) { ... }
+  Both := (short declaration) and = (assignment) support this pattern.
+reference: "https://gobyexample.com/variables"

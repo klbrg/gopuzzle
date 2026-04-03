@@ -1,0 +1,72 @@
+id: "19-003"
+title: "Signals"
+concept: "advanced"
+difficulty: 7
+description: |
+  Set up a signal handler that returns a channel for receiving OS signals and a cleanup function.
+template: |
+  package main
+
+  import (
+  	"os"
+  	"os/signal"
+  )
+
+  func setupSignalHandler(signals ...os.Signal) (<-chan os.Signal, func()) {
+  	// TODO
+  }
+test_code: |
+  package main
+
+  import (
+  	"os"
+  	"syscall"
+  	"testing"
+  )
+
+  func TestSetupSignalHandler(t *testing.T) {
+  	ch, cleanup := setupSignalHandler(syscall.SIGTERM, syscall.SIGINT)
+  	if ch == nil {
+  		t.Fatal("expected non-nil channel")
+  	}
+  	defer cleanup()
+
+  	// Send a signal to ourselves to test the channel
+  	p, _ := os.FindProcess(os.Getpid())
+  	p.Signal(syscall.SIGTERM)
+
+  	sig := <-ch
+  	if sig != syscall.SIGTERM {
+  		t.Errorf("expected SIGTERM, got %v", sig)
+  	}
+  }
+hint: "signal.Notify registers a channel to receive signals; signal.Stop deregisters it."
+solution: |
+  package main
+
+  import (
+  	"os"
+  	"os/signal"
+  )
+
+  func setupSignalHandler(signals ...os.Signal) (<-chan os.Signal, func()) {
+  	ch := make(chan os.Signal, 1)
+  	signal.Notify(ch, signals...)
+  	cleanup := func() {
+  		signal.Stop(ch)
+  	}
+  	return ch, cleanup
+  }
+explanation: |
+  os/signal lets you intercept OS signals (SIGINT from Ctrl+C, SIGTERM from kill, etc.):
+    ch := make(chan os.Signal, 1)   // buffered so signal isn't lost
+    signal.Notify(ch, signals...)   // register
+    // ...
+    sig := <-ch                     // blocks until signal received
+    signal.Stop(ch)                 // deregister
+  Typical graceful shutdown pattern in main():
+    quit := make(chan os.Signal, 1)
+    signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+    <-quit
+    // shutdown logic here
+reference: "https://gobyexample.com/signals"

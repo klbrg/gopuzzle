@@ -1,0 +1,66 @@
+id: "11-008"
+title: "Closing Channels"
+concept: "channels"
+difficulty: 5
+description: |
+  Write generate(vals []int) <-chan int that sends all values on a channel and closes it.
+  Write drain(ch <-chan int) []int that collects all values until the channel is closed.
+template: |
+  package main
+
+  func generate(vals []int) <-chan int {
+  	// TODO
+  }
+
+  func drain(ch <-chan int) []int {
+  	// TODO
+  }
+test_code: |
+  package main
+
+  import (
+  	"reflect"
+  	"testing"
+  )
+
+  func TestGenerateDrain(t *testing.T) {
+  	ch := generate([]int{1, 2, 3, 4, 5})
+  	got := drain(ch)
+  	want := []int{1, 2, 3, 4, 5}
+  	if !reflect.DeepEqual(got, want) {
+  		t.Errorf("expected %v, got %v", want, got)
+  	}
+  }
+hint: "Closing a channel signals no more values; range over a channel stops automatically when it's closed."
+solution: |
+  package main
+
+  func generate(vals []int) <-chan int {
+  	ch := make(chan int, len(vals))
+  	for _, v := range vals {
+  		ch <- v
+  	}
+  	close(ch)
+  	return ch
+  }
+
+  func drain(ch <-chan int) []int {
+  	var result []int
+  	for v := range ch {
+  		result = append(result, v)
+  	}
+  	return result
+  }
+explanation: |
+  Closing a channel signals that no more values will be sent.
+  A two-value receive detects closure: v, ok := <-ch (ok is false when closed and empty).
+  range over a channel automatically stops when the channel is closed:
+    func drain(ch <-chan int) []int {
+        var result []int
+        for v := range ch {   // stops when ch is closed
+            result = append(result, v)
+        }
+        return result
+    }
+  Only the sender should close a channel. Closing twice panics.
+reference: "https://gobyexample.com/closing-channels"

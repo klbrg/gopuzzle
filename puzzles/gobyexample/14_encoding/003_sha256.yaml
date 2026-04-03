@@ -1,0 +1,101 @@
+id: "14-003"
+title: "SHA256 Hashes"
+concept: "encoding"
+difficulty: 4
+description: |
+  Implement verifyChecksum(data []byte, expectedHex string) bool that computes the
+  SHA-256 hash of data and returns true if and only if it matches the expected hex
+  string (case-insensitive comparison).
+template: |
+  package main
+
+  import (
+  	"crypto/sha256"
+  	"fmt"
+  	"strings"
+  )
+
+  func verifyChecksum(data []byte, expectedHex string) bool {
+  	// TODO: compute SHA-256 of data
+  	// Compare hex digest against expectedHex (case-insensitive)
+  	return false
+  }
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestVerifyChecksumValid(t *testing.T) {
+  	// SHA-256 of "hello"
+  	data := []byte("hello")
+  	hex := "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+  	if !verifyChecksum(data, hex) {
+  		t.Error("expected valid checksum to return true")
+  	}
+  }
+
+  func TestVerifyChecksumInvalid(t *testing.T) {
+  	data := []byte("hello")
+  	hex := "0000000000000000000000000000000000000000000000000000000000000000"
+  	if verifyChecksum(data, hex) {
+  		t.Error("expected wrong checksum to return false")
+  	}
+  }
+
+  func TestVerifyChecksumCaseInsensitive(t *testing.T) {
+  	data := []byte("hello")
+  	hex := "2CF24DBA5FB0A30E26E83B2AC5B9E29E1B161E5C1FA7425E73043362938B9824"
+  	if !verifyChecksum(data, hex) {
+  		t.Error("expected case-insensitive comparison to succeed")
+  	}
+  }
+
+  func TestVerifyChecksumEmptyData(t *testing.T) {
+  	// SHA-256 of ""
+  	hex := "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  	if !verifyChecksum([]byte(""), hex) {
+  		t.Error("expected empty data checksum to match")
+  	}
+  }
+
+  func TestVerifyChecksumWrongLength(t *testing.T) {
+  	if verifyChecksum([]byte("test"), "abcd") {
+  		t.Error("expected short hex string to fail")
+  	}
+  }
+
+  func TestVerifyChecksumBinaryData(t *testing.T) {
+  	data := []byte{0x00, 0xFF, 0x42}
+  	// Precomputed SHA-256 of those 3 bytes
+  	hex := "667a7b5b0cf0608c5a2af73f1cbb7a4b883e0dbf3dd06ea4cc6a5ca1bf3e0b8a"
+  	if !verifyChecksum(data, hex) {
+  		t.Error("expected binary data checksum to match")
+  	}
+  }
+hint: "sha256.Sum256(data) returns [32]byte. Use fmt.Sprintf(\"%x\", ...) for hex encoding, then strings.EqualFold for case-insensitive comparison."
+solution: |
+  package main
+
+  import (
+  	"crypto/sha256"
+  	"fmt"
+  	"strings"
+  )
+
+  func verifyChecksum(data []byte, expectedHex string) bool {
+  	hash := sha256.Sum256(data)
+  	actual := fmt.Sprintf("%x", hash)
+  	return strings.EqualFold(actual, expectedHex)
+  }
+explanation: |
+  crypto/sha256 computes SHA-256 hashes:
+    hash := sha256.Sum256(data)  // returns [32]byte
+  Convert to hex string:
+    actual := fmt.Sprintf("%x", hash)  // 64-char lowercase hex
+  strings.EqualFold does case-insensitive comparison:
+    strings.EqualFold(actual, expectedHex)
+  This is the standard pattern for file integrity verification.
+  For constant-time comparison (security-critical contexts), use
+  crypto/subtle.ConstantTimeCompare on the raw byte slices instead
+  of comparing hex strings.
+reference: "https://gobyexample.com/sha256-hashes"

@@ -1,0 +1,124 @@
+id: "lg13-003"
+title: "io.Reader Composition"
+concept: "io"
+difficulty: 6
+description: |
+  Write wordCount(r io.Reader) (map[string]int, error) that reads all text from an
+  io.Reader and returns a frequency count of whitespace-separated words (case-insensitive,
+  lowercased keys).
+
+  Example: for input "Go go GO", the result is map[string]int{"go": 3}.
+
+  The function must work with any io.Reader — strings, files, network streams, etc.
+template: |
+  package main
+
+  import (
+  	"io"
+  )
+
+  func wordCount(r io.Reader) (map[string]int, error) {
+  	// TODO: read from r and count words (case-insensitive)
+  	return nil, nil
+  }
+test_code: |
+  package main
+
+  import (
+  	"strings"
+  	"testing"
+  )
+
+  func TestWordCountBasic(t *testing.T) {
+  	r := strings.NewReader("hello world hello")
+  	got, err := wordCount(r)
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if got["hello"] != 2 {
+  		t.Errorf("expected hello=2, got %d", got["hello"])
+  	}
+  	if got["world"] != 1 {
+  		t.Errorf("expected world=1, got %d", got["world"])
+  	}
+  }
+
+  func TestWordCountCaseInsensitive(t *testing.T) {
+  	r := strings.NewReader("Go go GO gO")
+  	got, err := wordCount(r)
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if got["go"] != 4 {
+  		t.Errorf("expected go=4, got %d", got["go"])
+  	}
+  	if len(got) != 1 {
+  		t.Errorf("expected 1 unique word, got %d", len(got))
+  	}
+  }
+
+  func TestWordCountEmpty(t *testing.T) {
+  	r := strings.NewReader("")
+  	got, err := wordCount(r)
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if len(got) != 0 {
+  		t.Errorf("expected empty map, got %v", got)
+  	}
+  }
+
+  func TestWordCountMultipleSpaces(t *testing.T) {
+  	r := strings.NewReader("  one   two  three  ")
+  	got, err := wordCount(r)
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if got["one"] != 1 || got["two"] != 1 || got["three"] != 1 {
+  		t.Errorf("unexpected counts: %v", got)
+  	}
+  	if len(got) != 3 {
+  		t.Errorf("expected 3 words, got %d", len(got))
+  	}
+  }
+
+  func TestWordCountNewlines(t *testing.T) {
+  	r := strings.NewReader("alpha\nbeta\nalpha\n")
+  	got, err := wordCount(r)
+  	if err != nil {
+  		t.Fatal(err)
+  	}
+  	if got["alpha"] != 2 || got["beta"] != 1 {
+  		t.Errorf("unexpected counts: %v", got)
+  	}
+  }
+hint: "bufio.Scanner splits on words with scanner.Split(bufio.ScanWords). Use strings.ToLower for case-insensitive counting."
+solution: |
+  package main
+
+  import (
+  	"bufio"
+  	"io"
+  	"strings"
+  )
+
+  func wordCount(r io.Reader) (map[string]int, error) {
+  	counts := make(map[string]int)
+  	scanner := bufio.NewScanner(r)
+  	scanner.Split(bufio.ScanWords)
+  	for scanner.Scan() {
+  		word := strings.ToLower(scanner.Text())
+  		counts[word]++
+  	}
+  	return counts, scanner.Err()
+  }
+explanation: |
+  Programming against io.Reader makes functions work with any data source:
+    func wordCount(r io.Reader) (map[string]int, error)
+  bufio.Scanner can split input in different ways:
+    scanner := bufio.NewScanner(r)
+    scanner.Split(bufio.ScanWords)  // split on whitespace
+  Built-in splitters: ScanLines (default), ScanWords, ScanRunes, ScanBytes.
+  strings.ToLower normalizes case. The function works unchanged with
+  strings.NewReader, os.File, http.Response.Body, or gzip.Reader.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch13.html"
