@@ -1,0 +1,52 @@
+id: "lg-ch03-004"
+title: "Independent Slice Copy"
+concept: "slices"
+kind: "fix"
+description: |
+  Assigning one slice to another does NOT copy the elements — both
+  variables now point into the same backing array. To get an
+  independent copy you have to allocate a new slice and use the
+  built-in `copy` function.
+
+  The code below mutates `b` and expects `a` to be untouched. Fix it
+  so `a` is unchanged after the mutation.
+template: |
+  package main
+
+  import "fmt"
+
+  func main() {
+  	a := []int{1, 2, 3}
+  	// BUG: this just aliases a — make b an independent copy.
+  	b := a
+  	b[0] = 99
+  	fmt.Println(a)
+  }
+expected_output: |
+  [1 2 3]
+hint: "Allocate b with `make([]int, len(a))`, then call `copy(b, a)`."
+solution: |
+  package main
+
+  import "fmt"
+
+  func main() {
+  	a := []int{1, 2, 3}
+  	b := make([]int, len(a))
+  	copy(b, a)
+  	b[0] = 99
+  	fmt.Println(a)
+  }
+explanation: |
+  `b := a` copies the slice header (pointer + length + capacity), not
+  the elements. Both variables now reference the same backing array,
+  so writing through one shows up in the other.
+
+  `copy(dst, src)` copies as many elements as `min(len(dst), len(src))`
+  allows. To get a full independent copy:
+    b := make([]int, len(a))
+    copy(b, a)
+
+  Since Go 1.21, `slices.Clone(a)` from the standard library does the
+  same thing in one call — handy when you have it available.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html"

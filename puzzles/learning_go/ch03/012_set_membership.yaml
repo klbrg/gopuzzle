@@ -1,0 +1,80 @@
+id: "lg-ch03-012"
+title: "Maps as Sets"
+concept: "maps"
+description: |
+  Go has no built-in set type, but you can use a `map[T]bool` (or
+  `map[T]struct{}`) the same way. The value is just a marker; what
+  matters is whether the key is in the map.
+
+  Reading a map[T]bool for an absent key returns `false`, which is
+  exactly what you want for membership tests.
+
+  Implement `hasDuplicate(nums)` that returns true if any element of
+  `nums` appears more than once.
+
+      hasDuplicate([]int{1, 2, 3})       == false
+      hasDuplicate([]int{1, 2, 3, 2})    == true
+      hasDuplicate(nil)                  == false
+template: |
+  package main
+
+  func hasDuplicate(nums []int) bool {
+  	seen := map[int]bool{}
+  	for _, n := range nums {
+  		// TODO: if n is already in seen, return true. Otherwise add it.
+  	}
+  	return false
+  }
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestHasDuplicate(t *testing.T) {
+  	cases := []struct {
+  		in   []int
+  		want bool
+  	}{
+  		{nil, false},
+  		{[]int{}, false},
+  		{[]int{1}, false},
+  		{[]int{1, 2, 3}, false},
+  		{[]int{1, 2, 3, 2}, true},
+  		{[]int{0, 0}, true},
+  		{[]int{-1, 1, -1}, true},
+  		{[]int{5, 6, 7, 8, 9}, false},
+  	}
+  	for _, c := range cases {
+  		if got := hasDuplicate(c.in); got != c.want {
+  			t.Errorf("hasDuplicate(%v): got %v, want %v", c.in, got, c.want)
+  		}
+  	}
+  }
+hint: "Two lines: `if seen[n] { return true }` and then `seen[n] = true`."
+solution: |
+  package main
+
+  func hasDuplicate(nums []int) bool {
+  	seen := map[int]bool{}
+  	for _, n := range nums {
+  		if seen[n] {
+  			return true
+  		}
+  		seen[n] = true
+  	}
+  	return false
+  }
+explanation: |
+  Reading `seen[n]` on a `map[int]bool` returns false when `n` hasn't
+  been added yet — that's the membership test. After the test, we
+  mark `n` as seen for any future iteration.
+
+  Why `map[T]bool` instead of a real set? Go just doesn't have one in
+  the standard library. The boolean value is wasted bytes (and some
+  people use `map[T]struct{}` to save them), but `map[T]bool` reads
+  more naturally and the memory difference rarely matters.
+
+  This pattern shows up everywhere: deduplication, "have I visited
+  this node yet" in graph traversal, "have I parsed this header
+  already" in protocol code.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html"

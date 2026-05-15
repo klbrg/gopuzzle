@@ -1,0 +1,35 @@
+id: "lg-ch03-003"
+title: "Slices Share Memory"
+concept: "slices"
+kind: "predict_output"
+description: |
+  Slicing a slice does NOT copy the elements — both slices point into
+  the same backing array. Mutating one is visible through the other.
+  This trips up a lot of newcomers.
+
+  Predict the output.
+snippet: |
+  package main
+
+  import "fmt"
+
+  func main() {
+  	x := []int{1, 2, 3, 4}
+  	y := x[1:3]
+  	y[0] = 99
+  	fmt.Println(x)
+  }
+expected_output: |
+  [1 99 3 4]
+hint: "`y` shares storage with `x`. Writing to `y[0]` writes to the same byte that `x[1]` references."
+explanation: |
+  `x[1:3]` returns a slice with length 2 that shares the same backing
+  array as `x` — it just records a different start, length, and
+  capacity. `y[0]` and `x[1]` are literally the same memory cell.
+
+  This is THE classic Go slice gotcha. Two ways to avoid it:
+    - Use `copy` to make an independent slice when you need one.
+    - Use a full slice expression `s[a:b:b]` to cap the subslice's
+      capacity at its length, so any future append on the subslice
+      allocates rather than overwriting the parent's data.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html"

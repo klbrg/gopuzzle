@@ -1,0 +1,72 @@
+id: "lg-ch03-011"
+title: "Word Count"
+concept: "maps"
+description: |
+  Maps return the zero value for missing keys, which makes counter
+  maps trivial: `counts[word]++` works on first sight because the
+  read sees 0, then the write sets it to 1.
+
+  Implement `wordCount(words)` that returns a map from each word to
+  how many times it appears in the slice.
+
+      wordCount([]string{"a", "b", "a", "c", "b", "a"}) ==
+          map[string]int{"a": 3, "b": 2, "c": 1}
+      wordCount(nil) == map[string]int{}
+template: |
+  package main
+
+  func wordCount(words []string) map[string]int {
+  	counts := map[string]int{}
+  	for _, w := range words {
+  		// TODO: bump the counter for w.
+  	}
+  	return counts
+  }
+test_code: |
+  package main
+
+  import (
+  	"maps"
+  	"testing"
+  )
+
+  func TestWordCount(t *testing.T) {
+  	cases := []struct {
+  		in   []string
+  		want map[string]int
+  	}{
+  		{[]string{}, map[string]int{}},
+  		{nil, map[string]int{}},
+  		{[]string{"a"}, map[string]int{"a": 1}},
+  		{[]string{"a", "b", "a", "c", "b", "a"}, map[string]int{"a": 3, "b": 2, "c": 1}},
+  		{[]string{"", "", "x"}, map[string]int{"": 2, "x": 1}},
+  	}
+  	for _, c := range cases {
+  		got := wordCount(c.in)
+  		if !maps.Equal(got, c.want) {
+  			t.Errorf("wordCount(%v): got %v, want %v", c.in, got, c.want)
+  		}
+  	}
+  }
+hint: "Inside the loop, one line: `counts[w]++`. The zero-value-for-missing-keys rule means this works on first sight."
+solution: |
+  package main
+
+  func wordCount(words []string) map[string]int {
+  	counts := map[string]int{}
+  	for _, w := range words {
+  		counts[w]++
+  	}
+  	return counts
+  }
+explanation: |
+  The counter-map idiom is one of the most common uses of a map in
+  Go. It works because `m[key]++` is shorthand for
+  `m[key] = m[key] + 1`, and reading an absent key returns 0.
+
+  Note that `wordCount(nil)` returns an empty (non-nil) map, not a
+  nil one — the function allocates with `map[string]int{}` up front.
+  Returning an empty map rather than nil is friendlier to callers
+  who want to immediately add more entries (writing to a nil map
+  panics).
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html"

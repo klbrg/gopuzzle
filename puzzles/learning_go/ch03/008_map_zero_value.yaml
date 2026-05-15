@@ -1,0 +1,37 @@
+id: "lg-ch03-008"
+title: "Map: Zero Value for Missing Keys"
+concept: "maps"
+kind: "predict_output"
+description: |
+  Reading a key that isn't in a map returns the zero value of the
+  value type — no error, no panic, no special case. This is the
+  foundation of the "counter map" idiom: `m[key]++` works even when
+  the key isn't there yet.
+
+  Predict the output.
+snippet: |
+  package main
+
+  import "fmt"
+
+  func main() {
+  	m := map[string]int{"x": 1}
+  	m["y"]++
+  	fmt.Println(m["x"], m["y"], m["missing"])
+  }
+expected_output: |
+  1 1 0
+hint: "Reading an absent key gives the int zero value. `++` reads (gets 0) then writes (1)."
+explanation: |
+  Maps return the zero value for any missing key. For `int`, that's
+  0; for `bool`, false; for `string`, the empty string; for a slice
+  or pointer, nil. This makes counter-style maps clean:
+    counts := map[string]int{}
+    counts[word]++   // even on first sight, counts[word] is 0
+
+  If you need to *distinguish* "key absent" from "key present with the
+  zero value", use the comma-ok idiom: `v, ok := m[key]`.
+
+  Writing to a nil map (`var m map[string]int; m["x"] = 1`) panics —
+  always initialize with a literal `{}` or `make`.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html"

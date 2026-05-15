@@ -1,0 +1,64 @@
+id: "lg-ch03-005"
+title: "Slicing Notation"
+concept: "slices"
+description: |
+  The slice expression `s[a:b]` takes elements from index `a` up to but
+  not including `b`. Both ends can be omitted: `s[:b]` starts at 0,
+  `s[a:]` runs to the end, `s[:]` returns the whole thing.
+
+  Implement `middle(s)` that returns the elements of `s` *without* the
+  first or last.
+
+      middle([]int{1, 2, 3, 4, 5}) == [2, 3, 4]
+      middle([]int{1, 2})          == []int{}
+      middle([]int{1, 2, 3})       == []int{2}
+template: |
+  package main
+
+  func middle(s []int) []int {
+  	// TODO: return s with the first and last elements dropped.
+  }
+test_code: |
+  package main
+
+  import (
+  	"slices"
+  	"testing"
+  )
+
+  func TestMiddle(t *testing.T) {
+  	cases := []struct {
+  		in, want []int
+  	}{
+  		{[]int{1, 2, 3, 4, 5}, []int{2, 3, 4}},
+  		{[]int{1, 2}, []int{}},
+  		{[]int{1, 2, 3}, []int{2}},
+  		{[]int{10, 20, 30, 40}, []int{20, 30}},
+  	}
+  	for _, c := range cases {
+  		got := middle(c.in)
+  		if !slices.Equal(got, c.want) {
+  			t.Errorf("middle(%v): got %v, want %v", c.in, got, c.want)
+  		}
+  	}
+  }
+hint: "Use s[1 : len(s)-1]. When the slice has fewer than 3 elements this still works — it returns an empty slice."
+solution: |
+  package main
+
+  func middle(s []int) []int {
+  	return s[1 : len(s)-1]
+  }
+explanation: |
+  The slice expression `s[1:len(s)-1]` builds a new slice header that
+  points at the same backing array but starts one past the front and
+  stops one before the end.
+
+  Remember that the result shares memory with the original — mutating
+  it would also mutate `s`. For this puzzle that's fine because we
+  only read.
+
+  Negative indices aren't a thing in Go (unlike Python). A negative
+  index would be a compile error if it's a constant, or a runtime
+  panic if it's computed from a variable.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html"

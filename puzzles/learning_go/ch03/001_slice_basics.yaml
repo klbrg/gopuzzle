@@ -1,0 +1,33 @@
+id: "lg-ch03-001"
+title: "Slice Basics: nil and len"
+concept: "slices"
+kind: "predict_output"
+description: |
+  A slice declared with `var` but never assigned is the slice zero value:
+  `nil`. A `nil` slice has length 0 and compares equal to `nil`. You can
+  still read its length safely (and even append to it).
+
+  Predict the output.
+snippet: |
+  package main
+
+  import "fmt"
+
+  func main() {
+  	var s []int
+  	fmt.Println(s == nil, len(s))
+  }
+expected_output: |
+  true 0
+hint: "Both conditions hold for a nil slice — it equals nil, and len(nil) is defined to be 0."
+explanation: |
+  The zero value for a slice is `nil`, distinct from an empty slice
+  literal `[]int{}`. A nil slice has no backing array, no length, and
+  no capacity, but you can still read its len and append to it.
+
+  Idiomatic Go: `var data []int` when you might not need any elements;
+  `make([]int, 0, n)` when you know roughly how many you'll append.
+
+  The only thing you can compare a slice to with `==` is `nil`. Use
+  `slices.Equal` (Go 1.21+) for value comparison.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html"

@@ -1,0 +1,40 @@
+id: "lg-ch03-002"
+title: "append Grows Capacity"
+concept: "slices"
+kind: "predict_output"
+description: |
+  When append needs to add an element and the slice has no spare capacity,
+  the runtime allocates a bigger backing array and copies the data over.
+  For small slices it doubles the capacity each time.
+
+  Predict the final length and capacity.
+snippet: |
+  package main
+
+  import "fmt"
+
+  func main() {
+  	x := []int{}
+  	x = append(x, 1)
+  	x = append(x, 2)
+  	x = append(x, 3)
+  	x = append(x, 4)
+  	x = append(x, 5)
+  	fmt.Println(len(x), cap(x))
+  }
+expected_output: |
+  5 8
+hint: "len matches the number of appends. Cap doubles each time the slice runs out of room: 0 → 1 → 2 → 4 → 8."
+explanation: |
+  Each append that fits within the current capacity is cheap. When the
+  slice is full, append allocates a new backing array, copies the old
+  elements over, and returns a new slice header. Small slices double in
+  capacity; once a slice gets to 256 elements, growth slows toward 25%.
+
+  Practical takeaway: if you know roughly how many elements you'll add,
+  pre-size with `make([]int, 0, n)` to avoid repeated copies.
+
+  Forgetting to assign the result of append (`x = append(x, ...)`) is
+  the most common mistake — the function returns a new slice header
+  whenever the backing array changes.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html"

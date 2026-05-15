@@ -1,0 +1,45 @@
+id: "lg-ch03-013"
+title: "Struct Zero Value"
+concept: "structs"
+kind: "quiz"
+description: |
+  A struct declared with `var` (or initialized with an empty struct
+  literal) gets the zero value — each field initialized to its own
+  type's zero value, recursively.
+
+  Given the struct below, pick the option that correctly describes
+  `var p Person` after declaration:
+
+      type Person struct {
+          Name    string
+          Age     int
+          Active  bool
+          Friends []string
+      }
+question: "What are the field values of `var p Person` after the declaration?"
+choices:
+  - 'Name: "", Age: 0, Active: false, Friends: nil'
+  - 'Name: "<nil>", Age: 0, Active: false, Friends: []'
+  - 'Name: "", Age: 0, Active: false, Friends: []string{}'
+  - 'all fields are undefined until you assign them'
+answer: 'Name: "", Age: 0, Active: false, Friends: nil'
+hint: "Each field gets the zero value of its declared type: string → empty, int → 0, bool → false, slice → nil. Not undefined, not an empty literal — the actual zero value."
+explanation: |
+  Every field gets its type's zero value:
+    string  → ""
+    int     → 0
+    bool    → false
+    slice   → nil       (NOT []string{} — those are different!)
+    map     → nil
+    pointer → nil
+
+  This is one of the design choices that makes Go safer than C: there
+  is no such thing as an "undefined" struct. If you can declare it,
+  you can read every field.
+
+  Note the slice difference: `nil` and `[]string{}` behave the same
+  for `len`, `range`, and `append`, but they're distinct values —
+  `nil == nil` but `[]string{} != nil`. Idiomatic Go prefers nil
+  unless you specifically need the empty literal (e.g. JSON
+  marshaling, where nil and empty serialize differently).
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html"

@@ -1,0 +1,32 @@
+id: "lg-ch03-006"
+title: "Strings Are Bytes, Not Runes"
+concept: "strings"
+kind: "predict_output"
+description: |
+  A Go string is a sequence of bytes, not runes. Indexing a string
+  with `s[0]` returns a single `byte` (uint8), not a character.
+
+  Predict the output.
+snippet: |
+  package main
+
+  import "fmt"
+
+  func main() {
+  	s := "Hi"
+  	fmt.Println(s[0])
+  }
+expected_output: |
+  72
+hint: "`s[0]` is the byte at position 0, which fmt prints as a decimal number."
+explanation: |
+  Strings in Go are immutable byte sequences. `s[i]` returns the byte
+  at position i, of type `byte` (alias for uint8). fmt's default verb
+  prints bytes as numbers (here, 72 — the ASCII code for 'H').
+
+  To get a character at a position, you usually want to iterate with
+  `for i, r := range s` (which decodes UTF-8 code points) or convert
+  the string to `[]rune`. Indexing into a string with `[i]` is
+  byte-level and you can get partial code points if the string
+  contains multi-byte characters (emojis, accented letters, etc.).
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html"

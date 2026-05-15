@@ -1,0 +1,33 @@
+id: "lg-ch03-007"
+title: "Converting a Rune to a String"
+concept: "strings"
+kind: "predict_output"
+description: |
+  `string(r)` where `r` is a rune (or integer Unicode code point)
+  produces a one-character string containing that code point —
+  *not* the decimal digits of `r`.
+
+  Predict the output.
+snippet: |
+  package main
+
+  import "fmt"
+
+  func main() {
+  	r := rune(0x4E2D)
+  	fmt.Println(string(r))
+  }
+expected_output: |
+  中
+hint: "0x4E2D is the Unicode code point for a single Chinese character. `string(rune)` returns that character as a one-rune string."
+explanation: |
+  `string(intValue)` and `string(runeValue)` interpret the integer as
+  a Unicode code point and return a one-rune UTF-8 string. This is
+  almost always what you want when the integer represents a code
+  point — and almost never what you want when it represents a number.
+
+  Common gotcha: `string(65)` returns `"A"`, not `"65"`. Since Go 1.15
+  `go vet` warns when you do this with a plain `int` (use `rune` or
+  `byte` to make the intent explicit). To convert an integer to its
+  *decimal text*, use `strconv.Itoa(n)`.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html"

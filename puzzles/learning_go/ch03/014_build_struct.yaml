@@ -1,0 +1,77 @@
+id: "lg-ch03-014"
+title: "Build a Struct"
+concept: "structs"
+description: |
+  A struct literal can be written two ways:
+    - positional:  `Person{"Alice", 30}` — values in field order
+    - named:       `Person{Name: "Alice", Age: 30}` — explicit names
+
+  The named form is more verbose but readable and forward-compatible
+  (adding a new field doesn't break it). It's the idiomatic choice
+  outside of small, obviously-ordered structs.
+
+  The `Person` type is defined for you. Implement `newPerson(name, age)`
+  that returns a `Person` with those fields set.
+
+      newPerson("Alice", 30)   == Person{Name: "Alice", Age: 30}
+      newPerson("", 0)         == Person{Name: "", Age: 0}
+template: |
+  package main
+
+  type Person struct {
+  	Name string
+  	Age  int
+  }
+
+  func newPerson(name string, age int) Person {
+  	// TODO: return a Person with Name and Age set from the arguments.
+  }
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestNewPerson(t *testing.T) {
+  	cases := []struct {
+  		name string
+  		age  int
+  		want Person
+  	}{
+  		{"Alice", 30, Person{Name: "Alice", Age: 30}},
+  		{"Bob", 0, Person{Name: "Bob", Age: 0}},
+  		{"", 100, Person{Name: "", Age: 100}},
+  		{"", 0, Person{}},
+  		{"Eve", -1, Person{Name: "Eve", Age: -1}},
+  	}
+  	for _, c := range cases {
+  		got := newPerson(c.name, c.age)
+  		if got != c.want {
+  			t.Errorf("newPerson(%q, %d): got %+v, want %+v", c.name, c.age, got, c.want)
+  		}
+  	}
+  }
+hint: "One line: `return Person{Name: name, Age: age}`."
+solution: |
+  package main
+
+  type Person struct {
+  	Name string
+  	Age  int
+  }
+
+  func newPerson(name string, age int) Person {
+  	return Person{Name: name, Age: age}
+  }
+explanation: |
+  The named-field literal `Person{Name: name, Age: age}` is the
+  idiomatic way to build a struct in production code. It documents
+  what each value means and survives the addition of new fields.
+
+  Two things to know about comparing structs:
+    - Two structs of the same type are `==` if every field is `==`.
+      Structs are usable as map keys, in sets, etc., as long as all
+      fields are comparable.
+    - Slices, maps, and functions are NOT comparable, so any struct
+      containing one of those is not comparable either (you'd need
+      a custom equality function).
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html"
