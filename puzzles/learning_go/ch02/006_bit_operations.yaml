@@ -15,7 +15,7 @@ template: |
   package main
 
   func toggleBit(n int, pos int) int {
-  	// TODO: XOR n with a 1-bit mask at position pos.
+  	// TODO: return n with the bit at position pos flipped.
   }
 test_code: |
   package main

@@ -16,7 +16,7 @@ template: |
   package main
 
   func alphabetPosition(r rune) int {
-  	// TODO: subtract the rune 'a' from r, then add 1.
+  	// TODO: return r's 1-based position in the alphabet.
   }
 test_code: |
   package main

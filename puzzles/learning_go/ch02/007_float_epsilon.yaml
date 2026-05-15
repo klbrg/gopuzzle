@@ -18,8 +18,7 @@ template: |
   import "math"
 
   func floatsClose(a, b, epsilon float64) bool {
-  	// TODO: return whether |a - b| < epsilon.
-  	// math.Abs is already imported for you.
+  	// TODO: return whether a and b are within epsilon of each other.
   }
 test_code: |
   package main

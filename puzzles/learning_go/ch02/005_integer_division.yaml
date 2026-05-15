@@ -20,8 +20,7 @@ template: |
   package main
 
   func secondsToHMS(total int) (int, int, int) {
-  	// TODO: use `/` to get the bigger unit and `%` to keep the
-  	// leftover for the next step. 3600 seconds per hour, 60 per minute.
+  	// TODO: return total split into hours, minutes, and seconds.
   }
 test_code: |
   package main

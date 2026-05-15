@@ -15,7 +15,7 @@ template: |
   package main
 
   func greet(name string) string {
-  	// TODO: concatenate "Hello, ", name, and "!" with the + operator.
+  	// TODO: return "Hello, <name>!" — substitute the supplied name.
   }
 test_code: |
   package main
