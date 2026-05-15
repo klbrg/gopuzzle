@@ -1,0 +1,59 @@
+id: "lg-ch02-009"
+title: "String Concatenation"
+concept: "types"
+description: |
+  Strings in Go are immutable — you cannot mutate the bytes of an
+  existing string. You build a new string instead, and the +
+  operator concatenates two strings into a fresh one.
+
+  Implement greet(name) that returns "Hello, <name>!", built from
+  the literal pieces "Hello, " and "!" plus the supplied name.
+
+      greet("Go")    == "Hello, Go!"
+      greet("World") == "Hello, World!"
+template: |
+  package main
+
+  func greet(name string) string {
+  	// TODO: concatenate "Hello, ", name, and "!" with the + operator.
+  }
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestGreet(t *testing.T) {
+  	cases := []struct {
+  		in, want string
+  	}{
+  		{"Go", "Hello, Go!"},
+  		{"World", "Hello, World!"},
+  		{"", "Hello, !"},
+  		{"Alice", "Hello, Alice!"},
+  		{"Bob Smith", "Hello, Bob Smith!"},
+  	}
+  	for _, c := range cases {
+  		if got := greet(c.in); got != c.want {
+  			t.Errorf("greet(%q): expected %q, got %q", c.in, c.want, got)
+  		}
+  	}
+  }
+hint: "Three pieces joined with +: `\"Hello, \" + name + \"!\"`."
+solution: |
+  package main
+
+  func greet(name string) string {
+  	return "Hello, " + name + "!"
+  }
+explanation: |
+  Go strings are immutable. `s[0] = 'X'` is a compile error. To
+  "change" a string you build a new one and reassign:
+    s = s + " more"
+    s += " more"     // shorthand
+
+  The + operator allocates a new string and copies both operands'
+  bytes into it. For loops that build strings, reach for
+  strings.Builder (covered in Chapter 3) to avoid intermediate
+  copies. Strings also support ==, !=, <, <=, >, >= for
+  lexicographic ordering on bytes.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html"

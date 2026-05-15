@@ -1,85 +1,31 @@
 id: "lg-ch02-001"
 title: "Zero Values"
 concept: "types"
+kind: "quiz"
 description: |
   Go assigns every declared variable a default "zero value" if you
-  don't initialize it. The zero value depends on the type.
+  don't initialize it. The value Go picks depends on the type.
 
-  Implement allZero(b, i, f, s) so it returns true exactly when every
-  argument equals the zero value Go would have assigned its type, and
-  false when at least one argument has been set to something else.
-
-  You'll need to recall what the zero value is for each of bool, int,
-  float64, and string — `var` shortcuts won't help here, because the
-  values arrive as arguments and you must compare them against the
-  literal defaults.
-template: |
-  package main
-
-  func allZero(b bool, i int, f float64, s string) bool {
-  	// TODO: return true exactly when every argument is at its
-  	// type's zero value. Compare against the literal zero values
-  	// directly — you have to know them to write this.
-  }
-test_code: |
-  package main
-
-  import (
-  	"math"
-  	"testing"
-  )
-
-  func TestAllZero(t *testing.T) {
-  	cases := []struct {
-  		name string
-  		b    bool
-  		i    int
-  		f    float64
-  		s    string
-  		want bool
-  	}{
-  		{"all defaults", false, 0, 0.0, "", true},
-  		{"bool set", true, 0, 0.0, "", false},
-  		{"int set", false, 1, 0.0, "", false},
-  		{"int negative", false, -1, 0.0, "", false},
-  		{"float set", false, 0, 0.1, "", false},
-  		{"float NaN is not the zero value", false, 0, math.NaN(), "", false},
-  		{"string set", false, 0, 0.0, "go", false},
-  		{"single space is not empty", false, 0, 0.0, " ", false},
-  		{"all set", true, 5, 3.14, "x", false},
-  	}
-  	for _, c := range cases {
-  		if got := allZero(c.b, c.i, c.f, c.s); got != c.want {
-  			t.Errorf("%s: allZero(%v, %d, %v, %q) = %v, want %v",
-  				c.name, c.b, c.i, c.f, c.s, got, c.want)
-  		}
-  	}
-  }
-hint: "Compare each argument to its zero-value literal and combine with &&. The literals are false, 0, 0, and \"\"."
-solution: |
-  package main
-
-  func allZero(b bool, i int, f float64, s string) bool {
-  	return b == false && i == 0 && f == 0 && s == ""
-  }
+  Pick the option that correctly names the zero values for bool,
+  int, string, and pointer (in that order).
+question: "Which row lists the correct zero values for bool, int, string, and pointer?"
+choices:
+  - 'false, 0, "", nil'
+  - 'true, 0, "", nil'
+  - 'false, 0, "empty", null'
+  - '0, 0, 0, nil'
+answer: 'false, 0, "", nil'
+hint: "Bool defaults to its falsy keyword, all numeric types share one literal, the empty string is two quotes with nothing between, and reference types use a single keyword."
 explanation: |
-  A declared but uninitialized variable in Go is never undefined —
-  it always has a known zero value. You have to know which value
-  to write this function, because the test gives you arguments
-  directly and asks "are these at their defaults?".
-
-  The zero values for the predeclared types:
+  Zero values for the predeclared types:
     bool                 -> false
-    all numeric types    -> 0 (int, float64, complex128, byte, rune, ...)
+    all numeric types    -> 0
     string               -> ""
     pointers, slices,
     maps, chans, funcs,
     interfaces           -> nil
 
-  An untyped `0` literal works for any numeric type, so the same
-  comparison `f == 0` works whether f is float64, int, or rune.
-
-  Notice that NaN is NOT the zero value for float64 — math.NaN()
-  also makes `f == 0` false, so the function correctly reports the
-  argument as not at its default.
+  `var x T` (with no `=`) declares a variable at its type's zero
+  value. The explicit zero value is one of the design decisions
+  that removes a whole class of bugs from C and C++ programs.
 reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html"

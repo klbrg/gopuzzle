@@ -1,14 +1,14 @@
-id: "lg-ch02-008"
+id: "lg-ch02-007"
 title: "Comparing Floats With Epsilon"
 concept: "types"
 description: |
-  Floating-point math is inexact, so == on floats is dangerous:
+  Floating-point math is inexact, so == on floats is dangerous —
   values that "should" be equal often differ by a tiny rounding
-  error. The book's advice is to define a tolerance (epsilon) and
-  test that the absolute difference is less than that.
+  error. The chapter's advice is to define a tolerance (epsilon)
+  and test that |a - b| is less than it.
 
-  Implement floatsClose(a, b, epsilon) which returns true when
-  |a - b| < epsilon.
+  Implement floatsClose(a, b, epsilon) returning true when the
+  absolute difference between a and b is less than epsilon.
 
       floatsClose(0.1+0.2, 0.3, 1e-9) == true
       floatsClose(1.0, 1.1, 0.01)     == false
@@ -18,8 +18,7 @@ template: |
   import "math"
 
   func floatsClose(a, b, epsilon float64) bool {
-  	// TODO: return whether the absolute difference
-  	// between a and b is less than epsilon.
+  	// TODO: return whether |a - b| < epsilon.
   	// math.Abs is already imported for you.
   }
 test_code: |
@@ -46,7 +45,7 @@ test_code: |
   		}
   	}
   }
-hint: "Use math.Abs(a - b) and compare to epsilon. Don't forget to import \"math\"."
+hint: "Use math.Abs(a - b) and compare to epsilon. The import is already in the template."
 solution: |
   package main
 
@@ -56,13 +55,12 @@ solution: |
   	return math.Abs(a-b) < epsilon
   }
 explanation: |
-  Go stores float64 values using IEEE 754, which is precise but
-  cannot represent every decimal exactly. For example,
-  `0.1 + 0.2` is 0.30000000000000004, not 0.3, so `==` would say
-  they are different even though they are mathematically equal.
-  Pick an epsilon appropriate to the precision you need
-  (e.g. 1e-9 for general work). math.Abs handles negative
-  differences for you.
-  The same advice applies to complex numbers and to ordering with
-  <, >, etc. — never rely on bit-exact equality of computed floats.
+  Go uses IEEE 754, which is precise but cannot represent every
+  decimal exactly. `0.1 + 0.2` is 0.30000000000000004, not 0.3, so
+  `==` says they're different even when they're mathematically
+  equal. Pick an epsilon appropriate to your needs (1e-9 is a
+  reasonable default).
+
+  The same caution applies to ordering — never rely on bit-exact
+  comparisons of computed floats.
 reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html"

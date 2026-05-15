@@ -136,3 +136,36 @@ func (p *Progress) RecordAttempt(puzzleID string, solved bool) {
 		p.Solved[puzzleID] = true
 	}
 }
+
+// Reset wipes all solved state. TotalSolved goes back to 0.
+func (p *Progress) Reset() {
+	p.Solved = make(map[string]bool)
+	p.TotalSolved = 0
+}
+
+// ToggleSolved flips a puzzle's solved status and returns the new state.
+func (p *Progress) ToggleSolved(id string) bool {
+	if p.Solved[id] {
+		delete(p.Solved, id)
+		p.TotalSolved--
+		return false
+	}
+	p.Solved[id] = true
+	p.TotalSolved++
+	return true
+}
+
+// PruneOrphans removes solved entries whose IDs are not in validIDs and
+// rebuilds TotalSolved from the surviving entries. Returns the number of
+// entries removed.
+func (p *Progress) PruneOrphans(validIDs map[string]bool) int {
+	removed := 0
+	for id := range p.Solved {
+		if !validIDs[id] {
+			delete(p.Solved, id)
+			removed++
+		}
+	}
+	p.TotalSolved = len(p.Solved)
+	return removed
+}

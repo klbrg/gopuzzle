@@ -1,67 +1,49 @@
 id: "lg-ch02-010"
 title: "Explicit Type Conversion"
 concept: "types"
+kind: "fix"
 description: |
   Go does not auto-promote between numeric types. Mixing an int with
-  a float64 — or even an int with an int32 — is a compile error. You
-  must convert explicitly with TypeName(value).
+  a float64 in an expression is a compile error — you must convert
+  explicitly with `TypeName(value)`.
 
-  Implement average(a, b) which returns the arithmetic mean of two
-  ints as a float64, with the fractional part preserved.
-
-      average(3, 4) == 3.5
-      average(2, 2) == 2.0
-      average(1, 4) == 2.5
+  The code below tries to add an int to a float64 and store the
+  result in a float64 variable. As written it won't compile. Fix
+  the assignment so the program compiles and prints the sum.
 template: |
   package main
 
-  func average(a, b int) float64 {
-  	// TODO: return the mean of a and b as a float64.
-  	// Remember that Go won't auto-convert int to float64 — you
-  	// must use float64(...) somewhere in the expression.
-  }
-test_code: |
-  package main
+  import "fmt"
 
-  import (
-  	"math"
-  	"testing"
-  )
-
-  func TestAverage(t *testing.T) {
-  	cases := []struct {
-  		a, b int
-  		want float64
-  	}{
-  		{3, 4, 3.5},
-  		{2, 2, 2.0},
-  		{1, 4, 2.5},
-  		{-1, 1, 0.0},
-  		{10, 20, 15.0},
-  		{7, 8, 7.5},
-  	}
-  	for _, c := range cases {
-  		got := average(c.a, c.b)
-  		if math.Abs(got-c.want) > 1e-9 {
-  			t.Errorf("average(%d, %d): expected %v, got %v", c.a, c.b, c.want, got)
-  		}
-  	}
+  func main() {
+  	var x int = 10
+  	var y float64 = 30.5
+  	// TODO: fix this line — int can't be added to float64 without converting.
+  	var sum float64 = x + y
+  	fmt.Println(sum)
   }
-hint: "Convert the int sum to float64 before dividing by 2, or convert the operands first."
+expected_output: |
+  40.5
+hint: "Wrap x in float64(...) so both operands are the same type before the +."
 solution: |
   package main
 
-  func average(a, b int) float64 {
-  	return float64(a+b) / 2
+  import "fmt"
+
+  func main() {
+  	var x int = 10
+  	var y float64 = 30.5
+  	var sum float64 = float64(x) + y
+  	fmt.Println(sum)
   }
 explanation: |
-  If you wrote `return (a + b) / 2` directly, the `/` is integer
-  division and the answer to `average(3, 4)` would be 3, not 3.5.
-  You must convert at least one operand to float64 before the
-  division so Go uses floating-point division:
-    float64(a+b) / 2
-  The literal `2` is an untyped constant, so it adopts the type of
-  the other operand (float64) without an explicit conversion.
-  This explicit-conversion rule applies to all numeric types,
-  including different-sized integers (int vs int32, byte vs int).
+  Writing `x + y` where x is int and y is float64 is a compile
+  error: Go does not auto-promote. Convert at least one operand
+  with an explicit cast — typically widening from int to float64
+  to preserve precision:
+    float64(x) + y
+
+  This rule applies to all numeric types, including different-
+  sized integers (int vs int32, byte vs int) and different
+  signedness.
 reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html"

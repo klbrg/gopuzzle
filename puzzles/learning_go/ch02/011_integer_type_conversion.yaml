@@ -1,0 +1,51 @@
+id: "lg-ch02-011"
+title: "Conversions Between Integer Types"
+concept: "types"
+kind: "fix"
+description: |
+  Even within the integer family, Go does not auto-convert. byte
+  (= uint8), int, and int32 are distinct types: mixing them in an
+  expression is a compile error.
+
+  The code below tries to add a byte to an int. As written it won't
+  compile. Fix the assignment so the program compiles and prints
+  the sum.
+template: |
+  package main
+
+  import "fmt"
+
+  func main() {
+  	var b byte = 100
+  	var n int = 200
+  	// TODO: fix this line — byte can't be added to int without converting.
+  	var total int = b + n
+  	fmt.Println(total)
+  }
+expected_output: |
+  300
+hint: "Convert b to int before adding. Widening to int also avoids any byte-range overflow."
+solution: |
+  package main
+
+  import "fmt"
+
+  func main() {
+  	var b byte = 100
+  	var n int = 200
+  	var total int = int(b) + n
+  	fmt.Println(total)
+  }
+explanation: |
+  Different-sized integer types are distinct to the compiler.
+  `byte + int` is a compile error; you must convert. The usual
+  pattern is to widen toward the larger type to avoid overflow:
+    int(b) + n       // widen byte to int — safe
+    b + byte(n)      // narrow int to byte — can overflow
+
+  Even int and int32 aren't interchangeable, despite often being
+  the same width on a 64-bit machine. Two named aliases ARE
+  interchangeable with their underlying type:
+    byte == uint8
+    rune == int32
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html"

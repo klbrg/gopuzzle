@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -8,10 +9,12 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/klbrg/gopuzzle/internal/ai"
 	"github.com/klbrg/gopuzzle/internal/progress"
 	"github.com/klbrg/gopuzzle/internal/puzzle"
 	"github.com/klbrg/gopuzzle/internal/runner"
@@ -22,6 +25,7 @@ type state int
 const (
 	stateBrowse state = iota
 	statePuzzleInfo
+	statePredictInput
 	stateRunning
 	stateResult
 	stateDone
@@ -33,6 +37,11 @@ type runResultMsg struct {
 	result   *runner.Result
 	solution string
 	err      error
+}
+
+type aiReviewMsg struct {
+	review string
+	err    error
 }
 
 // browseRow is one row in the browse list: a source header, section header, or puzzle entry.
@@ -70,6 +79,15 @@ type Model struct {
 	showHelp bool
 	flash    string
 
+	// Predict-output state.
+	answerInput string // what the user has typed so far
+	answerOK    bool   // true after a passing predict-output attempt
+
+	// AI review state.
+	aiReview  string // cached review text for the current puzzle attempt
+	aiErr     string // last error text, if review failed
+	aiLoading bool   // request in flight
+
 	totalPuzzles  int
 	sectionTotals map[string]int
 	sourceTotals  map[string]int
@@ -93,10 +111,15 @@ func New(p *progress.Progress, puzzles []*puzzle.Puzzle) Model {
 		sectionTotals: make(map[string]int),
 		sourceTotals:  make(map[string]int),
 	}
+	validIDs := make(map[string]bool, len(puzzles))
 	for _, pz := range puzzles {
+		validIDs[pz.ID] = true
 		m.totalPuzzles++
 		m.sectionTotals[pz.Source+"/"+pz.Section]++
 		m.sourceTotals[pz.Source]++
+	}
+	if removed := p.PruneOrphans(validIDs); removed > 0 {
+		_ = p.Save()
 	}
 	m.rebuildRows()
 	for i, row := range m.browseRows {
@@ -276,13 +299,28 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.state = stateRunning
 		solution, readErr := os.ReadFile(m.scratchPath())
 		cur := m.current
-		testCode := cur.TestCode
 		return m, tea.Batch(m.spinner.Tick, func() tea.Msg {
 			if readErr != nil {
 				return runResultMsg{err: readErr}
 			}
-			res, err := runner.Run(string(solution), testCode)
-			if err == nil && res.Passed {
+			var res *runner.Result
+			var err error
+			switch cur.Kind {
+			case puzzle.KindFix:
+				out, runErr := runner.RunSnippet(string(solution))
+				passed := runErr == nil && strings.TrimRight(out, " \t\n") == strings.TrimRight(cur.ExpectedOutput, " \t\n")
+				output := out
+				if !passed {
+					output = "Expected:\n" + cur.ExpectedOutput + "\n\nGot:\n" + out
+					if runErr != nil {
+						output += "\n\n(snippet error: " + runErr.Error() + ")"
+					}
+				}
+				res = &runner.Result{Passed: passed, Output: output}
+			default:
+				res, err = runner.Run(string(solution), cur.TestCode)
+			}
+			if err == nil && res != nil && res.Passed {
 				_ = progress.SaveSolution(cur.ID, cur.Title, cur.Dir, cur.Stem, string(solution))
 			}
 			return runResultMsg{result: res, solution: string(solution), err: err}
@@ -303,10 +341,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case spinner.TickMsg:
-		if m.state == stateRunning {
+		if m.state == stateRunning || m.aiLoading {
 			var cmd tea.Cmd
 			m.spinner, cmd = m.spinner.Update(msg)
 			return m, cmd
+		}
+		return m, nil
+
+	case aiReviewMsg:
+		m.aiLoading = false
+		if msg.err != nil {
+			m.aiErr = msg.err.Error()
+			m.aiReview = ""
+		} else {
+			m.aiReview = msg.review
+			m.aiErr = ""
 		}
 		return m, nil
 
@@ -331,6 +380,8 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleBrowseKey(msg)
 	case statePuzzleInfo:
 		return m.handlePuzzleInfoKey(msg)
+	case statePredictInput:
+		return m.handlePredictInputKey(msg)
 	case stateResult:
 		return m.handleResultKey(msg)
 	case stateDone:
@@ -448,6 +499,9 @@ func (m Model) handleBrowseKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				m.hintShown = false
 				m.solutionShown = false
 				m.result = nil
+				m.aiReview = ""
+				m.aiErr = ""
+				m.aiLoading = false
 				m.state = statePuzzleInfo
 			}
 		}
@@ -461,6 +515,24 @@ func (m Model) handleBrowseKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.rebuildRows()
 			m.placeOnFirstPuzzle()
 			m.clampScroll()
+		}
+	case "R":
+		before := m.progress.TotalSolved
+		m.progress.Reset()
+		_ = m.progress.Save()
+		m.flash = fmt.Sprintf("progress reset (%d solved entries cleared)", before)
+	case "u":
+		if m.browseIdx < len(m.browseRows) {
+			row := m.browseRows[m.browseIdx]
+			if row.puzzle != nil {
+				nowSolved := m.progress.ToggleSolved(row.puzzle.ID)
+				_ = m.progress.Save()
+				if nowSolved {
+					m.flash = "marked solved: " + row.puzzle.Title
+				} else {
+					m.flash = "unmarked: " + row.puzzle.Title
+				}
+			}
 		}
 	case "?":
 		m.showHelp = true
@@ -493,6 +565,14 @@ func (m *Model) moveCursor(delta int) {
 }
 
 func (m Model) handlePuzzleInfoKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.current != nil {
+		switch m.current.Kind {
+		case puzzle.KindPredictOutput:
+			return m.handlePuzzleInfoKeyPredict(msg)
+		case puzzle.KindQuiz:
+			return m.handlePuzzleInfoKeyQuiz(msg)
+		}
+	}
 	switch msg.String() {
 	case "enter", " ":
 		rewrote, err := m.ensureScratch(m.hintShown)
@@ -519,6 +599,8 @@ func (m Model) handlePuzzleInfoKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		} else {
 			m.flash = "scratch reset to template"
 		}
+	case "D":
+		m.flash = m.deleteScratchFlash()
 	case "?":
 		m.showHelp = true
 	case "b", "esc":
@@ -526,6 +608,138 @@ func (m Model) handlePuzzleInfoKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "q", "ctrl+q", "ctrl+c":
 		return m, tea.Quit
 	}
+	return m, nil
+}
+
+// handlePuzzleInfoKeyPredict handles keys in the puzzle-info view for
+// predict-output puzzles. The action keys differ (no editor, no scratch).
+func (m Model) handlePuzzleInfoKeyPredict(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "enter", " ":
+		m.answerInput = ""
+		m.state = statePredictInput
+	case "h":
+		m.hintShown = true
+	case "s":
+		m.solutionShown = true
+	case "o":
+		if m.current.Reference != "" {
+			openURL(m.current.Reference)
+		}
+	case "?":
+		m.showHelp = true
+	case "b", "esc":
+		m.state = stateBrowse
+	case "q", "ctrl+q", "ctrl+c":
+		return m, tea.Quit
+	}
+	return m, nil
+}
+
+// handlePuzzleInfoKeyQuiz handles keys for quiz puzzles. Multiple-choice:
+// a/b/c/d (or 1/2/3/4) picks a choice and immediately routes to stateResult.
+func (m Model) handlePuzzleInfoKeyQuiz(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	s := msg.String()
+	if idx, ok := quizChoiceIndex(s); ok {
+		if idx < len(m.current.Choices) {
+			return m.submitQuizAnswer(m.current.Choices[idx])
+		}
+	}
+	switch s {
+	case "h":
+		m.hintShown = true
+	case "s":
+		m.solutionShown = true
+	case "o":
+		if m.current.Reference != "" {
+			openURL(m.current.Reference)
+		}
+	case "?":
+		m.showHelp = true
+	case "b", "esc":
+		m.state = stateBrowse
+	case "q", "ctrl+q", "ctrl+c":
+		return m, tea.Quit
+	}
+	return m, nil
+}
+
+// quizChoiceIndex maps a keypress to a choice index. a/b/c/d -> 0..3, and
+// 1/2/3/4 also work for keyboard-friendly numeric input.
+func quizChoiceIndex(s string) (int, bool) {
+	switch s {
+	case "a", "A", "1":
+		return 0, true
+	case "b", "B", "2":
+		return 1, true
+	case "c", "C", "3":
+		return 2, true
+	case "d", "D", "4":
+		return 3, true
+	}
+	return -1, false
+}
+
+// submitQuizAnswer compares the picked choice to the recorded answer and
+// routes to stateResult with a synthetic Result.
+func (m Model) submitQuizAnswer(pick string) (tea.Model, tea.Cmd) {
+	passed := pick == m.current.Answer
+	m.userSolution = pick
+	output := ""
+	if !passed {
+		output = "You chose: " + pick + "\nCorrect answer: " + m.current.Answer
+	}
+	m.result = &runner.Result{Passed: passed, Output: output}
+	if passed {
+		m.progress.RecordAttempt(m.current.ID, true)
+		_ = m.progress.Save()
+	}
+	m.state = stateResult
+	return m, nil
+}
+
+// handlePredictInputKey processes typing in the predict-output answer field.
+func (m Model) handlePredictInputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "enter":
+		return m.submitPredictAnswer()
+	case "esc":
+		m.answerInput = ""
+		m.state = statePuzzleInfo
+	case "backspace":
+		if n := len(m.answerInput); n > 0 {
+			m.answerInput = m.answerInput[:n-1]
+		}
+	case "ctrl+u":
+		m.answerInput = ""
+	case "ctrl+c", "ctrl+q":
+		return m, tea.Quit
+	default:
+		if len(msg.Runes) > 0 {
+			m.answerInput += string(msg.Runes)
+		}
+	}
+	return m, nil
+}
+
+// submitPredictAnswer compares the typed answer against the expected output
+// (whitespace-trimmed) and routes to stateResult with a synthetic runner.Result.
+func (m Model) submitPredictAnswer() (tea.Model, tea.Cmd) {
+	got := strings.TrimRight(m.answerInput, " \t\n")
+	want := strings.TrimRight(m.current.ExpectedOutput, " \t\n")
+	passed := got == want
+	m.answerOK = passed
+	m.userSolution = m.answerInput
+	output := ""
+	if !passed {
+		output = "Expected:\n" + want + "\n\nGot:\n" + got
+	}
+	m.result = &runner.Result{Passed: passed, Output: output}
+	if passed {
+		m.progress.RecordAttempt(m.current.ID, true)
+		_ = m.progress.Save()
+	}
+	m.state = stateResult
 	return m, nil
 }
 
@@ -538,11 +752,39 @@ func (m Model) handleResultKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 		}
+		if m.current != nil {
+			switch m.current.Kind {
+			case puzzle.KindPredictOutput:
+				m.answerInput = ""
+				m.state = statePredictInput
+				return m, nil
+			case puzzle.KindQuiz:
+				m.state = statePuzzleInfo
+				return m, nil
+			}
+		}
 		return m, m.openEditor()
 	case "n":
 		if m.result != nil && m.result.Passed {
 			if !m.advanceToNextUnsolved() {
 				m.state = stateDone
+			}
+		}
+	case "a":
+		if m.result != nil && m.result.Passed && m.current != nil {
+			switch m.current.Kind {
+			case puzzle.KindCode, puzzle.KindFix:
+				if !m.aiLoading && m.aiReview == "" && m.aiErr == "" {
+					m.aiLoading = true
+					return m, tea.Batch(m.spinner.Tick, m.requestAIReview())
+				}
+			}
+		}
+	case "e":
+		if m.result != nil && m.result.Passed && m.current != nil {
+			switch m.current.Kind {
+			case puzzle.KindCode, puzzle.KindFix:
+				return m, m.openEditor()
 			}
 		}
 	case "h":
@@ -554,11 +796,19 @@ func (m Model) handleResultKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			openURL(m.current.Reference)
 		}
 	case "r":
+		if m.current != nil && m.current.Kind == puzzle.KindPredictOutput {
+			break // predict puzzles have no scratch to reset
+		}
 		if err := m.writeTemplate(m.hintShown); err != nil {
 			m.flash = "reset failed: " + err.Error()
 		} else {
 			m.flash = "scratch reset to template"
 		}
+	case "D":
+		if m.current != nil && m.current.Kind == puzzle.KindPredictOutput {
+			break
+		}
+		m.flash = m.deleteScratchFlash()
 	case "?":
 		m.showHelp = true
 	case "b", "esc":
@@ -567,6 +817,39 @@ func (m Model) handleResultKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	}
 	return m, nil
+}
+
+// requestAIReview kicks off an asynchronous Anthropic call for a short
+// review of the user's solution. The returned tea.Cmd produces an
+// aiReviewMsg when the request finishes (or errors).
+func (m Model) requestAIReview() tea.Cmd {
+	cur := m.current
+	user := m.userSolution
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		review, err := ai.Review(ctx, ai.ReviewRequest{
+			Title:       cur.Title,
+			Description: cur.Description,
+			Canonical:   cur.Solution,
+			UserCode:    user,
+		})
+		return aiReviewMsg{review: review, err: err}
+	}
+}
+
+// deleteScratchFlash removes the current puzzle's scratch file and returns
+// a flash message describing the result. Missing files are treated as
+// success — the operation is idempotent.
+func (m Model) deleteScratchFlash() string {
+	path := m.scratchPath()
+	if err := os.Remove(path); err != nil {
+		if os.IsNotExist(err) {
+			return "no scratch file to delete"
+		}
+		return "delete failed: " + err.Error()
+	}
+	return "scratch file deleted"
 }
 
 // advanceToNextUnsolved moves to the next puzzle in browse order that hasn't
@@ -602,6 +885,9 @@ func (m *Model) advanceToNextUnsolved() bool {
 		m.solutionShown = false
 		m.result = nil
 		m.userSolution = ""
+		m.aiReview = ""
+		m.aiErr = ""
+		m.aiLoading = false
 		m.state = statePuzzleInfo
 		// move browse cursor too
 		for i, row := range m.browseRows {
@@ -660,6 +946,8 @@ func (m Model) View() string {
 		return m.viewBrowse()
 	case statePuzzleInfo:
 		return m.viewPuzzleInfo()
+	case statePredictInput:
+		return m.viewPredictInput()
 	case stateRunning:
 		return fmt.Sprintf("\n\n  %s Compiling and running tests...\n", m.spinner.View())
 	case stateResult:
@@ -752,6 +1040,8 @@ func (m Model) viewBrowse() string {
 				styleKeyName.Render("enter") + " open  " +
 				styleKeyName.Render("tab") + " collapse  " +
 				styleKeyName.Render("/") + " search  " +
+				styleKeyName.Render("u") + " toggle solved  " +
+				styleKeyName.Render("R") + " reset all  " +
 				styleKeyName.Render("?") + " help  " +
 				styleKeyName.Render("q") + " quit",
 		)
@@ -762,6 +1052,9 @@ func (m Model) viewBrowse() string {
 		parts = append(parts, searchLine, "")
 	}
 	parts = append(parts, strings.Join(lines, "\n"))
+	if m.flash != "" {
+		parts = append(parts, "", "  "+styleHint.Render(m.flash))
+	}
 	parts = append(parts, "", "  "+keys)
 	return strings.Join(parts, "\n")
 }
@@ -871,6 +1164,12 @@ func (m Model) viewPuzzleInfo() string {
 	if m.current == nil {
 		return ""
 	}
+	switch m.current.Kind {
+	case puzzle.KindPredictOutput:
+		return m.viewPuzzleInfoPredict()
+	case puzzle.KindQuiz:
+		return m.viewPuzzleInfoQuiz()
+	}
 
 	solvedBadge := ""
 	if m.progress.Solved[m.current.ID] {
@@ -886,11 +1185,11 @@ func (m Model) viewPuzzleInfo() string {
 	))
 
 	title := styleTitle.Render(m.current.Title)
-	desc := styleDescription.Render(wordWrap(m.current.Description, m.width-4))
+	desc := renderInline(wordWrap(m.current.Description, m.width-4), styleDescription)
 
 	var hintLine string
 	if m.hintShown {
-		hintLine = "\n" + styleHint.Render("  Hint: "+m.current.Hint)
+		hintLine = "\n" + "  " + renderInline("Hint: " + m.current.Hint, styleHint)
 	}
 
 	keys := styleKeybind.Render(
@@ -899,6 +1198,7 @@ func (m Model) viewPuzzleInfo() string {
 			styleKeyName.Render("s") + " solution  " +
 			styleKeyName.Render("o") + " ref  " +
 			styleKeyName.Render("r") + " reset  " +
+			styleKeyName.Render("D") + " del  " +
 			styleKeyName.Render("b") + " back  " +
 			styleKeyName.Render("?") + " help  " +
 			styleKeyName.Render("q") + " quit",
@@ -930,6 +1230,142 @@ func (m Model) viewPuzzleInfo() string {
 	return strings.Join(parts, "\n")
 }
 
+// viewPuzzleInfoPredict renders the puzzle-info screen for predict-output
+// puzzles: shows the snippet and prompts the user to press enter to type
+// their predicted output.
+func (m Model) viewPuzzleInfoPredict() string {
+	solvedBadge := ""
+	if m.progress.Solved[m.current.ID] {
+		solvedBadge = "  " + stylePass.Render("✓ solved")
+	}
+	header := styleHeader.Render(fmt.Sprintf(
+		"%s  %s / %s%s  %s",
+		styleTitle.Render("gopuzzle"),
+		styleConcept.Render(m.current.Source),
+		styleConcept.Render(m.current.Section),
+		solvedBadge,
+		styleHint.Render("predict-output"),
+	))
+
+	title := styleTitle.Render(m.current.Title)
+	desc := renderInline(wordWrap(m.current.Description, m.width-4), styleDescription)
+	snippet := styleBorder.Render(styleOutput.Render(strings.TrimRight(m.current.Snippet, "\n")))
+
+	keys := styleKeybind.Render(
+		styleKeyName.Render("enter") + " type your prediction  " +
+			styleKeyName.Render("h") + " hint  " +
+			styleKeyName.Render("s") + " expected output  " +
+			styleKeyName.Render("o") + " ref  " +
+			styleKeyName.Render("b") + " back  " +
+			styleKeyName.Render("?") + " help  " +
+			styleKeyName.Render("q") + " quit",
+	)
+
+	parts := []string{header, "  " + title, "", "  " + desc, "", snippet}
+	if m.current.Reference != "" {
+		parts = append(parts, "  "+styleKeybind.Render("ref: ")+styleKeyName.Render(m.current.Reference))
+	}
+	if m.hintShown && m.current.Hint != "" {
+		parts = append(parts, "  " + renderInline("Hint: " + m.current.Hint, styleHint))
+	}
+	if m.solutionShown {
+		parts = append(parts, "", "  "+styleKeybind.Render("Expected output:"),
+			styleBorder.Render(styleOutput.Render(m.current.ExpectedOutput)))
+	}
+	parts = append(parts, "", "  "+keys)
+	return strings.Join(parts, "\n")
+}
+
+// viewPuzzleInfoQuiz renders a multiple-choice question with lettered
+// choices. The user picks by pressing the corresponding letter.
+func (m Model) viewPuzzleInfoQuiz() string {
+	solvedBadge := ""
+	if m.progress.Solved[m.current.ID] {
+		solvedBadge = "  " + stylePass.Render("✓ solved")
+	}
+	header := styleHeader.Render(fmt.Sprintf(
+		"%s  %s / %s%s  %s",
+		styleTitle.Render("gopuzzle"),
+		styleConcept.Render(m.current.Source),
+		styleConcept.Render(m.current.Section),
+		solvedBadge,
+		styleHint.Render("quiz"),
+	))
+	title := styleTitle.Render(m.current.Title)
+	desc := renderInline(wordWrap(m.current.Description, m.width-4), styleDescription)
+	question := renderInline(wordWrap(m.current.Question, m.width-4), styleDescription)
+
+	letters := []string{"a", "b", "c", "d"}
+	var choiceLines []string
+	for i, choice := range m.current.Choices {
+		if i >= len(letters) {
+			break
+		}
+		choiceLines = append(choiceLines,
+			"    "+styleKeyName.Render(letters[i])+")  "+styleDescription.Render(choice))
+	}
+
+	keys := styleKeybind.Render(
+		styleKeyName.Render("a-d") + " pick  " +
+			styleKeyName.Render("h") + " hint  " +
+			styleKeyName.Render("s") + " answer  " +
+			styleKeyName.Render("o") + " ref  " +
+			styleKeyName.Render("b") + " back  " +
+			styleKeyName.Render("?") + " help  " +
+			styleKeyName.Render("q") + " quit",
+	)
+
+	parts := []string{header, "  " + title, "", "  " + desc, "", "  " + question, ""}
+	parts = append(parts, choiceLines...)
+	if m.current.Reference != "" {
+		parts = append(parts, "", "  "+styleKeybind.Render("ref: ")+styleKeyName.Render(m.current.Reference))
+	}
+	if m.hintShown && m.current.Hint != "" {
+		parts = append(parts, "", "  " + renderInline("Hint: " + m.current.Hint, styleHint))
+	}
+	if m.solutionShown {
+		parts = append(parts, "", "  "+styleKeybind.Render("Answer:"),
+			"    "+stylePass.Render(m.current.Answer))
+	}
+	parts = append(parts, "", "  "+keys)
+	return strings.Join(parts, "\n")
+}
+
+// viewPredictInput renders the snippet plus a single-line answer field while
+// the user types their predicted output.
+func (m Model) viewPredictInput() string {
+	header := styleHeader.Render(fmt.Sprintf(
+		"%s  %s",
+		styleTitle.Render("gopuzzle"),
+		styleConcept.Render(m.current.Title),
+	))
+	prompt := styleDescription.Render(wordWrap(
+		"Type the exact output the snippet would print, then press enter.",
+		m.width-4,
+	))
+	snippet := styleBorder.Render(styleOutput.Render(strings.TrimRight(m.current.Snippet, "\n")))
+	caret := styleKeyName.Render("▎")
+	field := styleBorder.Render(styleDescription.Render(m.answerInput) + caret)
+	keys := styleKeybind.Render(
+		styleKeyName.Render("enter") + " submit  " +
+			styleKeyName.Render("⌫") + " backspace  " +
+			styleKeyName.Render("ctrl+u") + " clear  " +
+			styleKeyName.Render("esc") + " back  " +
+			styleKeyName.Render("q") + " quit",
+	)
+	return strings.Join([]string{
+		header,
+		"  " + prompt,
+		"",
+		snippet,
+		"",
+		"  " + styleKeybind.Render("Your prediction:"),
+		field,
+		"",
+		"  " + keys,
+	}, "\n")
+}
+
 func (m Model) viewResult() string {
 	if m.result == nil {
 		return ""
@@ -941,26 +1377,76 @@ func (m Model) viewResult() string {
 		lines = append(lines, stylePass.Render("  PASS ✓"), "")
 		userTrim := strings.TrimSpace(m.userSolution)
 		canonTrim := strings.TrimSpace(m.current.Solution)
+		switch m.current.Kind {
+		case puzzle.KindPredictOutput:
+			canonTrim = strings.TrimSpace(m.current.ExpectedOutput)
+		case puzzle.KindQuiz:
+			canonTrim = strings.TrimSpace(m.current.Answer)
+		}
 		if userTrim != "" {
+			label := "Your solution:"
+			switch m.current.Kind {
+			case puzzle.KindPredictOutput:
+				label = "Your prediction:"
+			case puzzle.KindQuiz:
+				label = "Your answer:"
+			}
 			lines = append(lines,
-				"  "+styleKeybind.Render("Your solution:"),
+				"  "+styleKeybind.Render(label),
 				styleBorder.Render(styleOutput.Render(userTrim)),
 				"",
 			)
 		}
 		if canonTrim != "" && canonTrim != userTrim {
+			label := "Suggested solution:"
+			switch m.current.Kind {
+			case puzzle.KindPredictOutput:
+				label = "Expected output:"
+			case puzzle.KindQuiz:
+				label = "Correct answer:"
+			}
 			lines = append(lines,
-				"  "+styleKeybind.Render("Suggested solution:"),
+				"  "+styleKeybind.Render(label),
 				styleBorder.Render(styleOutput.Render(canonTrim)),
 				"",
 			)
 		}
 		if strings.TrimSpace(m.current.Explanation) != "" {
-			lines = append(lines, "  "+styleExplanation.Render(wordWrap(m.current.Explanation, m.width-4)), "")
+			lines = append(lines, "  "+renderInline(wordWrap(m.current.Explanation, m.width-4), styleExplanation), "")
+		}
+		// AI review block (only for code/fix kinds; appears once requested).
+		switch m.current.Kind {
+		case puzzle.KindCode, puzzle.KindFix:
+			if m.aiLoading {
+				lines = append(lines,
+					"  "+m.spinner.View()+" "+styleHint.Render("AI review loading..."),
+					"",
+				)
+			} else if m.aiErr != "" {
+				lines = append(lines,
+					"  "+styleKeybind.Render("AI review:"),
+					"  "+styleFail.Render(m.aiErr),
+					"",
+				)
+			} else if m.aiReview != "" {
+				lines = append(lines,
+					"  "+styleKeybind.Render("AI review:"),
+					styleBorder.Render(renderInline(wordWrap(m.aiReview, m.width-6), styleDescription)),
+					"",
+				)
+			}
+		}
+		nextKeys := styleKeyName.Render("enter") + " next puzzle  "
+		switch m.current.Kind {
+		case puzzle.KindCode, puzzle.KindFix:
+			nextKeys += styleKeyName.Render("e") + " edit  "
+			if m.aiReview == "" && m.aiErr == "" && !m.aiLoading {
+				nextKeys += styleKeyName.Render("a") + " AI review  "
+			}
 		}
 		lines = append(lines,
 			"  "+styleKeybind.Render(
-				styleKeyName.Render("enter")+" next puzzle  "+
+				nextKeys+
 					styleKeyName.Render("b")+" browser  "+
 					styleKeyName.Render("q")+" quit",
 			),
@@ -976,11 +1462,18 @@ func (m Model) viewResult() string {
 			lines = append(lines, "  "+styleKeybind.Render("ref: ")+styleKeyName.Render(m.current.Reference))
 		}
 		if m.hintShown {
-			lines = append(lines, "", styleHint.Render("  Hint: "+m.current.Hint))
+			lines = append(lines, "", "  " + renderInline("Hint: " + m.current.Hint, styleHint))
 		}
 		if m.solutionShown {
-			if m.current.Solution != "" {
-				lines = append(lines, "", styleBorder.Render(styleOutput.Render(strings.TrimSpace(m.current.Solution))))
+			shown := m.current.Solution
+			switch m.current.Kind {
+			case puzzle.KindPredictOutput:
+				shown = m.current.ExpectedOutput
+			case puzzle.KindQuiz:
+				shown = m.current.Answer
+			}
+			if shown != "" {
+				lines = append(lines, "", styleBorder.Render(styleOutput.Render(strings.TrimSpace(shown))))
 			} else {
 				lines = append(lines, "", "  "+styleHint.Render("No suggested solution available for this puzzle."))
 			}
@@ -988,14 +1481,18 @@ func (m Model) viewResult() string {
 		if m.flash != "" {
 			lines = append(lines, "", "  "+styleHint.Render(m.flash))
 		}
+		retry := "retry in " + editorBin()
+		switch m.current.Kind {
+		case puzzle.KindPredictOutput, puzzle.KindQuiz:
+			retry = "try again"
+		}
 		lines = append(lines,
 			"",
 			"  "+styleKeybind.Render(
-				styleKeyName.Render("enter")+" retry in "+editorBin()+
+				styleKeyName.Render("enter")+" "+retry+
 					"  "+styleKeyName.Render("h")+" hint"+
 					"  "+styleKeyName.Render("s")+" solution"+
 					"  "+styleKeyName.Render("o")+" ref"+
-					"  "+styleKeyName.Render("r")+" reset"+
 					"  "+styleKeyName.Render("b")+" back"+
 					"  "+styleKeyName.Render("?")+" help"+
 					"  "+styleKeyName.Render("q")+" quit",
@@ -1023,13 +1520,18 @@ func (m Model) viewHelp() string {
 		{"enter", "open puzzle"},
 		{"tab", "collapse / expand source"},
 		{"/", "search puzzles"},
+		{"u", "toggle solved on highlighted puzzle"},
+		{"R", "reset all progress"},
 		{"", ""},
 		{"Puzzle & result", ""},
 		{"enter", "open editor · retry on fail · next on pass"},
+		{"e", "re-open editor on PASS (code · fix)"},
+		{"a", "AI review of your solution (on PASS; needs ANTHROPIC_API_KEY)"},
 		{"h", "show hint"},
 		{"s", "show suggested solution"},
 		{"o", "open reference URL in browser"},
 		{"r", "reset scratch file to template"},
+		{"D", "delete scratch file (no rewrite)"},
 		{"b  esc", "back to browser"},
 		{"", ""},
 		{"Anywhere", ""},
@@ -1055,6 +1557,55 @@ func (m Model) viewHelp() string {
 	}
 	b.WriteString("\n  ")
 	b.WriteString(styleKeybind.Render("press any key to dismiss"))
+	return b.String()
+}
+
+// renderInline takes prose with `code` spans marked by backticks and renders
+// each span bold while the surrounding text uses the supplied base style.
+// Backticks themselves are removed from the output. Unterminated spans are
+// rendered as plain base text (the stray backtick is dropped).
+//
+// We pass each line through separately and call Inline(true) on the styles
+// so lipgloss doesn't apply block-level padding when a segment happens to
+// span newlines (which would left-pad continuation lines to match width).
+func renderInline(text string, base lipgloss.Style) string {
+	base = base.Inline(true)
+	codeStyle := base.Bold(true)
+	lines := strings.Split(text, "\n")
+	for i, line := range lines {
+		lines[i] = renderInlineLine(line, base, codeStyle)
+	}
+	return strings.Join(lines, "\n")
+}
+
+func renderInlineLine(line string, base, codeStyle lipgloss.Style) string {
+	var b strings.Builder
+	var seg strings.Builder
+	inCode := false
+	flush := func() {
+		s := seg.String()
+		seg.Reset()
+		if s == "" {
+			return
+		}
+		if inCode {
+			b.WriteString(codeStyle.Render(s))
+		} else {
+			b.WriteString(base.Render(s))
+		}
+	}
+	for _, r := range line {
+		if r == '`' {
+			flush()
+			inCode = !inCode
+			continue
+		}
+		seg.WriteRune(r)
+	}
+	if inCode {
+		inCode = false
+	}
+	flush()
 	return b.String()
 }
 

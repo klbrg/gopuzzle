@@ -1,49 +1,31 @@
 id: "lg-ch02-003"
-title: "Interpreted String Literals and Escapes"
+title: "Interpreted String Escapes"
 concept: "types"
+kind: "predict_output"
 description: |
-  Interpreted string literals use double quotes and translate backslash
-  escape sequences. Return the exact two-line string:
+  Interpreted string literals use double quotes and process backslash
+  escapes. Inside one, `\\` means a literal backslash and `\"` means
+  a literal double quote.
 
-      She said "hi"
-      then left.
-
-  Use an interpreted (double-quoted) string literal with \n and \"
-  escapes — no raw strings, no string concatenation.
-template: |
+  Predict the output.
+snippet: |
   package main
 
-  func quotedLine() string {
-  	// TODO: return a double-quoted string literal that uses
-  	// \" for the inner quotes and \n for the newline.
-  }
-test_code: |
-  package main
+  import "fmt"
 
-  import "testing"
-
-  func TestQuotedLine(t *testing.T) {
-  	want := "She said \"hi\"\nthen left."
-  	if got := quotedLine(); got != want {
-  		t.Errorf("quotedLine():\n  want %q\n  got  %q", want, got)
-  	}
+  func main() {
+  	fmt.Print("a \"b\" c\\d")
   }
-hint: "Inside double quotes, write \\\" for a literal double quote and \\n for a newline."
-solution: |
-  package main
-
-  func quotedLine() string {
-  	return "She said \"hi\"\nthen left."
-  }
+expected_output: |
+  a "b" c\d
+hint: "Each backslash-escape turns into one character: `\\\"` produces `\"`, `\\\\` produces `\\`."
 explanation: |
-  Interpreted string literals are enclosed in double quotes and
-  process backslash escapes. The most useful escapes are:
+  Inside double-quoted strings, the most common backslash escapes:
     \n   newline
     \t   tab
-    \\   backslash
-    \"   double quote (legal in strings, NOT in rune literals)
-  Inside a rune literal you would use \' for a single quote, but
-  inside a string literal you do not escape single quotes — and
-  conversely, \" is required inside a string but is not used inside
-  a rune literal (you would use a plain `"` there).
+    \\   literal backslash
+    \"   literal double quote
+
+  Compare with raw string literals (backticks), which include every
+  character between the backticks verbatim — no escape processing.
 reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html"

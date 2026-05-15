@@ -1,0 +1,55 @@
+id: "lg-ch02-012"
+title: "No Truthiness"
+concept: "types"
+kind: "fix"
+description: |
+  Unlike many languages, Go does not treat non-zero numbers or
+  non-empty strings as "truthy". The only way to produce a bool
+  from another type is with a comparison operator.
+
+  The code below tries to use an int directly as a boolean
+  condition. As written it won't compile. Fix the condition so
+  the program compiles and prints "non-zero".
+template: |
+  package main
+
+  import "fmt"
+
+  func main() {
+  	count := 5
+  	// TODO: fix the condition — Go has no truthiness.
+  	if count {
+  		fmt.Println("non-zero")
+  	} else {
+  		fmt.Println("zero")
+  	}
+  }
+expected_output: |
+  non-zero
+hint: "Compare count to 0 with `!=`. Comparison operators are how you build a bool."
+solution: |
+  package main
+
+  import "fmt"
+
+  func main() {
+  	count := 5
+  	if count != 0 {
+  		fmt.Println("non-zero")
+  	} else {
+  		fmt.Println("zero")
+  	}
+  }
+explanation: |
+  Other languages let you write `if n` for "if n is non-zero" or
+  `if s` for "if s is non-empty". Go rejects this: no type can be
+  converted to bool implicitly or explicitly. To get a bool, you
+  must compare:
+    n != 0          // "is n non-zero"
+    s != ""         // "is s non-empty"
+    len(slice) > 0  // "does slice have elements"
+
+  This is the same philosophy as requiring explicit numeric
+  conversions: idiomatic Go values comprehensibility over
+  conciseness.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html"

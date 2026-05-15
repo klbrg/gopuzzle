@@ -53,3 +53,34 @@ func Run(solutionCode, testCode string) (*Result, error) {
 	passed := err == nil && strings.Contains(output, "PASS")
 	return &Result{Passed: passed, Output: output}, nil
 }
+
+// RunSnippet compiles a self-contained main package and returns its stdout.
+// Used to verify predict-output puzzles by actually running the snippet.
+func RunSnippet(code string) (string, error) {
+	dir, err := os.MkdirTemp("", "gopuzzle-snippet-*")
+	if err != nil {
+		return "", fmt.Errorf("creating temp dir: %w", err)
+	}
+	defer os.RemoveAll(dir)
+
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte(code), 0644); err != nil {
+		return "", fmt.Errorf("writing main.go: %w", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte(goModTemplate), 0644); err != nil {
+		return "", fmt.Errorf("writing go.mod: %w", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "go", "run", ".")
+	cmd.Dir = dir
+	out, err := cmd.CombinedOutput()
+	if ctx.Err() == context.DeadlineExceeded {
+		return "", fmt.Errorf("snippet timed out after 10s")
+	}
+	if err != nil {
+		return string(out), fmt.Errorf("go run: %w\n%s", err, string(out))
+	}
+	return string(out), nil
+}

@@ -1,0 +1,40 @@
+id: "lg-ch02-013"
+title: "Untyped Constants"
+concept: "constants"
+kind: "predict_output"
+description: |
+  An untyped constant behaves like a literal — it has no fixed type
+  and adopts whatever type fits where you use it. So the SAME
+  constant can flow into an int, a float64, or a byte without any
+  explicit conversion.
+
+  Predict the output.
+snippet: |
+  package main
+
+  import "fmt"
+
+  func main() {
+  	const score = 100
+  	var i int = score
+  	var f float64 = score
+  	var b byte = score
+  	fmt.Println(i, f, b)
+  }
+expected_output: |
+  100 100 100
+hint: "An untyped constant adopts whichever numeric type it's assigned to. All three vars hold 100 in their own type."
+explanation: |
+  Because `score` has no explicit type, it is an untyped constant.
+  Each `var` assignment picks the right interpretation:
+    var i int = score      → score is int 100
+    var f float64 = score  → score is float64 100
+    var b byte = score     → score is byte 100
+
+  If `score` were typed (`const score int = 100`), only the first
+  line would compile; the others would require an explicit
+  conversion like `float64(score)`.
+
+  Rule of thumb from the chapter: keep constants untyped unless
+  you have a specific reason to lock them down.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html"

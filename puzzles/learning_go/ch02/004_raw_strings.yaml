@@ -1,50 +1,32 @@
 id: "lg-ch02-004"
 title: "Raw String Literals"
 concept: "types"
+kind: "predict_output"
 description: |
-  Raw string literals are delimited by backticks and contain every
-  character verbatim — no escape processing. Return the exact
-  three-line JSON-shaped string below using a raw string literal:
+  Raw string literals are delimited by backticks and include every
+  character verbatim — no escape processing.
 
-      {
-        "name": "Go"
-      }
-
-  Build it with a single backtick-delimited literal, not with
-  concatenation or \n escapes.
-template: |
+  Predict the output. The input text looks like the previous puzzle
+  but the delimiter is different.
+snippet: |
   package main
 
-  func jsonTemplate() string {
-  	// TODO: return the three-line block above using a single
-  	// backtick-delimited raw string literal.
-  }
-test_code: |
-  package main
+  import "fmt"
 
-  import "testing"
-
-  func TestJSONTemplate(t *testing.T) {
-  	want := "{\n  \"name\": \"Go\"\n}"
-  	if got := jsonTemplate(); got != want {
-  		t.Errorf("jsonTemplate():\n  want %q\n  got  %q", want, got)
-  	}
+  func main() {
+  	fmt.Print(`a \"b\" c\\d`)
   }
-hint: "A raw string literal is delimited with backticks and may span multiple lines exactly as written."
-solution: |
-  package main
-
-  func jsonTemplate() string {
-  	return `{
-    "name": "Go"
-  }`
-  }
+expected_output: |
+  a \"b\" c\\d
+hint: "Inside backticks every character appears literally — backslashes and quotes are not interpreted."
 explanation: |
-  Raw string literals are delimited by backticks (`) and include every
-  character between them verbatim. They are useful when:
-    - The string contains many backslashes (regex, Windows paths).
-    - The string contains many double quotes (HTML, JSON, SQL).
-    - The string spans multiple lines.
-  There is no escape processing inside a raw string, and the only
-  character a raw string cannot contain is a backtick.
+  Backtick-delimited raw strings do no interpretation:
+    `\n`    is the two characters backslash and n
+    `\"`    is the two characters backslash and double-quote
+    `\\`    is the two characters backslash and backslash
+
+  They are useful when the text contains many backslashes (regex,
+  Windows paths), many double quotes (HTML, JSON, SQL), or spans
+  multiple lines. The only character a raw string cannot contain
+  is a backtick.
 reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html"

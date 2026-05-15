@@ -1,0 +1,81 @@
+id: "lg-ch02-005"
+title: "Integer Division and Modulo"
+concept: "types"
+description: |
+  Go's `/` and `%` on integers do truncating division and remainder.
+  They show up every time you need to break a count into "chunks
+  plus leftover": bytes into kilobytes, seconds into minutes,
+  cents into dollars, pixels into rows.
+
+  Implement `secondsToHMS(total)` that converts a whole number of
+  seconds into (hours, minutes, seconds). For example, 3661 seconds
+  is 1 hour, 1 minute, 1 second.
+
+      secondsToHMS(0)     == (0, 0, 0)
+      secondsToHMS(59)    == (0, 0, 59)
+      secondsToHMS(3600)  == (1, 0, 0)
+      secondsToHMS(3661)  == (1, 1, 1)
+      secondsToHMS(86399) == (23, 59, 59)
+template: |
+  package main
+
+  func secondsToHMS(total int) (int, int, int) {
+  	// TODO: use `/` to get the bigger unit and `%` to keep the
+  	// leftover for the next step. 3600 seconds per hour, 60 per minute.
+  }
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestSecondsToHMS(t *testing.T) {
+  	cases := []struct {
+  		in      int
+  		h, m, s int
+  	}{
+  		{0, 0, 0, 0},
+  		{1, 0, 0, 1},
+  		{59, 0, 0, 59},
+  		{60, 0, 1, 0},
+  		{3599, 0, 59, 59},
+  		{3600, 1, 0, 0},
+  		{3661, 1, 1, 1},
+  		{7322, 2, 2, 2},
+  		{86399, 23, 59, 59},
+  		{90061, 25, 1, 1},
+  	}
+  	for _, c := range cases {
+  		h, m, s := secondsToHMS(c.in)
+  		if h != c.h || m != c.m || s != c.s {
+  			t.Errorf("secondsToHMS(%d) = (%d, %d, %d), want (%d, %d, %d)",
+  				c.in, h, m, s, c.h, c.m, c.s)
+  		}
+  	}
+  }
+hint: "Hours come from `total / 3600`. After that, the remaining seconds are `total % 3600`; divide those by 60 to get minutes. The seconds part is whatever's left after dividing by 60: `total % 60`."
+solution: |
+  package main
+
+  func secondsToHMS(total int) (int, int, int) {
+  	h := total / 3600
+  	m := (total % 3600) / 60
+  	s := total % 60
+  	return h, m, s
+  }
+explanation: |
+  This "divide for the bigger unit, mod for the leftover" pattern
+  shows up everywhere:
+    - seconds to hours / minutes / seconds
+    - bytes to kilobytes (`size/1024`, `size%1024`)
+    - cents to whole dollars plus change
+    - a flat index to (row, col) on a grid
+
+  Two gotchas worth keeping in mind:
+    - Integer `/` truncates — it throws away the fractional part. For
+      a real division use a float: `float64(a) / float64(b)`.
+    - Dividing (or taking `%`) by zero panics at runtime.
+
+  The standard library's `time` package can convert seconds to HMS
+  for you, but knowing how to build it from `/` and `%` is the
+  fundamental skill.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html"

@@ -1,44 +1,33 @@
 id: "lg-ch02-002"
 title: "Integer Literals in Different Bases"
 concept: "types"
+kind: "predict_output"
 description: |
   Go integer literals are base 10 by default, but you can write them
-  in binary (0b), octal (0o), or hexadecimal (0x). Implement
-  sumBases that returns the value of 0b1010 + 0o17 + 0x10, written
-  using those exact base-prefixed literals. The arithmetic result
-  is 10 + 15 + 16 = 41.
-template: |
+  in binary (0b), octal (0o), or hexadecimal (0x). The prefix only
+  changes the spelling — the stored value is identical.
+
+  Predict the output.
+snippet: |
   package main
 
-  func sumBases() int {
-  	// TODO: return the sum of 0b1010, 0o17, and 0x10
-  	// written with those exact base prefixes.
-  }
-test_code: |
-  package main
+  import "fmt"
 
-  import "testing"
-
-  func TestSumBases(t *testing.T) {
-  	if got := sumBases(); got != 41 {
-  		t.Errorf("sumBases(): expected 41, got %d", got)
-  	}
+  func main() {
+  	fmt.Println(0b1010, 0o17, 0x10)
   }
-hint: "Use the prefixes 0b, 0o, and 0x directly in the expression you return."
-solution: |
-  package main
-
-  func sumBases() int {
-  	return 0b1010 + 0o17 + 0x10
-  }
+expected_output: |
+  10 15 16
+hint: "Convert each literal to base 10 mentally: 0b1010 is binary, 0o17 octal, 0x10 hex."
 explanation: |
   Integer literals can be written in four bases by their prefix:
     base 10 (no prefix)  1234
     binary  (0b / 0B)    0b1010   == 10
     octal   (0o / 0O)    0o17     == 15
     hex     (0x / 0X)    0x10     == 16
-  A leading `0` with no letter is also octal, but the book tells you
-  not to use it because it is confusing.
-  Underscores are allowed inside literals for readability, e.g.
-  `0b1111_0000` or `1_000_000`. They are ignored by the compiler.
+
+  Underscores are allowed inside any literal for readability, e.g.
+  `0b1111_0000` or `1_000_000`. Pick the base that makes the
+  intent clearest: hex for bytes/bit patterns, octal for POSIX
+  permissions, binary when you really mean bits.
 reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html"

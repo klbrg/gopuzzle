@@ -9,17 +9,37 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// Kind identifies how a puzzle is presented and verified.
+const (
+	KindCode          = "code"           // template + test_code + solution (default)
+	KindPredictOutput = "predict_output" // show snippet, accept the printed output as the answer
+	KindQuiz          = "quiz"           // multiple-choice question, pick the letter
+	KindFix           = "fix"            // edit broken main, verified by running and matching expected_output
+)
+
 type Puzzle struct {
 	ID          string `yaml:"id"`
 	Title       string `yaml:"title"`
 	Concept     string `yaml:"concept"`
+	Kind        string `yaml:"kind"` // default: "code"
 	Description string `yaml:"description"`
-	Template    string `yaml:"template"`
-	TestCode    string `yaml:"test_code"`
 	Hint        string `yaml:"hint"`
-	Solution    string `yaml:"solution"`
 	Explanation string `yaml:"explanation"`
-	Reference   string   `yaml:"reference"`
+	Reference   string `yaml:"reference"`
+
+	// KindCode fields (also used by KindFix; for fix the template is broken).
+	Template string `yaml:"template"`
+	TestCode string `yaml:"test_code"`
+	Solution string `yaml:"solution"`
+
+	// KindPredictOutput and KindFix share these.
+	Snippet        string `yaml:"snippet"`         // code shown for predict_output
+	ExpectedOutput string `yaml:"expected_output"` // stdout the program should produce
+
+	// KindQuiz fields
+	Question string   `yaml:"question"`
+	Choices  []string `yaml:"choices"`
+	Answer   string   `yaml:"answer"` // must equal one of the choices
 
 	// Set at load time from the file path.
 	Source  string `yaml:"-"` // e.g. "gobyexample", "learning_go"
@@ -57,6 +77,9 @@ func LoadAll() ([]*Puzzle, error) {
 			p.Section = parts[1]
 		}
 		p.Stem = strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+		if p.Kind == "" {
+			p.Kind = KindCode
+		}
 		puzzles = append(puzzles, &p)
 		return nil
 	})

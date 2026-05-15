@@ -2,19 +2,20 @@ id: "lg-ch02-006"
 title: "Bit Operations"
 concept: "types"
 description: |
-  Go has the usual bit-manipulation operators on integers:
-  & (AND), | (OR), ^ (XOR), &^ (AND NOT), << (left shift),
-  and >> (right shift). Implement toggleBit(n, pos) which flips
-  the bit at position pos in n (0 = least-significant bit).
+  Go's bitwise operators on integers: & (AND), | (OR), ^ (XOR),
+  &^ (AND NOT), << (left shift), >> (right shift).
 
-      toggleBit(0b0000, 0) == 0b0001  (= 1)
-      toggleBit(0b0101, 0) == 0b0100  (= 4)
-      toggleBit(0b0101, 2) == 0b0001  (= 1)
+  Implement toggleBit(n, pos) that flips the bit at position pos
+  in n (position 0 is the least significant bit).
+
+      toggleBit(0b0000, 0) == 0b0001
+      toggleBit(0b0101, 0) == 0b0100
+      toggleBit(0b0101, 2) == 0b0001
 template: |
   package main
 
   func toggleBit(n int, pos int) int {
-  	// TODO: return n with the bit at position pos flipped.
+  	// TODO: XOR n with a 1-bit mask at position pos.
   }
 test_code: |
   package main
@@ -37,7 +38,7 @@ test_code: |
   		}
   	}
   }
-hint: "XOR with a 1 in the right position. Build the mask with `1 << pos`."
+hint: "XOR with `1 << pos`. The shift positions a 1 bit; XOR flips exactly that bit."
 solution: |
   package main
 
@@ -46,10 +47,10 @@ solution: |
   }
 explanation: |
   XOR (^) flips every bit where the mask has a 1 and leaves the rest
-  unchanged. To flip a single bit, build a mask with that bit set:
-    1 << pos   // a 1 shifted left by `pos` positions
-  Then `n ^ mask` toggles exactly that bit.
-  The other bitwise operators follow similar patterns:
+  unchanged. To flip exactly one bit, build a mask with that bit
+  set: `1 << pos`.
+
+  Related patterns:
     set a bit       n | (1 << pos)
     clear a bit     n &^ (1 << pos)    // AND NOT
     test a bit      n & (1 << pos) != 0
