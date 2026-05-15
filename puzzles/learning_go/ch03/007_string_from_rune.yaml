@@ -1,33 +1,35 @@
 id: "lg-ch03-007"
-title: "Converting a Rune to a String"
+title: "string(int) Is the Character, Not the Digits"
 concept: "strings"
 kind: "predict_output"
 description: |
-  `string(r)` where `r` is a rune (or integer Unicode code point)
-  produces a one-character string containing that code point —
-  *not* the decimal digits of `r`.
+  `string(intValue)` is one of Go's classic gotchas: it produces the
+  character at that Unicode code point, NOT the decimal-text form of
+  the number. For digits-as-text, use `strconv.Itoa(n)`.
 
-  Predict the output.
+  Predict the output. For reference, decimal 65 is the Unicode code
+  point for the uppercase letter 'A'.
 snippet: |
   package main
 
   import "fmt"
 
   func main() {
-  	r := rune(0x4E2D)
-  	fmt.Println(string(r))
+  	n := 65
+  	fmt.Println(string(n))
   }
 expected_output: |
-  中
-hint: "0x4E2D is the Unicode code point for a single Chinese character. `string(rune)` returns that character as a one-rune string."
+  A
+hint: "The output is NOT \"65\". `string(intValue)` reads the integer as a code point, not as digits."
 explanation: |
-  `string(intValue)` and `string(runeValue)` interpret the integer as
-  a Unicode code point and return a one-rune UTF-8 string. This is
-  almost always what you want when the integer represents a code
-  point — and almost never what you want when it represents a number.
+  `string(intValue)` interprets the integer as a Unicode code point
+  and returns the corresponding one-rune UTF-8 string. This is almost
+  always what you want when the integer represents a code point — and
+  almost never what you want when it represents a number.
 
-  Common gotcha: `string(65)` returns `"A"`, not `"65"`. Since Go 1.15
-  `go vet` warns when you do this with a plain `int` (use `rune` or
-  `byte` to make the intent explicit). To convert an integer to its
-  *decimal text*, use `strconv.Itoa(n)`.
+  Since Go 1.15 `go vet` warns when you do this with a plain `int`,
+  exactly to flag the gotcha. The fixes:
+    - To convert a code point to a character: use `string(rune(n))`
+      so the intent is explicit.
+    - To convert a number to its decimal text: use `strconv.Itoa(n)`.
 reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html#strings_runes_bytes"

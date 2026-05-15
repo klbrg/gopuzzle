@@ -3,8 +3,9 @@ title: "Strings Are Bytes, Not Runes"
 concept: "strings"
 kind: "predict_output"
 description: |
-  A Go string is a sequence of bytes, not runes. Indexing a string
-  with `s[0]` returns a single `byte` (uint8), not a character.
+  A Go string is a sequence of bytes. When you index one with `s[i]`,
+  you get back a single byte — not a character, not a rune. The `%T`
+  format verb prints the underlying type of a value.
 
   Predict the output.
 snippet: |
@@ -14,19 +15,20 @@ snippet: |
 
   func main() {
   	s := "Hi"
-  	fmt.Println(s[0])
+  	fmt.Printf("%T\n", s[0])
   }
 expected_output: |
-  72
-hint: "`s[0]` is the byte at position 0, which fmt prints as a decimal number."
+  uint8
+hint: "`byte` is just an alias for one of Go's predeclared integer types. `%T` prints the underlying type, not the alias."
 explanation: |
-  Strings in Go are immutable byte sequences. `s[i]` returns the byte
-  at position i, of type `byte` (alias for uint8). fmt's default verb
-  prints bytes as numbers (here, 72 — the ASCII code for 'H').
+  `s[i]` returns a `byte`. `byte` is an alias for `uint8`, so `%T`
+  prints `uint8` (the underlying named type) rather than `byte`.
 
-  To get a character at a position, you usually want to iterate with
+  Because the result is a number, if you ever wrote
+  `fmt.Println(s[0])` you'd see a decimal value (e.g. 72 for 'H'),
+  not the character. To get a character at a position, iterate with
   `for i, r := range s` (which decodes UTF-8 code points) or convert
   the string to `[]rune`. Indexing into a string with `[i]` is
-  byte-level and you can get partial code points if the string
-  contains multi-byte characters (emojis, accented letters, etc.).
+  byte-level — you can land mid-character on multi-byte runes
+  (emojis, accented letters).
 reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html#strings_runes_bytes"

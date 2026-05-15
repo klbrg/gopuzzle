@@ -756,6 +756,8 @@ func (m Model) handlePredictInputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 // submitPredictAnswer compares the typed answer against the expected output
 // (whitespace-trimmed) and routes to stateResult with a synthetic runner.Result.
+// On FAIL we deliberately do NOT print the expected output — that would
+// spoil the puzzle. The user can press s to reveal it explicitly.
 func (m Model) submitPredictAnswer() (tea.Model, tea.Cmd) {
 	got := strings.TrimRight(m.answerInput, " \t\n")
 	want := strings.TrimRight(m.current.ExpectedOutput, " \t\n")
@@ -764,7 +766,11 @@ func (m Model) submitPredictAnswer() (tea.Model, tea.Cmd) {
 	m.userSolution = m.answerInput
 	output := ""
 	if !passed {
-		output = "Expected:\n" + want + "\n\nGot:\n" + got
+		shown := got
+		if shown == "" {
+			shown = "(empty)"
+		}
+		output = "Your prediction did not match the snippet's output.\n\nYou typed:\n" + shown + "\n\nPress s to reveal the expected output, or enter to try again."
 	}
 	m.result = &runner.Result{Passed: passed, Output: output}
 	if passed {
