@@ -48,4 +48,4 @@ explanation: |
   interchangeable with their underlying type:
     byte == uint8
     rune == int32
-reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html"
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html#type_conversion"

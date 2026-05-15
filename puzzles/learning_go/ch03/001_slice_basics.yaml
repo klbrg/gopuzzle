@@ -30,4 +30,4 @@ explanation: |
 
   The only thing you can compare a slice to with `==` is `nil`. Use
   `slices.Equal` (Go 1.21+) for value comparison.
-reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html"
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html#slice_info"

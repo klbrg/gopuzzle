@@ -49,4 +49,4 @@ explanation: |
 
   Since Go 1.21, `slices.Clone(a)` from the standard library does the
   same thing in one call — handy when you have it available.
-reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html"
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html#copy_slice"

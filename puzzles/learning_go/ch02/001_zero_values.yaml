@@ -28,4 +28,4 @@ explanation: |
   `var x T` (with no `=`) declares a variable at its type's zero
   value. The explicit zero value is one of the design decisions
   that removes a whole class of bugs from C and C++ programs.
-reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html"
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html#id16"

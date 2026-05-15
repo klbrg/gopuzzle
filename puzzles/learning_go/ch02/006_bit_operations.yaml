@@ -54,4 +54,4 @@ explanation: |
     set a bit       n | (1 << pos)
     clear a bit     n &^ (1 << pos)    // AND NOT
     test a bit      n & (1 << pos) != 0
-reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html"
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html#id22"

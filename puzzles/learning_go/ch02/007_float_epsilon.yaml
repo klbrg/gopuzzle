@@ -62,4 +62,4 @@ explanation: |
 
   The same caution applies to ordering — never rely on bit-exact
   comparisons of computed floats.
-reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html"
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html#id23"

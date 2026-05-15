@@ -30,4 +30,4 @@ explanation: |
   `go vet` warns when you do this with a plain `int` (use `rune` or
   `byte` to make the intent explicit). To convert an integer to its
   *decimal text*, use `strconv.Itoa(n)`.
-reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html"
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html#strings_runes_bytes"

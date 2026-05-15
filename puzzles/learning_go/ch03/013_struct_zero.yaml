@@ -42,4 +42,4 @@ explanation: |
   `nil == nil` but `[]string{} != nil`. Idiomatic Go prefers nil
   unless you specifically need the empty literal (e.g. JSON
   marshaling, where nil and empty serialize differently).
-reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html"
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html#struct_first_look"

@@ -77,4 +77,4 @@ explanation: |
   This pattern shows up everywhere: deduplication, "have I visited
   this node yet" in graph traversal, "have I parsed this header
   already" in protocol code.
-reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html"
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html#id42"

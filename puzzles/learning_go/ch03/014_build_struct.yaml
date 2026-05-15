@@ -74,4 +74,4 @@ explanation: |
     - Slices, maps, and functions are NOT comparable, so any struct
       containing one of those is not comparable either (you'd need
       a custom equality function).
-reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html"
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html#struct_first_look"

@@ -37,4 +37,4 @@ explanation: |
 
   Rule of thumb from the chapter: keep constants untyped unless
   you have a specific reason to lock them down.
-reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html"
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html#id29"

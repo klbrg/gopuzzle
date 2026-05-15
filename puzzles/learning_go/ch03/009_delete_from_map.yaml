@@ -28,4 +28,4 @@ explanation: |
     m["a"]--       — this just sets m["a"] to its current value
                      minus one (and brings it into the map if it
                      wasn't there).
-reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html"
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html#id41"

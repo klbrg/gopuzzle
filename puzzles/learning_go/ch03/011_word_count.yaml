@@ -69,4 +69,4 @@ explanation: |
   Returning an empty map rather than nil is friendlier to callers
   who want to immediately add more entries (writing to a nil map
   panics).
-reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html"
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html#id221"

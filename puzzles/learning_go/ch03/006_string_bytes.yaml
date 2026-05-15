@@ -29,4 +29,4 @@ explanation: |
   the string to `[]rune`. Indexing into a string with `[i]` is
   byte-level and you can get partial code points if the string
   contains multi-byte characters (emojis, accented letters, etc.).
-reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html"
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html#strings_runes_bytes"

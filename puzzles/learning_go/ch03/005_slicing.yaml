@@ -61,4 +61,4 @@ explanation: |
   Negative indices aren't a thing in Go (unlike Python). A negative
   index would be a compile error if it's a constant, or a runtime
   panic if it's computed from a variable.
-reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html"
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html#id36"

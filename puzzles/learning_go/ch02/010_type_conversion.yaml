@@ -46,4 +46,4 @@ explanation: |
   This rule applies to all numeric types, including different-
   sized integers (int vs int32, byte vs int) and different
   signedness.
-reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html"
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html#type_conversion"

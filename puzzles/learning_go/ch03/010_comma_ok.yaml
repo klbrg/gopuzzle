@@ -66,4 +66,4 @@ explanation: |
   Reading without the bool: `v := m[key]` is fine when you don't care
   about presence — useful with counter maps where 0 is the right
   default.
-reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html"
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html#comma_ok_section"

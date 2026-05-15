@@ -29,4 +29,4 @@ explanation: |
   Windows paths), many double quotes (HTML, JSON, SQL), or spans
   multiple lines. The only character a raw string cannot contain
   is a backtick.
-reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html"
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html#goliterals"

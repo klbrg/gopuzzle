@@ -37,4 +37,4 @@ explanation: |
   Forgetting to assign the result of append (`x = append(x, ...)`) is
   the most common mistake — the function returns a new slice header
   whenever the backing array changes.
-reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html"
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html#id35"

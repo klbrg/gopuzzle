@@ -28,4 +28,4 @@ explanation: |
 
   Compare with raw string literals (backticks), which include every
   character between the backticks verbatim — no escape processing.
-reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html"
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html#goliterals"

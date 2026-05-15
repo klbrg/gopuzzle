@@ -30,4 +30,4 @@ explanation: |
   `0b1111_0000` or `1_000_000`. Pick the base that makes the
   intent clearest: hex for bytes/bit patterns, octal for POSIX
   permissions, binary when you really mean bits.
-reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html"
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html#goliterals"

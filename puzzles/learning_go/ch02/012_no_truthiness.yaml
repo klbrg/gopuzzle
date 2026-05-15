@@ -52,4 +52,4 @@ explanation: |
   This is the same philosophy as requiring explicit numeric
   conversions: idiomatic Go values comprehensibility over
   conciseness.
-reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html"
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html#type_conversion"
