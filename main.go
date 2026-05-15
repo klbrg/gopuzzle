@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime/debug"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/klbrg/gopuzzle/internal/progress"
@@ -12,6 +14,14 @@ import (
 )
 
 func main() {
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "version", "-v", "--version":
+			printVersion()
+			return
+		}
+	}
+
 	var candidates []string
 	if env := os.Getenv("GOPUZZLE_DIR"); env != "" {
 		candidates = append(candidates, env)
@@ -55,4 +65,39 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Error running app: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+func printVersion() {
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		fmt.Println("gopuzzle: build info unavailable")
+		return
+	}
+	rev, commitTime, dirty := "unknown", "unknown", ""
+	for _, s := range info.Settings {
+		switch s.Key {
+		case "vcs.revision":
+			rev = s.Value
+			if len(rev) > 12 {
+				rev = rev[:12]
+			}
+		case "vcs.time":
+			commitTime = s.Value
+		case "vcs.modified":
+			if s.Value == "true" {
+				dirty = " (dirty)"
+			}
+		}
+	}
+	buildTime := "unknown"
+	if exe, err := os.Executable(); err == nil {
+		if st, err := os.Stat(exe); err == nil {
+			buildTime = st.ModTime().UTC().Format(time.RFC3339)
+		}
+	}
+	fmt.Printf("gopuzzle %s\n", info.Main.Version)
+	fmt.Printf("  commit:    %s%s\n", rev, dirty)
+	fmt.Printf("  committed: %s\n", commitTime)
+	fmt.Printf("  built:     %s\n", buildTime)
+	fmt.Printf("  go:        %s\n", info.GoVersion)
 }

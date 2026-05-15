@@ -15,7 +15,11 @@ description: |
 template: |
   package main
 
-  // TODO: implement average
+  func average(a, b int) float64 {
+  	// TODO: return the mean of a and b as a float64.
+  	// Remember that Go won't auto-convert int to float64 — you
+  	// must use float64(...) somewhere in the expression.
+  }
 test_code: |
   package main
 

@@ -10,7 +10,10 @@ description: |
 template: |
   package main
 
-  // TODO: implement sumBases using one binary, one octal, and one hex literal.
+  func sumBases() int {
+  	// TODO: return the sum of 0b1010, 0o17, and 0x10
+  	// written with those exact base prefixes.
+  }
 test_code: |
   package main
 

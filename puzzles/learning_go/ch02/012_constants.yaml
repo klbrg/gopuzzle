@@ -1,22 +1,32 @@
 id: "lg-ch02-012"
-title: "Constants and Untyped Values"
+title: "Untyped Constants"
 concept: "constants"
 description: |
-  Go's `const` keyword names a compile-time value. An untyped
-  constant has no fixed type yet, so it can be used with any
-  compatible type (much like a literal). Inside circleArea, declare
-  an untyped const named Pi with the value 3.141592653589793 and
-  use it to return the area of a circle of radius r.
+  Go's `const` keyword names a compile-time value. A constant that
+  is declared without a type is *untyped* — it behaves like a literal.
+  The compiler picks whatever numeric type fits where you use it,
+  so the SAME untyped constant can flow into an int expression and
+  a float64 expression with no explicit conversion.
 
-      circleArea(0)  == 0
-      circleArea(1)  ≈ 3.141592653589793
-      circleArea(2)  ≈ 12.566370614359172
+  In scale(i, f) declare exactly one untyped constant named factor
+  with the value 3, then return (i * factor, f * factor). No type
+  conversions, no second constant, no math.Pi-style import — just
+  the one untyped const reused in both expressions.
 
-  Don't import math/Pi — declare the constant yourself.
+      scale(10, 1.5) == (30, 4.5)
+      scale(2, 0.5)  == (6, 1.5)
+      scale(7, 2.0)  == (21, 6.0)
+
+  If the constant were typed (e.g. `const factor int = 3`), the
+  second multiplication wouldn't compile — that's the point.
 template: |
   package main
 
-  // TODO: implement circleArea
+  func scale(i int, f float64) (int, float64) {
+  	// TODO: declare an untyped `const factor = 3`
+  	// and return (i * factor, f * factor).
+  	// Same constant, two different result types, no conversion.
+  }
 test_code: |
   package main
 
@@ -25,42 +35,60 @@ test_code: |
   	"testing"
   )
 
-  func TestCircleArea(t *testing.T) {
+  func TestScale(t *testing.T) {
   	cases := []struct {
-  		r, want float64
+  		i        int
+  		f        float64
+  		wantInt  int
+  		wantFlt  float64
   	}{
-  		{0, 0},
-  		{1, 3.141592653589793},
-  		{2, 12.566370614359172},
-  		{0.5, 0.7853981633974483},
-  		{10, 314.1592653589793},
+  		{10, 1.5, 30, 4.5},
+  		{2, 0.5, 6, 1.5},
+  		{7, 2.0, 21, 6.0},
+  		{0, 0.0, 0, 0.0},
+  		{-3, -1.25, -9, -3.75},
+  		{100, 0.1, 300, 0.30000000000000004},
   	}
   	for _, c := range cases {
-  		got := circleArea(c.r)
-  		if math.Abs(got-c.want) > 1e-9 {
-  			t.Errorf("circleArea(%v): expected %v, got %v", c.r, c.want, got)
+  		gotInt, gotFlt := scale(c.i, c.f)
+  		if gotInt != c.wantInt {
+  			t.Errorf("scale(%d, %v) int result: got %d, want %d",
+  				c.i, c.f, gotInt, c.wantInt)
+  		}
+  		if math.Abs(gotFlt-c.wantFlt) > 1e-12 {
+  			t.Errorf("scale(%d, %v) float result: got %v, want %v",
+  				c.i, c.f, gotFlt, c.wantFlt)
   		}
   	}
   }
-hint: "Declare `const Pi = 3.141592653589793` inside the function and return Pi * r * r."
+hint: "Inside the function: `const factor = 3` (no type annotation), then return both products in one statement."
 solution: |
   package main
 
-  func circleArea(r float64) float64 {
-  	const Pi = 3.141592653589793
-  	return Pi * r * r
+  func scale(i int, f float64) (int, float64) {
+  	const factor = 3
+  	return i * factor, f * factor
   }
 explanation: |
-  `const` gives a name to a value the compiler can compute at
-  compile time. Constants can be declared at package level or inside
-  a function. Because `Pi` here has no explicit type, it is an
-  untyped constant — it can be combined with `r` (a float64) without
-  any conversion. The same untyped constant could also be assigned
-  directly to an int or a float32 elsewhere.
+  `factor` here is declared without a type, so it is an *untyped*
+  constant. When you write `i * factor`, the compiler decides
+  factor is an int (because i is). When you write `f * factor`,
+  the compiler decides factor is a float64. Same source, two
+  different inferred types, no conversion needed at the call site.
+
   Compare with a typed constant:
-    const Pi float64 = 3.141592653589793
-  which only fits where a float64 is expected.
-  Note: Go has no runtime "const" — `const` only works for values
-  the compiler can evaluate. `const z = x + y` for runtime variables
-  x, y is a compile error.
+    const factor int = 3
+    return i * factor, f * factor   // second line: compile error
+  Once you pin a const to a specific type, it loses this flexibility
+  and behaves like any typed value: you'd have to write
+  `f * float64(factor)`.
+
+  The chapter's rule of thumb: keep a constant untyped unless you
+  have a reason to enforce a specific type (typically when you want
+  the compiler to reject incompatible uses, e.g. in iota-based
+  enumerations).
+
+  Also note: Go's `const` only names values the compiler can compute
+  at compile time. `const z = x + y` for runtime variables x, y is
+  a compile error.
 reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html"

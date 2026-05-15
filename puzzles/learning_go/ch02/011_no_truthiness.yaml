@@ -17,7 +17,10 @@ description: |
 template: |
   package main
 
-  // TODO: implement bothSet
+  func bothSet(n int, s string) bool {
+  	// TODO: return true exactly when n is non-zero AND s is non-empty.
+  	// Go has no truthiness — use the comparison operators.
+  }
 test_code: |
   package main
 

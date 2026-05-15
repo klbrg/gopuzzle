@@ -13,7 +13,10 @@ description: |
 template: |
   package main
 
-  // TODO: implement quotedLine using a double-quoted string with escapes.
+  func quotedLine() string {
+  	// TODO: return a double-quoted string literal that uses
+  	// \" for the inner quotes and \n for the newline.
+  }
 test_code: |
   package main
 

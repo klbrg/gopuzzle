@@ -3,53 +3,83 @@ title: "Zero Values"
 concept: "types"
 description: |
   Go assigns every declared variable a default "zero value" if you
-  don't initialize it. Write a function zeroValues that returns the
-  zero values for bool, int, float64, and string, in that order.
+  don't initialize it. The zero value depends on the type.
+
+  Implement allZero(b, i, f, s) so it returns true exactly when every
+  argument equals the zero value Go would have assigned its type, and
+  false when at least one argument has been set to something else.
+
+  You'll need to recall what the zero value is for each of bool, int,
+  float64, and string — `var` shortcuts won't help here, because the
+  values arrive as arguments and you must compare them against the
+  literal defaults.
 template: |
   package main
 
-  // TODO: implement zeroValues
+  func allZero(b bool, i int, f float64, s string) bool {
+  	// TODO: return true exactly when every argument is at its
+  	// type's zero value. Compare against the literal zero values
+  	// directly — you have to know them to write this.
+  }
 test_code: |
   package main
 
-  import "testing"
+  import (
+  	"math"
+  	"testing"
+  )
 
-  func TestZeroValues(t *testing.T) {
-  	b, i, f, s := zeroValues()
-  	if b != false {
-  		t.Errorf("bool zero value: expected false, got %v", b)
+  func TestAllZero(t *testing.T) {
+  	cases := []struct {
+  		name string
+  		b    bool
+  		i    int
+  		f    float64
+  		s    string
+  		want bool
+  	}{
+  		{"all defaults", false, 0, 0.0, "", true},
+  		{"bool set", true, 0, 0.0, "", false},
+  		{"int set", false, 1, 0.0, "", false},
+  		{"int negative", false, -1, 0.0, "", false},
+  		{"float set", false, 0, 0.1, "", false},
+  		{"float NaN is not the zero value", false, 0, math.NaN(), "", false},
+  		{"string set", false, 0, 0.0, "go", false},
+  		{"single space is not empty", false, 0, 0.0, " ", false},
+  		{"all set", true, 5, 3.14, "x", false},
   	}
-  	if i != 0 {
-  		t.Errorf("int zero value: expected 0, got %d", i)
-  	}
-  	if f != 0.0 {
-  		t.Errorf("float64 zero value: expected 0, got %v", f)
-  	}
-  	if s != "" {
-  		t.Errorf("string zero value: expected %q, got %q", "", s)
+  	for _, c := range cases {
+  		if got := allZero(c.b, c.i, c.f, c.s); got != c.want {
+  			t.Errorf("%s: allZero(%v, %d, %v, %q) = %v, want %v",
+  				c.name, c.b, c.i, c.f, c.s, got, c.want)
+  		}
   	}
   }
-hint: "Declare four variables with `var` and no initial value, then return them."
+hint: "Compare each argument to its zero-value literal and combine with &&. The literals are false, 0, 0, and \"\"."
 solution: |
   package main
 
-  func zeroValues() (bool, int, float64, string) {
-  	var b bool
-  	var i int
-  	var f float64
-  	var s string
-  	return b, i, f, s
+  func allZero(b bool, i int, f float64, s string) bool {
+  	return b == false && i == 0 && f == 0 && s == ""
   }
 explanation: |
-  In Go, a declared but uninitialized variable always has a deterministic
-  default rather than being undefined. The zero values are:
+  A declared but uninitialized variable in Go is never undefined —
+  it always has a known zero value. You have to know which value
+  to write this function, because the test gives you arguments
+  directly and asks "are these at their defaults?".
+
+  The zero values for the predeclared types:
     bool                 -> false
-    all numeric types    -> 0
+    all numeric types    -> 0 (int, float64, complex128, byte, rune, ...)
     string               -> ""
     pointers, slices,
     maps, chans, funcs,
     interfaces           -> nil
-  Writing `var x T` (with no `=`) is the idiomatic way to say
-  "I want the zero value of T". The explicit zero value is one of
-  the things Go takes from removing a common source of C/C++ bugs.
+
+  An untyped `0` literal works for any numeric type, so the same
+  comparison `f == 0` works whether f is float64, int, or rune.
+
+  Notice that NaN is NOT the zero value for float64 — math.NaN()
+  also makes `f == 0` false, so the function correctly reports the
+  argument as not at its default.
 reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html"

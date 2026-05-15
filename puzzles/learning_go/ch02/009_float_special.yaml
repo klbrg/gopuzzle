@@ -16,7 +16,12 @@ description: |
 template: |
   package main
 
-  // TODO: implement isSpecial
+  import "math"
+
+  func isSpecial(f float64) bool {
+  	// TODO: return true when f is NaN or any infinity.
+  	// math.IsNaN and math.IsInf are already imported for you.
+  }
 test_code: |
   package main
 

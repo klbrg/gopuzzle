@@ -15,7 +15,10 @@ description: |
 template: |
   package main
 
-  // TODO: implement jsonTemplate using a backtick raw string literal.
+  func jsonTemplate() string {
+  	// TODO: return the three-line block above using a single
+  	// backtick-delimited raw string literal.
+  }
 test_code: |
   package main
 

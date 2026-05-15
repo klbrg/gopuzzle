@@ -68,6 +68,7 @@ type Model struct {
 	preSearchIdx int
 
 	showHelp bool
+	flash    string
 
 	totalPuzzles  int
 	sectionTotals map[string]int
@@ -198,13 +199,37 @@ func (m *Model) writeTemplate(includeHint bool) error {
 	return os.WriteFile(m.scratchPath(), []byte(b.String()), 0644)
 }
 
-// ensureScratch writes the template only if the user has no in-progress scratch
-// for this puzzle. Returning to a puzzle preserves prior edits.
-func (m *Model) ensureScratch(includeHint bool) error {
-	if _, err := os.Stat(m.scratchPath()); err == nil {
-		return nil
+// ensureScratch makes sure the scratch file for the current puzzle exists
+// and is compatible with the current template. Returns (rewrote, err): a
+// rewrite happens when the file is missing or its on-disk content no longer
+// matches the puzzle's `func` signatures (e.g. the puzzle was edited since
+// the scratch was last opened). Otherwise prior edits are preserved.
+func (m *Model) ensureScratch(includeHint bool) (bool, error) {
+	data, err := os.ReadFile(m.scratchPath())
+	if err != nil {
+		return true, m.writeTemplate(includeHint)
 	}
-	return m.writeTemplate(includeHint)
+	if m.scratchHasTemplateDrift(string(data)) {
+		return true, m.writeTemplate(includeHint)
+	}
+	return false, nil
+}
+
+// scratchHasTemplateDrift returns true when the puzzle's template declares
+// at least one `func ...` signature that no longer appears in the scratch.
+// A signature mismatch means the puzzle's tests cannot bind to the scratch,
+// so any prior body is unusable and rewriting is the right move.
+func (m *Model) scratchHasTemplateDrift(scratch string) bool {
+	for _, line := range strings.Split(m.current.Template, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if !strings.HasPrefix(trimmed, "func ") {
+			continue
+		}
+		if !strings.Contains(scratch, trimmed) {
+			return true
+		}
+	}
+	return false
 }
 
 func (m Model) openEditor() tea.Cmd {
@@ -293,6 +318,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	m.flash = ""
 	if m.showHelp {
 		m.showHelp = false
 		return m, nil
@@ -469,8 +495,12 @@ func (m *Model) moveCursor(delta int) {
 func (m Model) handlePuzzleInfoKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "enter", " ":
-		if err := m.ensureScratch(m.hintShown); err != nil {
+		rewrote, err := m.ensureScratch(m.hintShown)
+		if err != nil {
 			return m, nil
+		}
+		if rewrote {
+			m.flash = "scratch rewritten from template"
 		}
 		return m, m.openEditor()
 	case "h":
@@ -484,7 +514,11 @@ func (m Model) handlePuzzleInfoKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			openURL(m.current.Reference)
 		}
 	case "r":
-		_ = m.writeTemplate(m.hintShown)
+		if err := m.writeTemplate(m.hintShown); err != nil {
+			m.flash = "reset failed: " + err.Error()
+		} else {
+			m.flash = "scratch reset to template"
+		}
 	case "?":
 		m.showHelp = true
 	case "b", "esc":
@@ -520,7 +554,11 @@ func (m Model) handleResultKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			openURL(m.current.Reference)
 		}
 	case "r":
-		_ = m.writeTemplate(m.hintShown)
+		if err := m.writeTemplate(m.hintShown); err != nil {
+			m.flash = "reset failed: " + err.Error()
+		} else {
+			m.flash = "scratch reset to template"
+		}
 	case "?":
 		m.showHelp = true
 	case "b", "esc":
@@ -656,7 +694,7 @@ func (m Model) viewBrowse() string {
 	header := styleHeader.Render(fmt.Sprintf(
 		"%s  %s",
 		styleTitle.Render("gopuzzle"),
-		styleScore.Render(fmt.Sprintf("%d / %d solved", m.progress.TotalSolved, m.totalPuzzles)),
+		styleScore.Render(fmt.Sprintf("%d / %d solved", m.currentSolvedCount(), m.totalPuzzles)),
 	))
 
 	var searchLine string
@@ -783,6 +821,20 @@ func progressBadge(solved, total int) string {
 	}
 }
 
+// currentSolvedCount returns the number of *currently loaded* puzzles that are
+// marked solved in progress. Reading progress.TotalSolved directly is wrong
+// when puzzles get deleted or renamed — those IDs linger in progress.json but
+// no longer exist, inflating the score.
+func (m Model) currentSolvedCount() int {
+	n := 0
+	for _, p := range m.puzzles {
+		if m.progress.Solved[p.ID] {
+			n++
+		}
+	}
+	return n
+}
+
 func (m Model) sourceProgress(source string) (int, int) {
 	total := m.sourceTotals[source]
 	solved := 0
@@ -871,6 +923,9 @@ func (m Model) viewPuzzleInfo() string {
 			parts = append(parts, "\n  "+styleHint.Render("No suggested solution available for this puzzle."))
 		}
 	}
+	if m.flash != "" {
+		parts = append(parts, "", "  "+styleHint.Render(m.flash))
+	}
 	parts = append(parts, "", "  "+keys)
 	return strings.Join(parts, "\n")
 }
@@ -929,6 +984,9 @@ func (m Model) viewResult() string {
 			} else {
 				lines = append(lines, "", "  "+styleHint.Render("No suggested solution available for this puzzle."))
 			}
+		}
+		if m.flash != "" {
+			lines = append(lines, "", "  "+styleHint.Render(m.flash))
 		}
 		lines = append(lines,
 			"",

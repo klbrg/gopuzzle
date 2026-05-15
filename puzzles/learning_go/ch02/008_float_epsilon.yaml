@@ -15,7 +15,13 @@ description: |
 template: |
   package main
 
-  // TODO: implement floatsClose
+  import "math"
+
+  func floatsClose(a, b, epsilon float64) bool {
+  	// TODO: return whether the absolute difference
+  	// between a and b is less than epsilon.
+  	// math.Abs is already imported for you.
+  }
 test_code: |
   package main
 

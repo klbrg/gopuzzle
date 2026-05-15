@@ -15,7 +15,9 @@ description: |
 template: |
   package main
 
-  // TODO: implement divmod
+  func divmod(a, b int) (int, int) {
+  	// TODO: return the quotient and remainder of a divided by b.
+  }
 test_code: |
   package main
 

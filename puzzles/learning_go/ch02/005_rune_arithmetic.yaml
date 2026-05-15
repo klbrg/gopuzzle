@@ -15,7 +15,10 @@ description: |
 template: |
   package main
 
-  // TODO: implement alphabetPosition
+  func alphabetPosition(r rune) int {
+  	// TODO: return r's 1-based position in the alphabet.
+  	// Hint: rune arithmetic with the literal 'a'.
+  }
 test_code: |
   package main
 
