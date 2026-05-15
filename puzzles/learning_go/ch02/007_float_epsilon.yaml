@@ -13,7 +13,7 @@ description: |
       floatsClose(0.1+0.2, 0.3, 1e-9) == true
       floatsClose(1.0, 1.1, 0.01)     == false
 template: |
-  package main
+  package scratch
 
   import "math"
 
@@ -21,7 +21,7 @@ template: |
   	// TODO: return whether a and b are within epsilon of each other.
   }
 test_code: |
-  package main
+  package scratch
 
   import "testing"
 
@@ -46,7 +46,7 @@ test_code: |
   }
 hint: "Use math.Abs(a - b) and compare to epsilon. The import is already in the template."
 solution: |
-  package main
+  package scratch
 
   import "math"
 

@@ -189,14 +189,35 @@ func (m Model) Init() tea.Cmd {
 	return nil
 }
 
-func (m *Model) scratchPath() string {
+// scratchDirFor returns the per-puzzle directory holding scratch files.
+// Each puzzle gets its own subdirectory so neighbouring scratches don't
+// share a Go package (which would trigger "main redeclared" or "main not
+// declared" diagnostics in editors via gopls).
+func (m *Model) scratchDirFor() string {
 	if m.current == nil {
-		return filepath.Join(m.scratchDir, "scratch.go")
+		return filepath.Join(m.scratchDir, "_scratch")
 	}
-	return filepath.Join(m.scratchDir, m.current.ID+".go")
+	return filepath.Join(m.scratchDir, m.current.ID)
+}
+
+func (m *Model) scratchPath() string {
+	return filepath.Join(m.scratchDirFor(), "main.go")
 }
 
 func (m *Model) writeTemplate(includeHint bool) error {
+	dir := m.scratchDirFor()
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	// Standalone module so gopls treats this directory as self-contained
+	// rather than as part of a larger package.
+	gomod := filepath.Join(dir, "go.mod")
+	if _, err := os.Stat(gomod); err != nil {
+		if err := os.WriteFile(gomod, []byte("module scratch\n\ngo 1.23\n"), 0o644); err != nil {
+			return err
+		}
+	}
+
 	desc := strings.TrimSpace(m.current.Description)
 	var b strings.Builder
 	b.WriteString("// ")
@@ -219,7 +240,7 @@ func (m *Model) writeTemplate(includeHint bool) error {
 		b.WriteString(m.current.Hint)
 		b.WriteString("\n")
 	}
-	return os.WriteFile(m.scratchPath(), []byte(b.String()), 0644)
+	return os.WriteFile(m.scratchPath(), []byte(b.String()), 0o644)
 }
 
 // ensureScratch makes sure the scratch file for the current puzzle exists
@@ -782,15 +803,20 @@ func (m Model) handleResultKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 		}
 	case "a":
-		if m.result != nil && m.result.Passed && m.current != nil {
-			switch m.current.Kind {
-			case puzzle.KindCode, puzzle.KindFix:
-				if !m.aiLoading && m.aiReview == "" && m.aiErr == "" {
-					m.aiLoading = true
-					return m, tea.Batch(m.spinner.Tick, m.requestAIReview())
-				}
-			}
+		if m.result == nil || m.current == nil {
+			break
 		}
+		if m.current.Kind != puzzle.KindCode && m.current.Kind != puzzle.KindFix {
+			break
+		}
+		if m.aiLoading || m.aiReview != "" || m.aiErr != "" {
+			break
+		}
+		m.aiLoading = true
+		if m.result.Passed {
+			return m, tea.Batch(m.spinner.Tick, m.requestAIReview())
+		}
+		return m, tea.Batch(m.spinner.Tick, m.requestAIHint())
 	case "e":
 		if m.result != nil && m.result.Passed && m.current != nil {
 			switch m.current.Kind {
@@ -849,15 +875,41 @@ func (m Model) requestAIReview() tea.Cmd {
 	}
 }
 
-// deleteScratchFlash removes the current puzzle's scratch file and returns
-// a flash message describing the result. Missing files are treated as
-// success — the operation is idempotent.
-func (m Model) deleteScratchFlash() string {
-	path := m.scratchPath()
-	if err := os.Remove(path); err != nil {
-		if os.IsNotExist(err) {
-			return "no scratch file to delete"
+// requestAIHint kicks off an asynchronous Anthropic call for a short,
+// targeted hint on a failing attempt. The canonical solution is NOT
+// included in the prompt — the model is instructed to hint, not solve.
+func (m Model) requestAIHint() tea.Cmd {
+	cur := m.current
+	user := m.userSolution
+	failure := ""
+	if m.result != nil {
+		failure = m.result.Output
+		if cur.Kind == "" || cur.Kind == puzzle.KindCode {
+			failure = cleanTestOutput(failure)
 		}
+	}
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		hint, err := ai.Hint(ctx, ai.HintRequest{
+			Title:       cur.Title,
+			Description: cur.Description,
+			UserCode:    user,
+			Failure:     failure,
+		})
+		return aiReviewMsg{review: hint, err: err}
+	}
+}
+
+// deleteScratchFlash removes the current puzzle's scratch directory and
+// returns a flash message describing the result. Missing dirs are treated
+// as success — the operation is idempotent.
+func (m Model) deleteScratchFlash() string {
+	dir := m.scratchDirFor()
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		return "no scratch file to delete"
+	}
+	if err := os.RemoveAll(dir); err != nil {
 		return "delete failed: " + err.Error()
 	}
 	return "scratch file deleted"
@@ -1513,6 +1565,25 @@ func (m Model) viewResult() string {
 				lines = append(lines, "", "  "+styleHint.Render("No suggested solution available for this puzzle."))
 			}
 		}
+		// AI hint block (only for code/fix kinds, populated after `a`).
+		switch m.current.Kind {
+		case puzzle.KindCode, puzzle.KindFix:
+			if m.aiLoading {
+				lines = append(lines, "", "  "+m.spinner.View()+" "+styleHint.Render("AI hint loading..."))
+			} else if m.aiErr != "" {
+				lines = append(lines,
+					"",
+					"  "+styleKeybind.Render("AI hint:"),
+					"  "+styleFail.Render(m.aiErr),
+				)
+			} else if m.aiReview != "" {
+				lines = append(lines,
+					"",
+					"  "+styleKeybind.Render("AI hint:"),
+					styleBorder.Render(renderInline(wordWrap(m.aiReview, m.width-6), styleDescription)),
+				)
+			}
+		}
 		if m.flash != "" {
 			lines = append(lines, "", "  "+styleHint.Render(m.flash))
 		}
@@ -1521,18 +1592,20 @@ func (m Model) viewResult() string {
 		case puzzle.KindPredictOutput, puzzle.KindQuiz:
 			retry = "try again"
 		}
-		lines = append(lines,
-			"",
-			"  "+styleKeybind.Render(
-				styleKeyName.Render("enter")+" "+retry+
-					"  "+styleKeyName.Render("h")+" hint"+
-					"  "+styleKeyName.Render("s")+" solution"+
-					"  "+styleKeyName.Render("o")+" ref"+
-					"  "+styleKeyName.Render("b")+" back"+
-					"  "+styleKeyName.Render("?")+" help"+
-					"  "+styleKeyName.Render("q")+" quit",
-			),
-		)
+		failKeys := styleKeyName.Render("enter") + " " + retry +
+			"  " + styleKeyName.Render("h") + " hint" +
+			"  " + styleKeyName.Render("s") + " solution"
+		switch m.current.Kind {
+		case puzzle.KindCode, puzzle.KindFix:
+			if m.aiReview == "" && m.aiErr == "" && !m.aiLoading {
+				failKeys += "  " + styleKeyName.Render("a") + " AI hint"
+			}
+		}
+		failKeys += "  " + styleKeyName.Render("o") + " ref" +
+			"  " + styleKeyName.Render("b") + " back" +
+			"  " + styleKeyName.Render("?") + " help" +
+			"  " + styleKeyName.Render("q") + " quit"
+		lines = append(lines, "", "  "+styleKeybind.Render(failKeys))
 	}
 
 	return "\n" + strings.Join(lines, "\n")
@@ -1561,7 +1634,7 @@ func (m Model) viewHelp() string {
 		{"Puzzle & result", ""},
 		{"enter", "open editor · retry on fail · next on pass"},
 		{"e", "re-open editor on PASS (code · fix)"},
-		{"a", "AI review of your solution (on PASS; needs ANTHROPIC_API_KEY)"},
+		{"a", "AI review on PASS, AI hint on FAIL (code/fix; needs ANTHROPIC_API_KEY)"},
 		{"h", "show hint"},
 		{"s", "show suggested solution"},
 		{"o", "open reference URL in browser"},

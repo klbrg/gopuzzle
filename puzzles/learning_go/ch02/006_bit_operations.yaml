@@ -12,13 +12,13 @@ description: |
       toggleBit(0b0101, 0) == 0b0100
       toggleBit(0b0101, 2) == 0b0001
 template: |
-  package main
+  package scratch
 
   func toggleBit(n int, pos int) int {
   	// TODO: return n with the bit at position pos flipped.
   }
 test_code: |
-  package main
+  package scratch
 
   import "testing"
 
@@ -40,7 +40,7 @@ test_code: |
   }
 hint: "XOR with `1 << pos`. The shift positions a 1 bit; XOR flips exactly that bit."
 solution: |
-  package main
+  package scratch
 
   func toggleBit(n int, pos int) int {
   	return n ^ (1 << pos)

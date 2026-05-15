@@ -18,10 +18,9 @@ const (
 	apiVersion = "2023-06-01"
 	model      = "claude-sonnet-4-6"
 
-	// systemPrompt is shared across requests; ephemeral cache control on it
-	// gives us a 5-minute prompt-cache window so back-to-back reviews are
-	// cheaper.
-	systemPrompt = `You are a senior Go developer giving a short, friendly review of a beginner's solution to a puzzle from "Learning Go, 2nd Edition" Chapter 2.
+	// reviewSystem and hintSystem are ephemeral-cached so back-to-back
+	// AI calls in the same 5-minute window hit the prompt cache.
+	reviewSystem = `You are a senior Go developer giving a short, friendly review of a beginner's solution to a puzzle from "Learning Go, 2nd Edition".
 
 Rules:
 - Keep your response to 2-4 sentences total. Be concise.
@@ -29,14 +28,34 @@ Rules:
 - If the solution matches the canonical or is already clean, say so briefly and stop.
 - Be encouraging but honest. Plain prose only — no headings, no lists, no markdown formatting.
 - The student is learning the basics. Don't reach for advanced patterns they haven't met yet.`
+
+	hintSystem = `You are a senior Go developer giving a short, targeted hint to a beginner whose code FAILED its tests in a puzzle from "Learning Go, 2nd Edition".
+
+Rules:
+- Keep your response to 2-4 sentences total. Be concise.
+- Identify the specific mistake in the student's reasoning or code, based on the failing tests.
+- Give a HINT, not the answer. Point at the rule or concept they're missing; suggest what to try.
+- DO NOT paste a corrected version of their code or the canonical solution. They are learning by struggling productively — don't deprive them of that.
+- Be encouraging. Plain prose only — no headings, no lists, no markdown formatting.
+- The student is learning the basics. Don't reach for advanced patterns they haven't met yet.`
 )
 
-// ReviewRequest is the per-puzzle context passed to Review.
+// ReviewRequest is the per-puzzle context passed to Review (PASS case).
 type ReviewRequest struct {
 	Title       string
 	Description string
 	Canonical   string
 	UserCode    string
+}
+
+// HintRequest is the per-puzzle context passed to Hint (FAIL case). It
+// intentionally does NOT include the canonical solution — we don't want
+// the model tempted to leak it as a "hint".
+type HintRequest struct {
+	Title       string
+	Description string
+	UserCode    string
+	Failure     string
 }
 
 type apiRequest struct {
@@ -85,13 +104,8 @@ type usage struct {
 }
 
 // Review calls the Anthropic API and returns a short text review of the
-// student's solution. Errors include a missing API key and HTTP failures.
+// student's passing solution.
 func Review(ctx context.Context, r ReviewRequest) (string, error) {
-	key := os.Getenv("ANTHROPIC_API_KEY")
-	if key == "" {
-		return "", fmt.Errorf("ANTHROPIC_API_KEY is not set")
-	}
-
 	userPrompt := fmt.Sprintf(`Puzzle: %s
 
 %s
@@ -108,7 +122,39 @@ Give the student a short review.`,
 		strings.TrimSpace(r.Canonical),
 		strings.TrimSpace(r.UserCode),
 	)
+	return call(ctx, reviewSystem, userPrompt)
+}
 
+// Hint calls the Anthropic API and returns a short, targeted hint for a
+// failing attempt — pointing at the rule or concept being missed without
+// pasting a corrected version of the code.
+func Hint(ctx context.Context, r HintRequest) (string, error) {
+	userPrompt := fmt.Sprintf(`Puzzle: %s
+
+%s
+
+Student's code:
+%s
+
+Test failure:
+%s
+
+Give the student one short hint to help them unstick. Do NOT paste a corrected version of their code.`,
+		r.Title,
+		strings.TrimSpace(r.Description),
+		strings.TrimSpace(r.UserCode),
+		strings.TrimSpace(r.Failure),
+	)
+	return call(ctx, hintSystem, userPrompt)
+}
+
+// call performs the actual Anthropic Messages API request with prompt
+// caching on the system block.
+func call(ctx context.Context, systemPrompt, userPrompt string) (string, error) {
+	key := os.Getenv("ANTHROPIC_API_KEY")
+	if key == "" {
+		return "", fmt.Errorf("ANTHROPIC_API_KEY is not set")
+	}
 	body := apiRequest{
 		Model:     model,
 		MaxTokens: 400,

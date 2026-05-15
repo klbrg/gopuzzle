@@ -16,7 +16,7 @@ description: |
       hasDuplicate([]int{1, 2, 3, 2})    == true
       hasDuplicate(nil)                  == false
 template: |
-  package main
+  package scratch
 
   func hasDuplicate(nums []int) bool {
   	seen := map[int]bool{}
@@ -26,7 +26,7 @@ template: |
   	return false
   }
 test_code: |
-  package main
+  package scratch
 
   import "testing"
 
@@ -52,7 +52,7 @@ test_code: |
   }
 hint: "Two lines: `if seen[n] { return true }` and then `seen[n] = true`."
 solution: |
-  package main
+  package scratch
 
   func hasDuplicate(nums []int) bool {
   	seen := map[int]bool{}

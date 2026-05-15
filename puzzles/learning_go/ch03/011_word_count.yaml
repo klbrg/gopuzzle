@@ -13,7 +13,7 @@ description: |
           map[string]int{"a": 3, "b": 2, "c": 1}
       wordCount(nil) == map[string]int{}
 template: |
-  package main
+  package scratch
 
   func wordCount(words []string) map[string]int {
   	counts := map[string]int{}
@@ -23,7 +23,7 @@ template: |
   	return counts
   }
 test_code: |
-  package main
+  package scratch
 
   import (
   	"maps"
@@ -50,7 +50,7 @@ test_code: |
   }
 hint: "Inside the loop, one line: `counts[w]++`. The zero-value-for-missing-keys rule means this works on first sight."
 solution: |
-  package main
+  package scratch
 
   func wordCount(words []string) map[string]int {
   	counts := map[string]int{}

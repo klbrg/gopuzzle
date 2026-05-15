@@ -13,13 +13,13 @@ description: |
       middle([]int{1, 2})          == []int{}
       middle([]int{1, 2, 3})       == []int{2}
 template: |
-  package main
+  package scratch
 
   func middle(s []int) []int {
   	// TODO: return s with the first and last elements dropped.
   }
 test_code: |
-  package main
+  package scratch
 
   import (
   	"slices"
@@ -44,7 +44,7 @@ test_code: |
   }
 hint: "Use s[1 : len(s)-1]. When the slice has fewer than 3 elements this still works — it returns an empty slice."
 solution: |
-  package main
+  package scratch
 
   func middle(s []int) []int {
   	return s[1 : len(s)-1]

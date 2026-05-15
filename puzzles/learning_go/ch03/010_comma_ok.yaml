@@ -15,13 +15,13 @@ description: |
       lookup({"a": 1, "b": 0}, "b") == (0, true)   // present, value happens to be zero
       lookup({"a": 1, "b": 0}, "c") == (0, false)
 template: |
-  package main
+  package scratch
 
   func lookup(m map[string]int, key string) (int, bool) {
   	// TODO: return both the value and whether the key was present.
   }
 test_code: |
-  package main
+  package scratch
 
   import "testing"
 
@@ -48,7 +48,7 @@ test_code: |
   }
 hint: "`v, ok := m[key]` does exactly this — just return both."
 solution: |
-  package main
+  package scratch
 
   func lookup(m map[string]int, key string) (int, bool) {
   	v, ok := m[key]

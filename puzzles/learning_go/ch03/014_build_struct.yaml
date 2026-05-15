@@ -16,7 +16,7 @@ description: |
       newPerson("Alice", 30)   == Person{Name: "Alice", Age: 30}
       newPerson("", 0)         == Person{Name: "", Age: 0}
 template: |
-  package main
+  package scratch
 
   type Person struct {
   	Name string
@@ -27,7 +27,7 @@ template: |
   	// TODO: return a Person with Name and Age set from the arguments.
   }
 test_code: |
-  package main
+  package scratch
 
   import "testing"
 
@@ -52,7 +52,7 @@ test_code: |
   }
 hint: "One line: `return Person{Name: name, Age: age}`."
 solution: |
-  package main
+  package scratch
 
   type Person struct {
   	Name string

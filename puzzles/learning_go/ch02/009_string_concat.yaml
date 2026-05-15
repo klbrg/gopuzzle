@@ -12,13 +12,13 @@ description: |
       greet("Go")    == "Hello, Go!"
       greet("World") == "Hello, World!"
 template: |
-  package main
+  package scratch
 
   func greet(name string) string {
   	// TODO: return "Hello, <name>!" — substitute the supplied name.
   }
 test_code: |
-  package main
+  package scratch
 
   import "testing"
 
@@ -40,7 +40,7 @@ test_code: |
   }
 hint: "Three pieces joined with +: `\"Hello, \" + name + \"!\"`."
 solution: |
-  package main
+  package scratch
 
   func greet(name string) string {
   	return "Hello, " + name + "!"
