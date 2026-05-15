@@ -296,6 +296,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.state = statePuzzleInfo
 			return m, nil
 		}
+		// Any prior AI review is for the previous code — drop it so the
+		// user can press `a` again after their next run.
+		m.aiReview = ""
+		m.aiErr = ""
+		m.aiLoading = false
 		m.state = stateRunning
 		solution, readErr := os.ReadFile(m.scratchPath())
 		cur := m.current
@@ -699,15 +704,21 @@ func (m Model) submitQuizAnswer(pick string) (tea.Model, tea.Cmd) {
 }
 
 // handlePredictInputKey processes typing in the predict-output answer field.
+// ctrl+j inserts a literal newline so the user can match multi-line
+// expected output; enter submits.
 func (m Model) handlePredictInputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "enter":
 		return m.submitPredictAnswer()
+	case "ctrl+j":
+		m.answerInput += "\n"
 	case "esc":
 		m.answerInput = ""
 		m.state = statePuzzleInfo
 	case "backspace":
 		if n := len(m.answerInput); n > 0 {
+			// Trim one byte; safe for ASCII. For multi-byte runes we'd
+			// trim the trailing rune, but the typical answer is ASCII.
 			m.answerInput = m.answerInput[:n-1]
 		}
 	case "ctrl+u":
@@ -1091,11 +1102,12 @@ func (m Model) renderPuzzleRow(idx int, row browseRow) string {
 		cursor = styleKeyName.Render("▶ ")
 		titleStyle = lipgloss.NewStyle().Bold(true).Foreground(colorWhite)
 	}
-	return fmt.Sprintf("      %s%s%s  %s",
+	return fmt.Sprintf("      %s%s%s  %s  %s",
 		cursor,
 		check,
 		styleOutput.Render(p.ID),
 		titleStyle.Render(p.Title),
+		kindBadge(p.Kind),
 	)
 }
 
@@ -1218,7 +1230,7 @@ func (m Model) viewPuzzleInfo() string {
 	}
 	if m.solutionShown {
 		if m.current.Solution != "" {
-			parts = append(parts, "\n"+styleBorder.Render(styleOutput.Render(strings.TrimSpace(m.current.Solution))))
+			parts = append(parts, "\n"+renderCodeBlock(m.current.Solution, true))
 		} else {
 			parts = append(parts, "\n  "+styleHint.Render("No suggested solution available for this puzzle."))
 		}
@@ -1249,7 +1261,7 @@ func (m Model) viewPuzzleInfoPredict() string {
 
 	title := styleTitle.Render(m.current.Title)
 	desc := renderInline(wordWrap(m.current.Description, m.width-4), styleDescription)
-	snippet := styleBorder.Render(styleOutput.Render(strings.TrimRight(m.current.Snippet, "\n")))
+	snippet := renderCodeBlock(strings.TrimRight(m.current.Snippet, "\n"), true)
 
 	keys := styleKeybind.Render(
 		styleKeyName.Render("enter") + " type your prediction  " +
@@ -1270,7 +1282,7 @@ func (m Model) viewPuzzleInfoPredict() string {
 	}
 	if m.solutionShown {
 		parts = append(parts, "", "  "+styleKeybind.Render("Expected output:"),
-			styleBorder.Render(styleOutput.Render(m.current.ExpectedOutput)))
+			renderCodeBlock(m.current.ExpectedOutput, false))
 	}
 	parts = append(parts, "", "  "+keys)
 	return strings.Join(parts, "\n")
@@ -1343,22 +1355,28 @@ func (m Model) viewPredictInput() string {
 		"Type the exact output the snippet would print, then press enter.",
 		m.width-4,
 	))
-	snippet := styleBorder.Render(styleOutput.Render(strings.TrimRight(m.current.Snippet, "\n")))
+	snippet := renderCodeBlock(strings.TrimRight(m.current.Snippet, "\n"), true)
 	caret := styleKeyName.Render("▎")
 	field := styleBorder.Render(styleDescription.Render(m.answerInput) + caret)
-	keys := styleKeybind.Render(
-		styleKeyName.Render("enter") + " submit  " +
-			styleKeyName.Render("⌫") + " backspace  " +
-			styleKeyName.Render("ctrl+u") + " clear  " +
-			styleKeyName.Render("esc") + " back  " +
-			styleKeyName.Render("q") + " quit",
-	)
+	multiLine := strings.Contains(strings.TrimRight(m.current.ExpectedOutput, "\n"), "\n")
+	keybinds := styleKeyName.Render("enter") + " submit  " +
+		styleKeyName.Render("⌫") + " backspace  " +
+		styleKeyName.Render("ctrl+u") + " clear  "
+	if multiLine {
+		keybinds += styleKeyName.Render("ctrl+j") + " newline  "
+	}
+	keybinds += styleKeyName.Render("esc") + " back  " +
+		styleKeyName.Render("q") + " quit"
+	keys := styleKeybind.Render(keybinds)
+
+	hint := predictFormatHint(m.current.ExpectedOutput)
 	return strings.Join([]string{
 		header,
 		"  " + prompt,
 		"",
 		snippet,
 		"",
+		"  " + styleHint.Render(hint),
 		"  " + styleKeybind.Render("Your prediction:"),
 		field,
 		"",
@@ -1391,13 +1409,22 @@ func (m Model) viewResult() string {
 			case puzzle.KindQuiz:
 				label = "Your answer:"
 			}
+			isGo := m.current.Kind == puzzle.KindCode || m.current.Kind == puzzle.KindFix
 			lines = append(lines,
 				"  "+styleKeybind.Render(label),
-				styleBorder.Render(styleOutput.Render(userTrim)),
+				renderCodeBlock(userTrim, isGo),
 				"",
 			)
 		}
-		if canonTrim != "" && canonTrim != userTrim {
+		// For code/fix puzzles the user's scratch always begins with a
+		// comment header, so the literal-string comparison is never
+		// equal. Strip those leading comments to detect "body matches".
+		userBody := userTrim
+		switch m.current.Kind {
+		case puzzle.KindCode, puzzle.KindFix:
+			userBody = stripLeadingComments(userTrim)
+		}
+		if canonTrim != "" && canonTrim != userBody {
 			label := "Suggested solution:"
 			switch m.current.Kind {
 			case puzzle.KindPredictOutput:
@@ -1405,9 +1432,10 @@ func (m Model) viewResult() string {
 			case puzzle.KindQuiz:
 				label = "Correct answer:"
 			}
+			isGo := m.current.Kind == puzzle.KindCode || m.current.Kind == puzzle.KindFix
 			lines = append(lines,
 				"  "+styleKeybind.Render(label),
-				styleBorder.Render(styleOutput.Render(canonTrim)),
+				renderCodeBlock(canonTrim, isGo),
 				"",
 			)
 		}
@@ -1452,7 +1480,13 @@ func (m Model) viewResult() string {
 			),
 		)
 	} else {
-		outputBox := styleBorder.Render(styleOutput.Render(truncate(m.result.Output, 30)))
+		output := m.result.Output
+		// Only code-kind output is `go test -v` raw text. Other kinds
+		// (predict/quiz/fix) already format their own messages.
+		if m.current.Kind == "" || m.current.Kind == puzzle.KindCode {
+			output = cleanTestOutput(output)
+		}
+		outputBox := styleBorder.Render(styleOutput.Render(truncate(output, 30)))
 		lines = append(lines,
 			styleFail.Render("  FAIL ✗"),
 			"",
@@ -1473,7 +1507,8 @@ func (m Model) viewResult() string {
 				shown = m.current.Answer
 			}
 			if shown != "" {
-				lines = append(lines, "", styleBorder.Render(styleOutput.Render(strings.TrimSpace(shown))))
+				isGo := m.current.Kind == puzzle.KindCode || m.current.Kind == puzzle.KindFix
+				lines = append(lines, "", renderCodeBlock(shown, isGo))
 			} else {
 				lines = append(lines, "", "  "+styleHint.Render("No suggested solution available for this puzzle."))
 			}
