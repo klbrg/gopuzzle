@@ -37,10 +37,12 @@ type runResultMsg struct {
 
 // browseRow is one row in the browse list: a source header, section header, or puzzle entry.
 type browseRow struct {
-	isHeader  bool
-	isSource  bool   // top-level source header (e.g. "gobyexample")
-	headerTxt string // text for any header row
-	puzzle    *puzzle.Puzzle
+	isHeader    bool
+	isSource    bool
+	headerTxt   string
+	sourceName  string // set on source headers
+	sectionPath string // set on section headers: "source/section"
+	puzzle      *puzzle.Puzzle
 }
 
 type Model struct {
@@ -49,17 +51,27 @@ type Model struct {
 	progress      *progress.Progress
 	puzzles       []*puzzle.Puzzle
 	browseRows    []browseRow
-	browseIdx     int            // cursor index into browseRows
-	browseOffset  int            // scroll offset (top visible row index)
-	collapsed     map[string]bool // collapsed source headers
+	browseIdx     int
+	browseOffset  int
+	collapsed     map[string]bool
 	current       *puzzle.Puzzle
-	tempFile      string
+	scratchDir    string
 	result        *runner.Result
 	userSolution  string
 	hintShown     bool
 	solutionShown bool
 	width         int
 	height        int
+
+	searchMode   bool
+	searchQuery  string
+	preSearchIdx int
+
+	showHelp bool
+
+	totalPuzzles  int
+	sectionTotals map[string]int
+	sourceTotals  map[string]int
 }
 
 func New(p *progress.Progress, puzzles []*puzzle.Puzzle) Model {
@@ -67,18 +79,27 @@ func New(p *progress.Progress, puzzles []*puzzle.Puzzle) Model {
 	sp.Spinner = spinner.Dot
 	sp.Style = lipgloss.NewStyle().Foreground(colorBlue)
 
+	scratchDir := defaultScratchDir()
+	_ = os.MkdirAll(scratchDir, 0755)
+
 	m := Model{
-		state:     stateBrowse,
-		spinner:   sp,
-		progress:  p,
-		puzzles:   puzzles,
-		collapsed: make(map[string]bool),
-		tempFile:  filepath.Join(os.TempDir(), "gopuzzle_solution.go"),
+		state:         stateBrowse,
+		spinner:       sp,
+		progress:      p,
+		puzzles:       puzzles,
+		collapsed:     make(map[string]bool),
+		scratchDir:    scratchDir,
+		sectionTotals: make(map[string]int),
+		sourceTotals:  make(map[string]int),
 	}
-	m.browseRows = buildBrowseRows(puzzles)
-	// Place cursor on first unsolved puzzle.
+	for _, pz := range puzzles {
+		m.totalPuzzles++
+		m.sectionTotals[pz.Source+"/"+pz.Section]++
+		m.sourceTotals[pz.Source]++
+	}
+	m.rebuildRows()
 	for i, row := range m.browseRows {
-		if !row.isHeader && !p.Solved[row.puzzle.ID] {
+		if row.puzzle != nil && !p.Solved[row.puzzle.ID] {
 			m.browseIdx = i
 			break
 		}
@@ -86,61 +107,108 @@ func New(p *progress.Progress, puzzles []*puzzle.Puzzle) Model {
 	return m
 }
 
-func buildBrowseRows(puzzles []*puzzle.Puzzle) []browseRow {
-	sorted := make([]*puzzle.Puzzle, len(puzzles))
-	copy(sorted, puzzles)
-	sort.Slice(sorted, func(i, j int) bool {
-		if sorted[i].Source != sorted[j].Source {
-			return sorted[i].Source < sorted[j].Source
+func defaultScratchDir() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return filepath.Join(os.TempDir(), "gopuzzle-scratch")
+	}
+	return filepath.Join(home, ".gopuzzle", "scratch")
+}
+
+func (m *Model) rebuildRows() {
+	filtered := make([]*puzzle.Puzzle, 0, len(m.puzzles))
+	for _, pz := range m.puzzles {
+		if m.searchMatches(pz) {
+			filtered = append(filtered, pz)
 		}
-		if sorted[i].Section != sorted[j].Section {
-			return sorted[i].Section < sorted[j].Section
+	}
+	sort.Slice(filtered, func(i, j int) bool {
+		if filtered[i].Source != filtered[j].Source {
+			return filtered[i].Source < filtered[j].Source
 		}
-		return sorted[i].ID < sorted[j].ID
+		if filtered[i].Section != filtered[j].Section {
+			return filtered[i].Section < filtered[j].Section
+		}
+		return filtered[i].ID < filtered[j].ID
 	})
 
 	var rows []browseRow
 	lastSource, lastSection := "", ""
-	for _, p := range sorted {
+	for _, p := range filtered {
 		if p.Source != lastSource {
-			rows = append(rows, browseRow{isHeader: true, isSource: true, headerTxt: p.Source})
+			rows = append(rows, browseRow{isHeader: true, isSource: true, headerTxt: p.Source, sourceName: p.Source})
 			lastSource = p.Source
 			lastSection = ""
 		}
 		if p.Section != lastSection {
-			rows = append(rows, browseRow{isHeader: true, headerTxt: p.Section})
+			rows = append(rows, browseRow{isHeader: true, headerTxt: p.Section, sectionPath: p.Source + "/" + p.Section})
 			lastSection = p.Section
 		}
 		rows = append(rows, browseRow{puzzle: p})
 	}
-	return rows
+	m.browseRows = rows
+	if m.browseIdx >= len(rows) {
+		m.browseIdx = 0
+	}
+}
+
+func (m Model) searchMatches(p *puzzle.Puzzle) bool {
+	if m.searchQuery == "" {
+		return true
+	}
+	q := strings.ToLower(m.searchQuery)
+	hay := strings.ToLower(p.ID + " " + p.Title + " " + p.Section + " " + p.Source)
+	return strings.Contains(hay, q)
 }
 
 func (m Model) Init() tea.Cmd {
 	return nil
 }
 
-func (m *Model) writeTempFile(includeHint bool) error {
-	// Build description comment block.
-	desc := strings.TrimSpace(m.current.Description)
-	header := "// " + m.current.Title + "\n"
-	for _, line := range strings.Split(desc, "\n") {
-		header += "// " + line + "\n"
+func (m *Model) scratchPath() string {
+	if m.current == nil {
+		return filepath.Join(m.scratchDir, "scratch.go")
 	}
-	if m.current.Reference != "" {
-		header += "// ref: " + m.current.Reference + "\n"
-	}
-	header += "\n"
-
-	content := header + m.current.Template
-	if includeHint && m.current.Hint != "" {
-		content += "\n// HINT: " + m.current.Hint + "\n"
-	}
-	return os.WriteFile(m.tempFile, []byte(content), 0644)
+	return filepath.Join(m.scratchDir, m.current.ID+".go")
 }
 
-func (m Model) openVi() tea.Cmd {
-	cmd := exec.Command(editorBin(), m.tempFile)
+func (m *Model) writeTemplate(includeHint bool) error {
+	desc := strings.TrimSpace(m.current.Description)
+	var b strings.Builder
+	b.WriteString("// ")
+	b.WriteString(m.current.Title)
+	b.WriteString("\n")
+	for _, line := range strings.Split(desc, "\n") {
+		b.WriteString("// ")
+		b.WriteString(line)
+		b.WriteString("\n")
+	}
+	if m.current.Reference != "" {
+		b.WriteString("// ref: ")
+		b.WriteString(m.current.Reference)
+		b.WriteString("\n")
+	}
+	b.WriteString("\n")
+	b.WriteString(m.current.Template)
+	if includeHint && m.current.Hint != "" {
+		b.WriteString("\n// HINT: ")
+		b.WriteString(m.current.Hint)
+		b.WriteString("\n")
+	}
+	return os.WriteFile(m.scratchPath(), []byte(b.String()), 0644)
+}
+
+// ensureScratch writes the template only if the user has no in-progress scratch
+// for this puzzle. Returning to a puzzle preserves prior edits.
+func (m *Model) ensureScratch(includeHint bool) error {
+	if _, err := os.Stat(m.scratchPath()); err == nil {
+		return nil
+	}
+	return m.writeTemplate(includeHint)
+}
+
+func (m Model) openEditor() tea.Cmd {
+	cmd := exec.Command(editorBin(), m.scratchPath())
 	return tea.ExecProcess(cmd, func(err error) tea.Msg {
 		return viExitMsg{err: err}
 	})
@@ -159,11 +227,11 @@ func editorBin() string {
 func openURL(url string) {
 	switch runtime.GOOS {
 	case "darwin":
-		exec.Command("open", url).Start()
+		_ = exec.Command("open", url).Start()
 	case "linux":
-		exec.Command("xdg-open", url).Start()
+		_ = exec.Command("xdg-open", url).Start()
 	case "windows":
-		exec.Command("cmd", "/c", "start", url).Start()
+		_ = exec.Command("cmd", "/c", "start", url).Start()
 	}
 }
 
@@ -181,7 +249,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.state = stateRunning
-		solution, readErr := os.ReadFile(m.tempFile)
+		solution, readErr := os.ReadFile(m.scratchPath())
 		cur := m.current
 		testCode := cur.TestCode
 		return m, tea.Batch(m.spinner.Tick, func() tea.Msg {
@@ -225,107 +293,291 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.showHelp {
+		m.showHelp = false
+		return m, nil
+	}
+	if m.searchMode {
+		return m.handleSearchKey(msg)
+	}
 	switch m.state {
-
 	case stateBrowse:
-		switch msg.String() {
-		case "up", "k":
-			for i := m.browseIdx - 1; i >= 0; i-- {
-				if m.isRowVisible(i) && (m.browseRows[i].isSource || !m.browseRows[i].isHeader) {
-					m.browseIdx = i
-					break
-				}
-			}
-			m.clampScroll()
-		case "down", "j":
-			for i := m.browseIdx + 1; i < len(m.browseRows); i++ {
-				if m.isRowVisible(i) && (m.browseRows[i].isSource || !m.browseRows[i].isHeader) {
-					m.browseIdx = i
-					break
-				}
-			}
-			m.clampScroll()
-		case "enter", " ":
-			if m.browseIdx < len(m.browseRows) {
-				row := m.browseRows[m.browseIdx]
-				if row.isSource {
-					m.collapsed[row.headerTxt] = !m.collapsed[row.headerTxt]
-				} else if !row.isHeader {
-					m.current = row.puzzle
-					m.hintShown = false
-					m.solutionShown = false
-					m.result = nil
-					m.state = statePuzzleInfo
-				}
-			}
-		case "q", "ctrl+q":
-			return m, tea.Quit
-		}
-
+		return m.handleBrowseKey(msg)
 	case statePuzzleInfo:
-		switch msg.String() {
-		case "enter", " ":
-			if err := m.writeTempFile(m.hintShown); err != nil {
-				return m, nil
-			}
-			return m, m.openVi()
-		case "h":
-			if !m.hintShown {
-				m.hintShown = true
-			}
-			return m, nil
-		case "s":
-			m.solutionShown = true
-			return m, nil
-		case "o":
-			if m.current.Reference != "" {
-				openURL(m.current.Reference)
-			}
-			return m, nil
-		case "b", "esc":
-			m.state = stateBrowse
-		case "q", "ctrl+q":
-			return m, tea.Quit
-		}
-
+		return m.handlePuzzleInfoKey(msg)
 	case stateResult:
-		switch msg.String() {
-		case "enter", " ":
-			if m.result != nil && m.result.Passed {
-				m.state = stateBrowse
-				return m, nil
-			}
-			return m, m.openVi()
-		case "h":
-			if !m.hintShown {
-				m.hintShown = true
-				_ = m.writeTempFile(true)
-			}
-			return m, nil
-		case "s":
-			m.solutionShown = true
-			return m, nil
-		case "o":
-			if m.current.Reference != "" {
-				openURL(m.current.Reference)
-			}
-			return m, nil
-		case "b", "esc":
-			m.state = stateBrowse
-		case "q", "ctrl+q":
-			return m, tea.Quit
-		}
-
+		return m.handleResultKey(msg)
 	case stateDone:
-		if msg.String() == "q" || msg.String() == "ctrl+q" {
+		switch msg.String() {
+		case "q", "ctrl+q", "ctrl+c":
 			return m, tea.Quit
+		case "b", "esc", "enter", " ":
+			m.state = stateBrowse
+		case "?":
+			m.showHelp = true
 		}
 	}
-
 	return m, nil
 }
 
-// visibleIndex returns how many visible rows come before row idx.
+func (m Model) handleSearchKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	s := msg.String()
+	switch s {
+	case "enter":
+		m.searchMode = false
+		m.placeOnFirstPuzzle()
+		m.clampScroll()
+	case "esc":
+		m.searchMode = false
+		m.searchQuery = ""
+		m.rebuildRows()
+		if m.preSearchIdx < len(m.browseRows) {
+			m.browseIdx = m.preSearchIdx
+		}
+		m.clampScroll()
+	case "backspace":
+		if len(m.searchQuery) > 0 {
+			m.searchQuery = m.searchQuery[:len(m.searchQuery)-1]
+			m.rebuildRows()
+			m.placeOnFirstPuzzle()
+			m.clampScroll()
+		}
+	case "ctrl+c", "ctrl+q":
+		return m, tea.Quit
+	default:
+		if len(msg.Runes) > 0 {
+			m.searchQuery += string(msg.Runes)
+			m.rebuildRows()
+			m.placeOnFirstPuzzle()
+			m.clampScroll()
+		}
+	}
+	return m, nil
+}
+
+func (m *Model) placeOnFirstPuzzle() {
+	for i, row := range m.browseRows {
+		if row.puzzle != nil {
+			m.browseIdx = i
+			return
+		}
+	}
+	if len(m.browseRows) > 0 {
+		m.browseIdx = 0
+	} else {
+		m.browseIdx = 0
+	}
+}
+
+func (m Model) handleBrowseKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "up", "k":
+		m.moveCursor(-1)
+	case "down", "j":
+		m.moveCursor(1)
+	case "pgup", "ctrl+u":
+		step := m.visibleRowCount() / 2
+		if step < 1 {
+			step = 1
+		}
+		m.moveCursor(-step)
+	case "pgdown", "ctrl+d":
+		step := m.visibleRowCount() / 2
+		if step < 1 {
+			step = 1
+		}
+		m.moveCursor(step)
+	case "g", "home":
+		m.placeOnFirstPuzzle()
+		m.clampScroll()
+	case "G", "end":
+		for i := len(m.browseRows) - 1; i >= 0; i-- {
+			if m.browseRows[i].puzzle != nil && m.isRowVisible(i) {
+				m.browseIdx = i
+				break
+			}
+		}
+		m.clampScroll()
+	case "tab":
+		src := m.sourceForRow(m.browseIdx)
+		if src != "" {
+			m.collapsed[src] = !m.collapsed[src]
+			if !m.isRowVisible(m.browseIdx) {
+				for i := m.browseIdx; i >= 0; i-- {
+					if m.browseRows[i].isSource && m.browseRows[i].headerTxt == src {
+						m.browseIdx = i
+						break
+					}
+				}
+			}
+			m.clampScroll()
+		}
+	case "enter", " ":
+		if m.browseIdx < len(m.browseRows) {
+			row := m.browseRows[m.browseIdx]
+			if row.isSource {
+				m.collapsed[row.headerTxt] = !m.collapsed[row.headerTxt]
+			} else if !row.isHeader {
+				m.current = row.puzzle
+				m.hintShown = false
+				m.solutionShown = false
+				m.result = nil
+				m.state = statePuzzleInfo
+			}
+		}
+	case "/":
+		m.searchMode = true
+		m.searchQuery = ""
+		m.preSearchIdx = m.browseIdx
+	case "esc":
+		if m.searchQuery != "" {
+			m.searchQuery = ""
+			m.rebuildRows()
+			m.placeOnFirstPuzzle()
+			m.clampScroll()
+		}
+	case "?":
+		m.showHelp = true
+	case "q", "ctrl+q", "ctrl+c":
+		return m, tea.Quit
+	}
+	return m, nil
+}
+
+func (m *Model) moveCursor(delta int) {
+	if delta == 0 || len(m.browseRows) == 0 {
+		return
+	}
+	step := 1
+	if delta < 0 {
+		step = -1
+		delta = -delta
+	}
+	for moved := 0; moved < delta; {
+		next := m.browseIdx + step
+		if next < 0 || next >= len(m.browseRows) {
+			break
+		}
+		m.browseIdx = next
+		if m.isRowVisible(next) && (m.browseRows[next].isSource || !m.browseRows[next].isHeader) {
+			moved++
+		}
+	}
+	m.clampScroll()
+}
+
+func (m Model) handlePuzzleInfoKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "enter", " ":
+		if err := m.ensureScratch(m.hintShown); err != nil {
+			return m, nil
+		}
+		return m, m.openEditor()
+	case "h":
+		if !m.hintShown {
+			m.hintShown = true
+		}
+	case "s":
+		m.solutionShown = true
+	case "o":
+		if m.current.Reference != "" {
+			openURL(m.current.Reference)
+		}
+	case "r":
+		_ = m.writeTemplate(m.hintShown)
+	case "?":
+		m.showHelp = true
+	case "b", "esc":
+		m.state = stateBrowse
+	case "q", "ctrl+q", "ctrl+c":
+		return m, tea.Quit
+	}
+	return m, nil
+}
+
+func (m Model) handleResultKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "enter", " ":
+		if m.result != nil && m.result.Passed {
+			if !m.advanceToNextUnsolved() {
+				m.state = stateDone
+			}
+			return m, nil
+		}
+		return m, m.openEditor()
+	case "n":
+		if m.result != nil && m.result.Passed {
+			if !m.advanceToNextUnsolved() {
+				m.state = stateDone
+			}
+		}
+	case "h":
+		m.hintShown = true
+	case "s":
+		m.solutionShown = true
+	case "o":
+		if m.current.Reference != "" {
+			openURL(m.current.Reference)
+		}
+	case "r":
+		_ = m.writeTemplate(m.hintShown)
+	case "?":
+		m.showHelp = true
+	case "b", "esc":
+		m.state = stateBrowse
+	case "q", "ctrl+q", "ctrl+c":
+		return m, tea.Quit
+	}
+	return m, nil
+}
+
+// advanceToNextUnsolved moves to the next puzzle in browse order that hasn't
+// been solved yet (skipping the current one). Returns false if none remain.
+func (m *Model) advanceToNextUnsolved() bool {
+	// Walk full puzzle list, not filtered browseRows, so an active search
+	// can't strand the user.
+	var ordered []*puzzle.Puzzle
+	ordered = append(ordered, m.puzzles...)
+	sort.Slice(ordered, func(i, j int) bool {
+		if ordered[i].Source != ordered[j].Source {
+			return ordered[i].Source < ordered[j].Source
+		}
+		if ordered[i].Section != ordered[j].Section {
+			return ordered[i].Section < ordered[j].Section
+		}
+		return ordered[i].ID < ordered[j].ID
+	})
+
+	curID := ""
+	if m.current != nil {
+		curID = m.current.ID
+	}
+	for _, p := range ordered {
+		if p.ID == curID {
+			continue
+		}
+		if m.progress.Solved[p.ID] {
+			continue
+		}
+		m.current = p
+		m.hintShown = false
+		m.solutionShown = false
+		m.result = nil
+		m.userSolution = ""
+		m.state = statePuzzleInfo
+		// move browse cursor too
+		for i, row := range m.browseRows {
+			if row.puzzle != nil && row.puzzle.ID == p.ID {
+				m.browseIdx = i
+				break
+			}
+		}
+		m.clampScroll()
+		return true
+	}
+	return false
+}
+
 func (m Model) visibleIndex(idx int) int {
 	n := 0
 	for i := 0; i < idx; i++ {
@@ -336,12 +588,8 @@ func (m Model) visibleIndex(idx int) int {
 	return n
 }
 
-// clampScroll adjusts browseOffset so the cursor stays visible.
 func (m *Model) clampScroll() {
-	visible := m.height - 6
-	if visible < 1 {
-		visible = 10
-	}
+	visible := m.visibleRowCount()
 	cursorPos := m.visibleIndex(m.browseIdx)
 	if cursorPos < m.browseOffset {
 		m.browseOffset = cursorPos
@@ -349,9 +597,26 @@ func (m *Model) clampScroll() {
 	if cursorPos >= m.browseOffset+visible {
 		m.browseOffset = cursorPos - visible + 1
 	}
+	if m.browseOffset < 0 {
+		m.browseOffset = 0
+	}
+}
+
+func (m Model) visibleRowCount() int {
+	visible := m.height - 8
+	if m.searchMode || m.searchQuery != "" {
+		visible -= 2
+	}
+	if visible < 1 {
+		visible = 10
+	}
+	return visible
 }
 
 func (m Model) View() string {
+	if m.showHelp {
+		return m.viewHelp()
+	}
 	switch m.state {
 	case stateBrowse:
 		return m.viewBrowse()
@@ -362,12 +627,11 @@ func (m Model) View() string {
 	case stateResult:
 		return m.viewResult()
 	case stateDone:
-		return stylePass.Render("\n\n  All puzzles completed! Great work.\n\n  Press q to quit.\n")
+		return m.viewDone()
 	}
 	return ""
 }
 
-// sourceForRow walks backwards to find which source a row belongs to.
 func (m Model) sourceForRow(idx int) string {
 	for i := idx; i >= 0; i-- {
 		if m.browseRows[i].isSource {
@@ -377,35 +641,39 @@ func (m Model) sourceForRow(idx int) string {
 	return ""
 }
 
-// isRowVisible returns false if the row's source is collapsed.
 func (m Model) isRowVisible(idx int) bool {
+	if idx < 0 || idx >= len(m.browseRows) {
+		return false
+	}
 	row := m.browseRows[idx]
 	if row.isSource {
-		return true // source headers are always visible
+		return true
 	}
 	return !m.collapsed[m.sourceForRow(idx)]
 }
 
 func (m Model) viewBrowse() string {
-	solved := m.progress.TotalSolved
-	total := 0
-	for _, r := range m.browseRows {
-		if !r.isHeader {
-			total++
-		}
-	}
-
 	header := styleHeader.Render(fmt.Sprintf(
 		"%s  %s",
 		styleTitle.Render("gopuzzle"),
-		styleScore.Render(fmt.Sprintf("%d / %d solved", solved, total)),
+		styleScore.Render(fmt.Sprintf("%d / %d solved", m.progress.TotalSolved, m.totalPuzzles)),
 	))
 
-	visible := m.height - 6
-	if visible < 1 {
-		visible = 10
+	var searchLine string
+	if m.searchMode || m.searchQuery != "" {
+		caret := ""
+		if m.searchMode {
+			caret = "▎"
+		}
+		hitCount := m.countPuzzleRows()
+		status := styleKeybind.Render(fmt.Sprintf("  (%d match)", hitCount))
+		if hitCount == 0 {
+			status = styleHint.Render("  (no matches)")
+		}
+		searchLine = "  " + styleKeyName.Render("/") + " " + styleDescription.Render(m.searchQuery) + caret + status
 	}
 
+	visible := m.visibleRowCount()
 	var lines []string
 	shown := 0
 	skipped := 0
@@ -417,62 +685,134 @@ func (m Model) viewBrowse() string {
 			skipped++
 			continue
 		}
-
 		row := m.browseRows[i]
-		if row.isSource {
-			arrow := "▼"
-			if m.collapsed[row.headerTxt] {
-				arrow = "▶"
-			}
-			cursor := "  "
-			style := styleTitle
-			if i == m.browseIdx {
-				cursor = styleKeyName.Render("▶ ")
-				style = lipgloss.NewStyle().Bold(true).Foreground(colorWhite)
-			}
-			lines = append(lines, fmt.Sprintf("  %s%s %s", cursor, arrow, style.Render(row.headerTxt)))
-			shown++
-			continue
+		switch {
+		case row.isSource:
+			lines = append(lines, m.renderSourceRow(i, row))
+		case row.isHeader:
+			lines = append(lines, m.renderSectionRow(row))
+		default:
+			lines = append(lines, m.renderPuzzleRow(i, row))
 		}
-		if row.isHeader {
-			lines = append(lines, "      "+styleConcept.Render(row.headerTxt))
-			shown++
-			continue
-		}
-
-		p := row.puzzle
-		check := "  "
-		if m.progress.Solved[p.ID] {
-			check = stylePass.Render("✓ ")
-		}
-
-		cursor := "  "
-		titleStyle := styleDescription
-		if i == m.browseIdx {
-			cursor = styleKeyName.Render("▶ ")
-			titleStyle = lipgloss.NewStyle().Bold(true).Foreground(colorWhite)
-		}
-
-		line := fmt.Sprintf("      %s%s%s  %s  %s",
-			cursor,
-			check,
-			styleOutput.Render(p.ID),
-			titleStyle.Render(p.Title),
-			styleDifficulty.Render(difficultyStars(p.Difficulty)),
-		)
-		lines = append(lines, line)
 		shown++
 	}
 
-	keys := styleKeybind.Render(fmt.Sprintf(
-		"%s/%s navigate  %s start  %s quit",
-		styleKeyName.Render("↑"),
-		styleKeyName.Render("↓"),
-		styleKeyName.Render("enter"),
-		styleKeyName.Render("q"),
-	))
+	if len(lines) == 0 && (m.searchMode || m.searchQuery != "") {
+		lines = []string{"  " + styleHint.Render("No puzzles match this filter.")}
+	}
 
-	return header + "\n" + strings.Join(lines, "\n") + "\n\n  " + keys
+	var keys string
+	if m.searchMode {
+		keys = styleKeybind.Render(
+			styleKeyName.Render("enter") + " accept  " +
+				styleKeyName.Render("esc") + " cancel  " +
+				styleKeyName.Render("⌫") + " delete",
+		)
+	} else {
+		keys = styleKeybind.Render(
+			styleKeyName.Render("↑↓") + " move  " +
+				styleKeyName.Render("enter") + " open  " +
+				styleKeyName.Render("tab") + " collapse  " +
+				styleKeyName.Render("/") + " search  " +
+				styleKeyName.Render("?") + " help  " +
+				styleKeyName.Render("q") + " quit",
+		)
+	}
+
+	parts := []string{header}
+	if searchLine != "" {
+		parts = append(parts, searchLine, "")
+	}
+	parts = append(parts, strings.Join(lines, "\n"))
+	parts = append(parts, "", "  "+keys)
+	return strings.Join(parts, "\n")
+}
+
+func (m Model) renderSourceRow(idx int, row browseRow) string {
+	arrow := "▼"
+	if m.collapsed[row.headerTxt] {
+		arrow = "▶"
+	}
+	cursor := "  "
+	nameStyle := styleTitle
+	if idx == m.browseIdx {
+		cursor = styleKeyName.Render("▶ ")
+		nameStyle = lipgloss.NewStyle().Bold(true).Foreground(colorWhite)
+	}
+	solved, total := m.sourceProgress(row.sourceName)
+	return fmt.Sprintf("  %s%s %s  %s", cursor, arrow, nameStyle.Render(row.headerTxt), progressBadge(solved, total))
+}
+
+func (m Model) renderSectionRow(row browseRow) string {
+	solved, total := m.sectionProgress(row.sectionPath)
+	return fmt.Sprintf("      %s  %s", styleConcept.Render(row.headerTxt), progressBadge(solved, total))
+}
+
+func (m Model) renderPuzzleRow(idx int, row browseRow) string {
+	p := row.puzzle
+	check := "  "
+	if m.progress.Solved[p.ID] {
+		check = stylePass.Render("✓ ")
+	}
+	cursor := "  "
+	titleStyle := styleDescription
+	if idx == m.browseIdx {
+		cursor = styleKeyName.Render("▶ ")
+		titleStyle = lipgloss.NewStyle().Bold(true).Foreground(colorWhite)
+	}
+	return fmt.Sprintf("      %s%s%s  %s",
+		cursor,
+		check,
+		styleOutput.Render(p.ID),
+		titleStyle.Render(p.Title),
+	)
+}
+
+func progressBadge(solved, total int) string {
+	if total == 0 {
+		return ""
+	}
+	txt := fmt.Sprintf("%d/%d", solved, total)
+	switch {
+	case solved == total:
+		return stylePass.Render(txt)
+	case solved == 0:
+		return styleOutput.Render(txt)
+	default:
+		return styleHint.Render(txt)
+	}
+}
+
+func (m Model) sourceProgress(source string) (int, int) {
+	total := m.sourceTotals[source]
+	solved := 0
+	for _, p := range m.puzzles {
+		if p.Source == source && m.progress.Solved[p.ID] {
+			solved++
+		}
+	}
+	return solved, total
+}
+
+func (m Model) sectionProgress(path string) (int, int) {
+	total := m.sectionTotals[path]
+	solved := 0
+	for _, p := range m.puzzles {
+		if p.Source+"/"+p.Section == path && m.progress.Solved[p.ID] {
+			solved++
+		}
+	}
+	return solved, total
+}
+
+func (m Model) countPuzzleRows() int {
+	n := 0
+	for _, r := range m.browseRows {
+		if r.puzzle != nil {
+			n++
+		}
+	}
+	return n
 }
 
 func (m Model) viewPuzzleInfo() string {
@@ -480,12 +820,17 @@ func (m Model) viewPuzzleInfo() string {
 		return ""
 	}
 
+	solvedBadge := ""
+	if m.progress.Solved[m.current.ID] {
+		solvedBadge = "  " + stylePass.Render("✓ solved")
+	}
+
 	header := styleHeader.Render(fmt.Sprintf(
-		"%s  %s / %s  %s",
+		"%s  %s / %s%s",
 		styleTitle.Render("gopuzzle"),
 		styleConcept.Render(m.current.Source),
 		styleConcept.Render(m.current.Section),
-		styleDifficulty.Render(difficultyStars(m.current.Difficulty)),
+		solvedBadge,
 	))
 
 	title := styleTitle.Render(m.current.Title)
@@ -496,16 +841,16 @@ func (m Model) viewPuzzleInfo() string {
 		hintLine = "\n" + styleHint.Render("  Hint: "+m.current.Hint)
 	}
 
-	keys := styleKeybind.Render(fmt.Sprintf(
-		"%s open in %s  %s hint  %s solution  %s ref  %s back  %s quit",
-		styleKeyName.Render("enter"),
-		editorBin(),
-		styleKeyName.Render("h"),
-		styleKeyName.Render("s"),
-		styleKeyName.Render("o"),
-		styleKeyName.Render("b"),
-		styleKeyName.Render("q"),
-	))
+	keys := styleKeybind.Render(
+		styleKeyName.Render("enter") + " open in " + editorBin() + "  " +
+			styleKeyName.Render("h") + " hint  " +
+			styleKeyName.Render("s") + " solution  " +
+			styleKeyName.Render("o") + " ref  " +
+			styleKeyName.Render("r") + " reset  " +
+			styleKeyName.Render("b") + " back  " +
+			styleKeyName.Render("?") + " help  " +
+			styleKeyName.Render("q") + " quit",
+	)
 
 	parts := []string{
 		header,
@@ -521,13 +866,12 @@ func (m Model) viewPuzzleInfo() string {
 	}
 	if m.solutionShown {
 		if m.current.Solution != "" {
-			parts = append(parts, "\n"+styleBorder.Render(styleOutput.Render(m.current.Solution)))
+			parts = append(parts, "\n"+styleBorder.Render(styleOutput.Render(strings.TrimSpace(m.current.Solution))))
 		} else {
 			parts = append(parts, "\n  "+styleHint.Render("No suggested solution available for this puzzle."))
 		}
 	}
 	parts = append(parts, "", "  "+keys)
-
 	return strings.Join(parts, "\n")
 }
 
@@ -540,25 +884,29 @@ func (m Model) viewResult() string {
 
 	if m.result.Passed {
 		lines = append(lines, stylePass.Render("  PASS ✓"), "")
-		if m.userSolution != "" {
+		userTrim := strings.TrimSpace(m.userSolution)
+		canonTrim := strings.TrimSpace(m.current.Solution)
+		if userTrim != "" {
 			lines = append(lines,
 				"  "+styleKeybind.Render("Your solution:"),
-				styleBorder.Render(styleOutput.Render(strings.TrimSpace(m.userSolution))),
+				styleBorder.Render(styleOutput.Render(userTrim)),
 				"",
 			)
 		}
-		if m.current.Solution != "" {
+		if canonTrim != "" && canonTrim != userTrim {
 			lines = append(lines,
 				"  "+styleKeybind.Render("Suggested solution:"),
-				styleBorder.Render(styleOutput.Render(strings.TrimSpace(m.current.Solution))),
+				styleBorder.Render(styleOutput.Render(canonTrim)),
 				"",
 			)
 		}
+		if strings.TrimSpace(m.current.Explanation) != "" {
+			lines = append(lines, "  "+styleExplanation.Render(wordWrap(m.current.Explanation, m.width-4)), "")
+		}
 		lines = append(lines,
-			"  "+styleExplanation.Render(wordWrap(m.current.Explanation, m.width-4)),
-			"",
 			"  "+styleKeybind.Render(
-				styleKeyName.Render("enter")+" back to browser  "+
+				styleKeyName.Render("enter")+" next puzzle  "+
+					styleKeyName.Render("b")+" browser  "+
 					styleKeyName.Render("q")+" quit",
 			),
 		)
@@ -573,14 +921,11 @@ func (m Model) viewResult() string {
 			lines = append(lines, "  "+styleKeybind.Render("ref: ")+styleKeyName.Render(m.current.Reference))
 		}
 		if m.hintShown {
-			lines = append(lines,
-				"",
-				styleHint.Render("  Hint: "+m.current.Hint),
-			)
+			lines = append(lines, "", styleHint.Render("  Hint: "+m.current.Hint))
 		}
 		if m.solutionShown {
 			if m.current.Solution != "" {
-				lines = append(lines, "", styleBorder.Render(styleOutput.Render(m.current.Solution)))
+				lines = append(lines, "", styleBorder.Render(styleOutput.Render(strings.TrimSpace(m.current.Solution))))
 			} else {
 				lines = append(lines, "", "  "+styleHint.Render("No suggested solution available for this puzzle."))
 			}
@@ -592,7 +937,9 @@ func (m Model) viewResult() string {
 					"  "+styleKeyName.Render("h")+" hint"+
 					"  "+styleKeyName.Render("s")+" solution"+
 					"  "+styleKeyName.Render("o")+" ref"+
+					"  "+styleKeyName.Render("r")+" reset"+
 					"  "+styleKeyName.Render("b")+" back"+
+					"  "+styleKeyName.Render("?")+" help"+
 					"  "+styleKeyName.Render("q")+" quit",
 			),
 		)
@@ -601,7 +948,58 @@ func (m Model) viewResult() string {
 	return "\n" + strings.Join(lines, "\n")
 }
 
-// wordWrap wraps text at the given width, preserving existing newlines.
+func (m Model) viewDone() string {
+	return "\n\n  " + stylePass.Render(fmt.Sprintf("All %d puzzles solved.", m.totalPuzzles)) +
+		"\n\n  " + styleExplanation.Render("That's the whole catalog. Beautiful work.") +
+		"\n\n  " + styleKeybind.Render("press "+styleKeyName.Render("q")+" to quit, or "+styleKeyName.Render("b")+" to keep browsing")
+}
+
+func (m Model) viewHelp() string {
+	rows := []struct {
+		k, v string
+	}{
+		{"Browser", ""},
+		{"↑ ↓  j k", "move cursor"},
+		{"g  G", "first / last puzzle"},
+		{"pgup  pgdn", "page up / down"},
+		{"enter", "open puzzle"},
+		{"tab", "collapse / expand source"},
+		{"/", "search puzzles"},
+		{"", ""},
+		{"Puzzle & result", ""},
+		{"enter", "open editor · retry on fail · next on pass"},
+		{"h", "show hint"},
+		{"s", "show suggested solution"},
+		{"o", "open reference URL in browser"},
+		{"r", "reset scratch file to template"},
+		{"b  esc", "back to browser"},
+		{"", ""},
+		{"Anywhere", ""},
+		{"?", "this help"},
+		{"q  ctrl+c", "quit"},
+	}
+
+	var b strings.Builder
+	b.WriteString(styleHeader.Render(styleTitle.Render("gopuzzle — keys")))
+	b.WriteString("\n")
+	for _, r := range rows {
+		if r.k == "" && r.v == "" {
+			b.WriteString("\n")
+			continue
+		}
+		if r.v == "" {
+			b.WriteString("  ")
+			b.WriteString(styleConcept.Render(r.k))
+			b.WriteString("\n")
+			continue
+		}
+		b.WriteString(fmt.Sprintf("    %-14s  %s\n", styleKeyName.Render(r.k), styleDescription.Render(r.v)))
+	}
+	b.WriteString("\n  ")
+	b.WriteString(styleKeybind.Render("press any key to dismiss"))
+	return b.String()
+}
+
 func wordWrap(text string, width int) string {
 	if width <= 0 {
 		return text
@@ -627,7 +1025,6 @@ func wordWrap(text string, width int) string {
 	return strings.Join(lines, "\n  ")
 }
 
-// truncate keeps at most maxLines lines of output.
 func truncate(s string, maxLines int) string {
 	lines := strings.Split(s, "\n")
 	if len(lines) <= maxLines {

@@ -1,0 +1,58 @@
+id: "lg-ch02-007"
+title: "Integer Division and Modulo"
+concept: "types"
+description: |
+  Go's / operator on integers performs integer division — the
+  fractional part is truncated toward zero. The % operator gives
+  the remainder. Implement divmod(a, b) that returns both the
+  quotient and the remainder.
+
+      divmod(7, 2)  == (3, 1)
+      divmod(10, 5) == (2, 0)
+      divmod(-7, 2) == (-3, -1)   // truncation toward zero
+
+  You may assume b is never 0 — dividing by zero would panic.
+template: |
+  package main
+
+  // TODO: implement divmod
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestDivmod(t *testing.T) {
+  	cases := []struct {
+  		a, b, wantQ, wantR int
+  	}{
+  		{7, 2, 3, 1},
+  		{10, 5, 2, 0},
+  		{0, 4, 0, 0},
+  		{-7, 2, -3, -1},
+  		{17, 5, 3, 2},
+  	}
+  	for _, c := range cases {
+  		q, r := divmod(c.a, c.b)
+  		if q != c.wantQ || r != c.wantR {
+  			t.Errorf("divmod(%d, %d): expected (%d, %d), got (%d, %d)",
+  				c.a, c.b, c.wantQ, c.wantR, q, r)
+  		}
+  	}
+  }
+hint: "Return a / b and a % b. Both are operators built into the language."
+solution: |
+  package main
+
+  func divmod(a, b int) (int, int) {
+  	return a / b, a % b
+  }
+explanation: |
+  When both operands are integers, / performs integer division and
+  truncates toward zero — so 7/2 == 3 and -7/2 == -3 (not -4).
+  The remainder operator % obeys the identity:
+    a == (a/b)*b + a%b
+  so the sign of the remainder follows the sign of `a`.
+  If you want a floating-point result you must convert one of the
+  operands first, e.g. `float64(a) / float64(b)`. And dividing any
+  integer by 0 panics at runtime.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html"

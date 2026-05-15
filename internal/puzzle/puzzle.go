@@ -13,7 +13,6 @@ type Puzzle struct {
 	ID          string `yaml:"id"`
 	Title       string `yaml:"title"`
 	Concept     string `yaml:"concept"`
-	Difficulty  int    `yaml:"difficulty"`
 	Description string `yaml:"description"`
 	Template    string `yaml:"template"`
 	TestCode    string `yaml:"test_code"`

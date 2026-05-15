@@ -19,9 +19,6 @@ var (
 			Foreground(colorPurple).
 			Bold(true)
 
-	styleDifficulty = lipgloss.NewStyle().
-			Foreground(colorYellow)
-
 	styleDescription = lipgloss.NewStyle().
 				Foreground(colorWhite)
 
@@ -62,23 +59,7 @@ var (
 			Padding(0, 1).
 			MarginBottom(1)
 
-	stylePenalty = lipgloss.NewStyle().
-			Foreground(colorRed).
-			Bold(true)
-
 	styleScore = lipgloss.NewStyle().
 			Foreground(colorGreen).
 			Bold(true)
 )
-
-func difficultyStars(d int) string {
-	stars := ""
-	for i := 0; i < 10; i++ {
-		if i < d {
-			stars += "★"
-		} else {
-			stars += "☆"
-		}
-	}
-	return stars
-}

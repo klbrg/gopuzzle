@@ -1,0 +1,66 @@
+id: "lg-ch02-012"
+title: "Constants and Untyped Values"
+concept: "constants"
+description: |
+  Go's `const` keyword names a compile-time value. An untyped
+  constant has no fixed type yet, so it can be used with any
+  compatible type (much like a literal). Inside circleArea, declare
+  an untyped const named Pi with the value 3.141592653589793 and
+  use it to return the area of a circle of radius r.
+
+      circleArea(0)  == 0
+      circleArea(1)  ≈ 3.141592653589793
+      circleArea(2)  ≈ 12.566370614359172
+
+  Don't import math/Pi — declare the constant yourself.
+template: |
+  package main
+
+  // TODO: implement circleArea
+test_code: |
+  package main
+
+  import (
+  	"math"
+  	"testing"
+  )
+
+  func TestCircleArea(t *testing.T) {
+  	cases := []struct {
+  		r, want float64
+  	}{
+  		{0, 0},
+  		{1, 3.141592653589793},
+  		{2, 12.566370614359172},
+  		{0.5, 0.7853981633974483},
+  		{10, 314.1592653589793},
+  	}
+  	for _, c := range cases {
+  		got := circleArea(c.r)
+  		if math.Abs(got-c.want) > 1e-9 {
+  			t.Errorf("circleArea(%v): expected %v, got %v", c.r, c.want, got)
+  		}
+  	}
+  }
+hint: "Declare `const Pi = 3.141592653589793` inside the function and return Pi * r * r."
+solution: |
+  package main
+
+  func circleArea(r float64) float64 {
+  	const Pi = 3.141592653589793
+  	return Pi * r * r
+  }
+explanation: |
+  `const` gives a name to a value the compiler can compute at
+  compile time. Constants can be declared at package level or inside
+  a function. Because `Pi` here has no explicit type, it is an
+  untyped constant — it can be combined with `r` (a float64) without
+  any conversion. The same untyped constant could also be assigned
+  directly to an int or a float32 elsewhere.
+  Compare with a typed constant:
+    const Pi float64 = 3.141592653589793
+  which only fits where a float64 is expected.
+  Note: Go has no runtime "const" — `const` only works for values
+  the compiler can evaluate. `const z = x + y` for runtime variables
+  x, y is a compile error.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html"

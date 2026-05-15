@@ -1,0 +1,56 @@
+id: "lg-ch02-005"
+title: "Rune Arithmetic"
+concept: "types"
+description: |
+  A rune is Go's type for a single Unicode code point — it is an
+  alias for int32, so you can do integer arithmetic with rune
+  literals like 'a'. Given a lowercase ASCII letter r (between 'a'
+  and 'z'), return its 1-based position in the alphabet:
+
+      alphabetPosition('a') == 1
+      alphabetPosition('c') == 3
+      alphabetPosition('z') == 26
+
+  Assume the input is always a lowercase letter.
+template: |
+  package main
+
+  // TODO: implement alphabetPosition
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestAlphabetPosition(t *testing.T) {
+  	cases := []struct {
+  		in   rune
+  		want int
+  	}{
+  		{'a', 1},
+  		{'b', 2},
+  		{'c', 3},
+  		{'m', 13},
+  		{'z', 26},
+  	}
+  	for _, c := range cases {
+  		if got := alphabetPosition(c.in); got != c.want {
+  			t.Errorf("alphabetPosition(%q): expected %d, got %d", c.in, c.want, got)
+  		}
+  	}
+  }
+hint: "Subtract 'a' from the input rune and add 1. Convert to int to return it."
+solution: |
+  package main
+
+  func alphabetPosition(r rune) int {
+  	return int(r - 'a' + 1)
+  }
+explanation: |
+  A rune literal like 'a' has the numeric value of its Unicode code
+  point (97 for 'a'). Because rune is an alias for int32, you can
+  do arithmetic on runes the same way you would on ints.
+  This is why `r - 'a'` gives you a zero-based offset into the
+  alphabet, and `+ 1` shifts it to 1-based.
+  The book recommends using `rune` (not `int32`) whenever the value
+  represents a character — same compiler behavior, clearer intent.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html"

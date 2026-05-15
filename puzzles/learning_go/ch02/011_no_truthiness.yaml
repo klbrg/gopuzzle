@@ -1,0 +1,63 @@
+id: "lg-ch02-011"
+title: "No Truthiness — Booleans Come From Comparisons"
+concept: "types"
+description: |
+  Unlike many languages, Go does not treat non-zero numbers or
+  non-empty strings as "truthy". The only way to produce a bool
+  from another type is with a comparison operator
+  (==, !=, <, <=, >, >=).
+
+  Implement bothSet(n, s) that returns true exactly when n is
+  non-zero AND s is non-empty.
+
+      bothSet(0, "")    == false
+      bothSet(0, "hi")  == false
+      bothSet(1, "")    == false
+      bothSet(1, "hi")  == true
+template: |
+  package main
+
+  // TODO: implement bothSet
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestBothSet(t *testing.T) {
+  	cases := []struct {
+  		n    int
+  		s    string
+  		want bool
+  	}{
+  		{0, "", false},
+  		{0, "hi", false},
+  		{1, "", false},
+  		{1, "hi", true},
+  		{-1, "x", true},
+  		{42, " ", true},
+  	}
+  	for _, c := range cases {
+  		if got := bothSet(c.n, c.s); got != c.want {
+  			t.Errorf("bothSet(%d, %q): expected %v, got %v", c.n, c.s, c.want, got)
+  		}
+  	}
+  }
+hint: "Combine two comparisons with &&: `n != 0 && s != \"\"`."
+solution: |
+  package main
+
+  func bothSet(n int, s string) bool {
+  	return n != 0 && s != ""
+  }
+explanation: |
+  Other languages let you write `if n` to mean "if n is non-zero"
+  or `if s` to mean "if s is non-empty". Go rejects this: no type
+  can be converted to bool implicitly or explicitly. To get a
+  bool, you must compare:
+    n != 0         // "is n non-zero"
+    s != ""        // "is s non-empty"
+    len(slice) > 0 // "does slice have elements"
+  This is the same philosophy as requiring explicit numeric
+  conversions: idiomatic Go favors comprehensibility over
+  conciseness.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html"

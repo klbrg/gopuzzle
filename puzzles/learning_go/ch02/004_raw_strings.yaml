@@ -1,0 +1,47 @@
+id: "lg-ch02-004"
+title: "Raw String Literals"
+concept: "types"
+description: |
+  Raw string literals are delimited by backticks and contain every
+  character verbatim — no escape processing. Return the exact
+  three-line JSON-shaped string below using a raw string literal:
+
+      {
+        "name": "Go"
+      }
+
+  Build it with a single backtick-delimited literal, not with
+  concatenation or \n escapes.
+template: |
+  package main
+
+  // TODO: implement jsonTemplate using a backtick raw string literal.
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestJSONTemplate(t *testing.T) {
+  	want := "{\n  \"name\": \"Go\"\n}"
+  	if got := jsonTemplate(); got != want {
+  		t.Errorf("jsonTemplate():\n  want %q\n  got  %q", want, got)
+  	}
+  }
+hint: "A raw string literal is delimited with backticks and may span multiple lines exactly as written."
+solution: |
+  package main
+
+  func jsonTemplate() string {
+  	return `{
+    "name": "Go"
+  }`
+  }
+explanation: |
+  Raw string literals are delimited by backticks (`) and include every
+  character between them verbatim. They are useful when:
+    - The string contains many backslashes (regex, Windows paths).
+    - The string contains many double quotes (HTML, JSON, SQL).
+    - The string spans multiple lines.
+  There is no escape processing inside a raw string, and the only
+  character a raw string cannot contain is a backtick.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html"

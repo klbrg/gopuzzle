@@ -12,14 +12,13 @@ import (
 )
 
 func main() {
-	// Look for puzzles/ next to the binary, then next to the working directory.
-	exe, err := os.Executable()
-	if err != nil {
-		exe = "."
+	var candidates []string
+	if env := os.Getenv("GOPUZZLE_DIR"); env != "" {
+		candidates = append(candidates, env)
 	}
-	candidates := []string{
-		filepath.Join(filepath.Dir(exe), "puzzles"),
-		"puzzles",
+	candidates = append(candidates, "puzzles")
+	if home, err := os.UserHomeDir(); err == nil {
+		candidates = append(candidates, filepath.Join(home, ".config", "gopuzzle", "puzzles"))
 	}
 	var puzzleDir string
 	for _, c := range candidates {
@@ -29,7 +28,7 @@ func main() {
 		}
 	}
 	if puzzleDir == "" {
-		fmt.Fprintln(os.Stderr, "puzzles/ directory not found")
+		fmt.Fprintln(os.Stderr, "puzzles/ directory not found (set GOPUZZLE_DIR, run from a directory with puzzles/, or install to ~/.config/gopuzzle/puzzles)")
 		os.Exit(1)
 	}
 	puzzle.Dir = puzzleDir

@@ -1,0 +1,62 @@
+id: "lg-ch02-008"
+title: "Comparing Floats With Epsilon"
+concept: "types"
+description: |
+  Floating-point math is inexact, so == on floats is dangerous:
+  values that "should" be equal often differ by a tiny rounding
+  error. The book's advice is to define a tolerance (epsilon) and
+  test that the absolute difference is less than that.
+
+  Implement floatsClose(a, b, epsilon) which returns true when
+  |a - b| < epsilon.
+
+      floatsClose(0.1+0.2, 0.3, 1e-9) == true
+      floatsClose(1.0, 1.1, 0.01)     == false
+template: |
+  package main
+
+  // TODO: implement floatsClose
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestFloatsClose(t *testing.T) {
+  	cases := []struct {
+  		a, b, eps float64
+  		want      bool
+  	}{
+  		{0.1 + 0.2, 0.3, 1e-9, true},
+  		{1.0, 1.0, 1e-9, true},
+  		{1.0, 1.1, 0.01, false},
+  		{1.0, 1.001, 0.01, true},
+  		{-1.0, -1.0001, 1e-3, true},
+  		{-1.0, 1.0, 0.5, false},
+  	}
+  	for _, c := range cases {
+  		if got := floatsClose(c.a, c.b, c.eps); got != c.want {
+  			t.Errorf("floatsClose(%v, %v, %v): expected %v, got %v",
+  				c.a, c.b, c.eps, c.want, got)
+  		}
+  	}
+  }
+hint: "Use math.Abs(a - b) and compare to epsilon. Don't forget to import \"math\"."
+solution: |
+  package main
+
+  import "math"
+
+  func floatsClose(a, b, epsilon float64) bool {
+  	return math.Abs(a-b) < epsilon
+  }
+explanation: |
+  Go stores float64 values using IEEE 754, which is precise but
+  cannot represent every decimal exactly. For example,
+  `0.1 + 0.2` is 0.30000000000000004, not 0.3, so `==` would say
+  they are different even though they are mathematically equal.
+  Pick an epsilon appropriate to the precision you need
+  (e.g. 1e-9 for general work). math.Abs handles negative
+  differences for you.
+  The same advice applies to complex numbers and to ordering with
+  <, >, etc. — never rely on bit-exact equality of computed floats.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html"

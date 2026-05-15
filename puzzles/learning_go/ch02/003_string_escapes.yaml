@@ -1,0 +1,46 @@
+id: "lg-ch02-003"
+title: "Interpreted String Literals and Escapes"
+concept: "types"
+description: |
+  Interpreted string literals use double quotes and translate backslash
+  escape sequences. Return the exact two-line string:
+
+      She said "hi"
+      then left.
+
+  Use an interpreted (double-quoted) string literal with \n and \"
+  escapes — no raw strings, no string concatenation.
+template: |
+  package main
+
+  // TODO: implement quotedLine using a double-quoted string with escapes.
+test_code: |
+  package main
+
+  import "testing"
+
+  func TestQuotedLine(t *testing.T) {
+  	want := "She said \"hi\"\nthen left."
+  	if got := quotedLine(); got != want {
+  		t.Errorf("quotedLine():\n  want %q\n  got  %q", want, got)
+  	}
+  }
+hint: "Inside double quotes, write \\\" for a literal double quote and \\n for a newline."
+solution: |
+  package main
+
+  func quotedLine() string {
+  	return "She said \"hi\"\nthen left."
+  }
+explanation: |
+  Interpreted string literals are enclosed in double quotes and
+  process backslash escapes. The most useful escapes are:
+    \n   newline
+    \t   tab
+    \\   backslash
+    \"   double quote (legal in strings, NOT in rune literals)
+  Inside a rune literal you would use \' for a single quote, but
+  inside a string literal you do not escape single quotes — and
+  conversely, \" is required inside a string but is not used inside
+  a rune literal (you would use a plain `"` there).
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html"
