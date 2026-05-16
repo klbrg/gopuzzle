@@ -1,4 +1,4 @@
-id: "ep-examples-004"
+id: "ep-ch01-004"
 title: "Parse a Query String"
 concept: "pythonic_thinking"
 description: |
@@ -18,25 +18,27 @@ template: |
       # piece on '=' once, and collect into a dict.
       ...
 test_code: |
+  import unittest
   from main import parse_query_string
 
-  def test_basic():
-      assert parse_query_string("a=1&b=2") == {"a": "1", "b": "2"}
+  class TestParseQueryString(unittest.TestCase):
+      def test_basic(self):
+          self.assertEqual(parse_query_string("a=1&b=2"), {"a": "1", "b": "2"})
 
-  def test_empty():
-      assert parse_query_string("") == {}
+      def test_empty(self):
+          self.assertEqual(parse_query_string(""), {})
 
-  def test_blank_value():
-      assert parse_query_string("a=1&b=") == {"a": "1", "b": ""}
+      def test_blank_value(self):
+          self.assertEqual(parse_query_string("a=1&b="), {"a": "1", "b": ""})
 
-  def test_skips_empty_pairs():
-      assert parse_query_string("a=1&&b=2") == {"a": "1", "b": "2"}
+      def test_skips_empty_pairs(self):
+          self.assertEqual(parse_query_string("a=1&&b=2"), {"a": "1", "b": "2"})
 
-  def test_no_equals():
-      assert parse_query_string("flag") == {"flag": ""}
+      def test_no_equals(self):
+          self.assertEqual(parse_query_string("flag"), {"flag": ""})
 
-  def test_value_contains_equals():
-      assert parse_query_string("eq=1=2") == {"eq": "1=2"}
+      def test_value_contains_equals(self):
+          self.assertEqual(parse_query_string("eq=1=2"), {"eq": "1=2"})
 hint: "Iterate `qs.split('&')`, skip empty parts, and use `part.partition('=')` which returns (before, sep, after) for a single split."
 solution: |
   def parse_query_string(qs: str) -> dict[str, str]:

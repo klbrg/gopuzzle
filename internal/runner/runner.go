@@ -52,6 +52,8 @@ func For(lang Lang) Runner {
 	switch lang {
 	case "", LangGo:
 		return &goRunner{}
+	case LangPython:
+		return &pythonRunner{}
 	default:
 		return &unsupportedRunner{lang: lang}
 	}
