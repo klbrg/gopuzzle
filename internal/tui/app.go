@@ -44,13 +44,16 @@ type aiReviewMsg struct {
 	err    error
 }
 
-// browseRow is one row in the browse list: a source header, section header, or puzzle entry.
+// browseRow is one row in the browse list: a language banner, source
+// header, section header, or puzzle entry.
 type browseRow struct {
 	isHeader    bool
 	isSource    bool
+	isLanguage  bool   // language banner (top-level grouping)
 	headerTxt   string
 	sourceName  string // set on source headers
 	sectionPath string // set on section headers: "source/section"
+	language    string // set on language banners (e.g. "go", "python")
 	puzzle      *puzzle.Puzzle
 }
 
@@ -88,9 +91,10 @@ type Model struct {
 	aiErr     string // last error text, if review failed
 	aiLoading bool   // request in flight
 
-	totalPuzzles  int
-	sectionTotals map[string]int
-	sourceTotals  map[string]int
+	totalPuzzles   int
+	sectionTotals  map[string]int
+	sourceTotals   map[string]int
+	languageTotals map[string]int
 }
 
 func New(p *progress.Progress, puzzles []*puzzle.Puzzle) Model {
@@ -102,14 +106,15 @@ func New(p *progress.Progress, puzzles []*puzzle.Puzzle) Model {
 	_ = os.MkdirAll(scratchDir, 0755)
 
 	m := Model{
-		state:         stateBrowse,
-		spinner:       sp,
-		progress:      p,
-		puzzles:       puzzles,
-		collapsed:     make(map[string]bool),
-		scratchDir:    scratchDir,
-		sectionTotals: make(map[string]int),
-		sourceTotals:  make(map[string]int),
+		state:          stateBrowse,
+		spinner:        sp,
+		progress:       p,
+		puzzles:        puzzles,
+		collapsed:      make(map[string]bool),
+		scratchDir:     scratchDir,
+		sectionTotals:  make(map[string]int),
+		sourceTotals:   make(map[string]int),
+		languageTotals: make(map[string]int),
 	}
 	validIDs := make(map[string]bool, len(puzzles))
 	for _, pz := range puzzles {
@@ -117,6 +122,7 @@ func New(p *progress.Progress, puzzles []*puzzle.Puzzle) Model {
 		m.totalPuzzles++
 		m.sectionTotals[pz.Source+"/"+pz.Section]++
 		m.sourceTotals[pz.Source]++
+		m.languageTotals[pz.Lang]++
 	}
 	if removed := p.PruneOrphans(validIDs); removed > 0 {
 		_ = p.Save()
@@ -147,6 +153,9 @@ func (m *Model) rebuildRows() {
 		}
 	}
 	sort.Slice(filtered, func(i, j int) bool {
+		if filtered[i].Lang != filtered[j].Lang {
+			return filtered[i].Lang < filtered[j].Lang
+		}
 		if filtered[i].Source != filtered[j].Source {
 			return filtered[i].Source < filtered[j].Source
 		}
@@ -157,8 +166,14 @@ func (m *Model) rebuildRows() {
 	})
 
 	var rows []browseRow
-	lastSource, lastSection := "", ""
+	lastLang, lastSource, lastSection := "", "", ""
 	for _, p := range filtered {
+		if p.Lang != lastLang {
+			rows = append(rows, browseRow{isHeader: true, isLanguage: true, headerTxt: displayLanguage(p.Lang), language: p.Lang})
+			lastLang = p.Lang
+			lastSource = ""
+			lastSection = ""
+		}
 		if p.Source != lastSource {
 			rows = append(rows, browseRow{isHeader: true, isSource: true, headerTxt: p.Source, sourceName: p.Source})
 			lastSource = p.Source
@@ -201,7 +216,29 @@ func (m *Model) scratchDirFor() string {
 }
 
 func (m *Model) scratchPath() string {
-	return filepath.Join(m.scratchDirFor(), "main.go")
+	return filepath.Join(m.scratchDirFor(), "main."+m.scratchExt())
+}
+
+// scratchExt returns the source extension for the current puzzle's
+// language. Defaults to "go" when there's no current puzzle (e.g. before
+// one is opened).
+func (m *Model) scratchExt() string {
+	if m.current == nil || m.current.Lang == "" || m.current.Lang == "go" {
+		return "go"
+	}
+	if m.current.Lang == "python" {
+		return "py"
+	}
+	return "go"
+}
+
+// scratchCommentPrefix returns the line-comment marker for the puzzle's
+// language. Go uses `//`, Python uses `#`.
+func (m *Model) scratchCommentPrefix() string {
+	if m.scratchExt() == "py" {
+		return "#"
+	}
+	return "//"
 }
 
 func (m *Model) writeTemplate(includeHint bool) error {
@@ -209,34 +246,49 @@ func (m *Model) writeTemplate(includeHint bool) error {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
-	// Standalone module so gopls treats this directory as self-contained
-	// rather than as part of a larger package.
-	gomod := filepath.Join(dir, "go.mod")
-	if _, err := os.Stat(gomod); err != nil {
-		if err := os.WriteFile(gomod, []byte("module scratch\n\ngo 1.23\n"), 0o644); err != nil {
-			return err
+	// Drop a per-language module-scope marker so the editor's LSP
+	// treats this directory as self-contained rather than as part of
+	// some larger package.
+	switch m.scratchExt() {
+	case "go":
+		gomod := filepath.Join(dir, "go.mod")
+		if _, err := os.Stat(gomod); err != nil {
+			if err := os.WriteFile(gomod, []byte("module scratch\n\ngo 1.23\n"), 0o644); err != nil {
+				return err
+			}
+		}
+	case "py":
+		// An empty __init__.py gives Pyright / Ruff LSP a clean module
+		// boundary, so they don't try to resolve symbols against any
+		// neighbouring scratch.
+		initPy := filepath.Join(dir, "__init__.py")
+		if _, err := os.Stat(initPy); err != nil {
+			if err := os.WriteFile(initPy, nil, 0o644); err != nil {
+				return err
+			}
 		}
 	}
 
+	cmt := m.scratchCommentPrefix()
 	desc := strings.TrimSpace(m.current.Description)
 	var b strings.Builder
-	b.WriteString("// ")
+	b.WriteString(cmt + " ")
 	b.WriteString(m.current.Title)
 	b.WriteString("\n")
 	for _, line := range strings.Split(desc, "\n") {
-		b.WriteString("// ")
+		b.WriteString(cmt + " ")
 		b.WriteString(line)
 		b.WriteString("\n")
 	}
 	if m.current.Reference != "" {
-		b.WriteString("// ref: ")
+		b.WriteString(cmt + " ref: ")
 		b.WriteString(m.current.Reference)
 		b.WriteString("\n")
 	}
 	b.WriteString("\n")
 	b.WriteString(m.current.Template)
 	if includeHint && m.current.Hint != "" {
-		b.WriteString("\n// HINT: ")
+		b.WriteString("\n" + cmt + " HINT: ")
 		b.WriteString(m.current.Hint)
 		b.WriteString("\n")
 	}
@@ -260,13 +312,14 @@ func (m *Model) ensureScratch(includeHint bool) (bool, error) {
 }
 
 // scratchHasTemplateDrift returns true when the puzzle's template declares
-// at least one `func ...` signature that no longer appears in the scratch.
-// A signature mismatch means the puzzle's tests cannot bind to the scratch,
-// so any prior body is unusable and rewriting is the right move.
+// at least one signature (`func`, `def`, or `class`) that no longer appears
+// in the scratch. A signature mismatch means the puzzle's tests cannot bind
+// to the scratch, so any prior body is unusable and rewriting is the right
+// move.
 func (m *Model) scratchHasTemplateDrift(scratch string) bool {
 	for _, line := range strings.Split(m.current.Template, "\n") {
 		trimmed := strings.TrimSpace(line)
-		if !strings.HasPrefix(trimmed, "func ") {
+		if !isSignatureLine(trimmed) {
 			continue
 		}
 		if !strings.Contains(scratch, trimmed) {
@@ -274,6 +327,15 @@ func (m *Model) scratchHasTemplateDrift(scratch string) bool {
 		}
 	}
 	return false
+}
+
+// isSignatureLine returns true if a stripped line introduces a top-level
+// definition we want to anchor on for drift detection. Catches Go's
+// `func ...` and Python's `def ...` / `class ...` headers.
+func isSignatureLine(s string) bool {
+	return strings.HasPrefix(s, "func ") ||
+		strings.HasPrefix(s, "def ") ||
+		strings.HasPrefix(s, "class ")
 }
 
 func (m Model) openEditor() tea.Cmd {
@@ -502,25 +564,15 @@ func (m Model) handleBrowseKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 		}
 		m.clampScroll()
-	case "tab":
-		src := m.sourceForRow(m.browseIdx)
-		if src != "" {
-			m.collapsed[src] = !m.collapsed[src]
-			if !m.isRowVisible(m.browseIdx) {
-				for i := m.browseIdx; i >= 0; i-- {
-					if m.browseRows[i].isSource && m.browseRows[i].headerTxt == src {
-						m.browseIdx = i
-						break
-					}
-				}
-			}
-			m.clampScroll()
-		}
-	case "enter", " ":
+	case "tab", " ":
+		m.toggleCollapseAtCursor()
+		m.clampScroll()
+	case "enter":
 		if m.browseIdx < len(m.browseRows) {
 			row := m.browseRows[m.browseIdx]
-			if row.isSource {
-				m.collapsed[row.headerTxt] = !m.collapsed[row.headerTxt]
+			if row.isHeader {
+				m.toggleCollapseAtCursor()
+				m.clampScroll()
 			} else if !row.isHeader {
 				m.current = row.puzzle
 				m.hintShown = false
@@ -584,7 +636,7 @@ func (m *Model) moveCursor(delta int) {
 			break
 		}
 		m.browseIdx = next
-		if m.isRowVisible(next) && (m.browseRows[next].isSource || !m.browseRows[next].isHeader) {
+		if m.isRowVisible(next) {
 			moved++
 		}
 	}
@@ -756,13 +808,15 @@ func (m Model) handlePredictInputKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 // submitPredictAnswer compares the typed answer against the expected output
-// (whitespace-trimmed) and routes to stateResult with a synthetic runner.Result.
+// and routes to stateResult with a synthetic runner.Result. Comparison is
+// whitespace-tolerant — a missing space after a comma shouldn't fail you
+// when you got the lesson right. See normalizePrediction for the rules.
 // On FAIL we deliberately do NOT print the expected output — that would
 // spoil the puzzle. The user can press s to reveal it explicitly.
 func (m Model) submitPredictAnswer() (tea.Model, tea.Cmd) {
 	got := strings.TrimRight(m.answerInput, " \t\n")
 	want := strings.TrimRight(m.current.ExpectedOutput, " \t\n")
-	passed := got == want
+	passed := normalizePrediction(got) == normalizePrediction(want)
 	m.answerOK = passed
 	m.userSolution = m.answerInput
 	output := ""
@@ -892,7 +946,7 @@ func (m Model) requestAIHint() tea.Cmd {
 	if m.result != nil {
 		failure = m.result.Output
 		if cur.Kind == "" || cur.Kind == puzzle.KindCode {
-			failure = cleanTestOutput(failure)
+			failure = cleanTestOutput(failure, cur.Lang)
 		}
 	}
 	return func() tea.Msg {
@@ -1031,21 +1085,103 @@ func (m Model) View() string {
 func (m Model) sourceForRow(idx int) string {
 	for i := idx; i >= 0; i-- {
 		if m.browseRows[i].isSource {
-			return m.browseRows[i].headerTxt
+			return m.browseRows[i].sourceName
 		}
 	}
 	return ""
 }
 
+func (m Model) languageForRow(idx int) string {
+	for i := idx; i >= 0; i-- {
+		if m.browseRows[i].isLanguage {
+			return m.browseRows[i].language
+		}
+	}
+	return ""
+}
+
+// collapseKeyForRow returns the map key that toggling tab/enter on this
+// row should flip. For headers it's the matching ancestor (lang/src/sec).
+// For puzzle rows, tab folds the puzzle's section.
+func (m Model) collapseKeyForRow(idx int) string {
+	if idx < 0 || idx >= len(m.browseRows) {
+		return ""
+	}
+	row := m.browseRows[idx]
+	switch {
+	case row.isLanguage:
+		return "lang:" + row.language
+	case row.isSource:
+		return "src:" + row.sourceName
+	case row.isHeader: // section header
+		return "sec:" + row.sectionPath
+	case row.puzzle != nil:
+		return "sec:" + row.puzzle.Source + "/" + row.puzzle.Section
+	}
+	return ""
+}
+
+// toggleCollapseAtCursor flips the collapse state for whatever container
+// the highlighted row implies, then nudges the cursor up to the nearest
+// still-visible row if the highlighted row got hidden.
+func (m *Model) toggleCollapseAtCursor() {
+	key := m.collapseKeyForRow(m.browseIdx)
+	if key == "" {
+		return
+	}
+	m.collapsed[key] = !m.collapsed[key]
+	if !m.isRowVisible(m.browseIdx) {
+		for i := m.browseIdx; i >= 0; i-- {
+			if m.isRowVisible(i) {
+				m.browseIdx = i
+				return
+			}
+		}
+	}
+}
+
+// isRowVisible returns true when the row is currently displayed. A row
+// is hidden if any of its ancestor collapse keys are set: language >
+// source > section.
 func (m Model) isRowVisible(idx int) bool {
 	if idx < 0 || idx >= len(m.browseRows) {
 		return false
 	}
 	row := m.browseRows[idx]
+
+	// Language banner is the top — always visible.
+	if row.isLanguage {
+		return true
+	}
+
+	// Check language collapse first.
+	if lang := m.languageForRow(idx); lang != "" && m.collapsed["lang:"+lang] {
+		return false
+	}
+
+	// Source headers visible iff language not collapsed (checked above).
 	if row.isSource {
 		return true
 	}
-	return !m.collapsed[m.sourceForRow(idx)]
+
+	// Check source collapse.
+	if src := m.sourceForRow(idx); src != "" && m.collapsed["src:"+src] {
+		return false
+	}
+
+	// Section headers visible iff source not collapsed.
+	if row.isHeader {
+		return true
+	}
+
+	// Puzzle rows: also subject to section collapse.
+	if row.puzzle != nil {
+		secKey := "sec:" + row.puzzle.Source + "/" + row.puzzle.Section
+		if m.collapsed[secKey] {
+			return false
+		}
+	}
+	return true
 }
 
 func (m Model) viewBrowse() string {
@@ -1083,10 +1219,12 @@ func (m Model) viewBrowse() string {
 		}
 		row := m.browseRows[i]
 		switch {
+		case row.isLanguage:
+			lines = append(lines, m.renderLanguageRow(i, row))
 		case row.isSource:
 			lines = append(lines, m.renderSourceRow(i, row))
 		case row.isHeader:
-			lines = append(lines, m.renderSectionRow(row))
+			lines = append(lines, m.renderSectionRow(i, row))
 		default:
 			lines = append(lines, m.renderPuzzleRow(i, row))
 		}
@@ -1108,7 +1246,7 @@ func (m Model) viewBrowse() string {
 		keys = styleKeybind.Render(
 			styleKeyName.Render("↑↓") + " move  " +
 				styleKeyName.Render("enter") + " open  " +
-				styleKeyName.Render("tab") + " collapse  " +
+				styleKeyName.Render("space") + " collapse  " +
 				styleKeyName.Render("/") + " search  " +
 				styleKeyName.Render("u") + " toggle solved  " +
 				styleKeyName.Render("R") + " reset all  " +
@@ -1129,9 +1267,10 @@ func (m Model) viewBrowse() string {
 	return strings.Join(parts, "\n")
 }
 
-func (m Model) renderSourceRow(idx int, row browseRow) string {
+func (m Model) renderLanguageRow(idx int, row browseRow) string {
+	solved, total := m.languageProgress(row.language)
 	arrow := "▼"
-	if m.collapsed[row.headerTxt] {
+	if m.collapsed["lang:"+row.language] {
 		arrow = "▶"
 	}
 	cursor := "  "
@@ -1140,13 +1279,37 @@ func (m Model) renderSourceRow(idx int, row browseRow) string {
 		cursor = styleKeyName.Render("▶ ")
 		nameStyle = lipgloss.NewStyle().Bold(true).Foreground(colorWhite)
 	}
-	solved, total := m.sourceProgress(row.sourceName)
 	return fmt.Sprintf("  %s%s %s  %s", cursor, arrow, nameStyle.Render(row.headerTxt), progressBadge(solved, total))
 }
 
-func (m Model) renderSectionRow(row browseRow) string {
+func (m Model) renderSourceRow(idx int, row browseRow) string {
+	arrow := "▼"
+	if m.collapsed["src:"+row.sourceName] {
+		arrow = "▶"
+	}
+	cursor := "  "
+	nameStyle := styleDescription
+	if idx == m.browseIdx {
+		cursor = styleKeyName.Render("▶ ")
+		nameStyle = lipgloss.NewStyle().Bold(true).Foreground(colorWhite)
+	}
+	solved, total := m.sourceProgress(row.sourceName)
+	return fmt.Sprintf("    %s%s %s  %s", cursor, arrow, nameStyle.Render(row.headerTxt), progressBadge(solved, total))
+}
+
+func (m Model) renderSectionRow(idx int, row browseRow) string {
+	arrow := "▼"
+	if m.collapsed["sec:"+row.sectionPath] {
+		arrow = "▶"
+	}
+	cursor := "  "
+	nameStyle := styleConcept
+	if idx == m.browseIdx {
+		cursor = styleKeyName.Render("▶ ")
+		nameStyle = lipgloss.NewStyle().Bold(true).Foreground(colorWhite)
+	}
 	solved, total := m.sectionProgress(row.sectionPath)
-	return fmt.Sprintf("      %s  %s", styleConcept.Render(row.headerTxt), progressBadge(solved, total))
+	return fmt.Sprintf("      %s%s %s  %s", cursor, arrow, nameStyle.Render(row.headerTxt), progressBadge(solved, total))
 }
 
 func (m Model) renderPuzzleRow(idx int, row browseRow) string {
@@ -1197,6 +1360,17 @@ func (m Model) currentSolvedCount() int {
 		}
 	}
 	return n
+}
+
+func (m Model) languageProgress(lang string) (int, int) {
+	total := m.languageTotals[lang]
+	solved := 0
+	for _, p := range m.puzzles {
+		if p.Lang == lang && m.progress.Solved[p.ID] {
+			solved++
+		}
+	}
+	return solved, total
 }
 
 func (m Model) sourceProgress(source string) (int, int) {
@@ -1289,7 +1463,7 @@ func (m Model) viewPuzzleInfo() string {
 	}
 	if m.solutionShown {
 		if m.current.Solution != "" {
-			parts = append(parts, "\n"+renderCodeBlock(m.current.Solution, true))
+			parts = append(parts, "\n"+renderCodeBlock(m.current.Solution, m.current.Lang))
 		} else {
 			parts = append(parts, "\n  "+styleHint.Render("No suggested solution available for this puzzle."))
 		}
@@ -1320,7 +1494,7 @@ func (m Model) viewPuzzleInfoPredict() string {
 
 	title := styleTitle.Render(m.current.Title)
 	desc := renderInline(wordWrap(m.current.Description, m.width-4), styleDescription)
-	snippet := renderCodeBlock(strings.TrimRight(m.current.Snippet, "\n"), true)
+	snippet := renderCodeBlock(strings.TrimRight(m.current.Snippet, "\n"), m.current.Lang)
 
 	keys := styleKeybind.Render(
 		styleKeyName.Render("enter") + " type your prediction  " +
@@ -1341,7 +1515,7 @@ func (m Model) viewPuzzleInfoPredict() string {
 	}
 	if m.solutionShown {
 		parts = append(parts, "", "  "+styleKeybind.Render("Expected output:"),
-			renderCodeBlock(m.current.ExpectedOutput, false))
+			renderCodeBlock(m.current.ExpectedOutput, ""))
 	}
 	parts = append(parts, "", "  "+keys)
 	return strings.Join(parts, "\n")
@@ -1414,7 +1588,7 @@ func (m Model) viewPredictInput() string {
 		"Type the exact output the snippet would print, then press enter.",
 		m.width-4,
 	))
-	snippet := renderCodeBlock(strings.TrimRight(m.current.Snippet, "\n"), true)
+	snippet := renderCodeBlock(strings.TrimRight(m.current.Snippet, "\n"), m.current.Lang)
 	caret := styleKeyName.Render("▎")
 	field := styleBorder.Render(styleDescription.Render(m.answerInput) + caret)
 	multiLine := strings.Contains(strings.TrimRight(m.current.ExpectedOutput, "\n"), "\n")
@@ -1468,10 +1642,9 @@ func (m Model) viewResult() string {
 			case puzzle.KindQuiz:
 				label = "Your answer:"
 			}
-			isGo := m.current.Kind == puzzle.KindCode || m.current.Kind == puzzle.KindFix
 			lines = append(lines,
 				"  "+styleKeybind.Render(label),
-				renderCodeBlock(userTrim, isGo),
+				renderCodeBlock(userTrim, codeLang(m.current)),
 				"",
 			)
 		}
@@ -1491,10 +1664,9 @@ func (m Model) viewResult() string {
 			case puzzle.KindQuiz:
 				label = "Correct answer:"
 			}
-			isGo := m.current.Kind == puzzle.KindCode || m.current.Kind == puzzle.KindFix
 			lines = append(lines,
 				"  "+styleKeybind.Render(label),
-				renderCodeBlock(canonTrim, isGo),
+				renderCodeBlock(canonTrim, codeLang(m.current)),
 				"",
 			)
 		}
@@ -1543,7 +1715,7 @@ func (m Model) viewResult() string {
 		// Only code-kind output is `go test -v` raw text. Other kinds
 		// (predict/quiz/fix) already format their own messages.
 		if m.current.Kind == "" || m.current.Kind == puzzle.KindCode {
-			output = cleanTestOutput(output)
+			output = cleanTestOutput(output, m.current.Lang)
 		}
 		outputBox := styleBorder.Render(styleOutput.Render(truncate(output, 30)))
 		lines = append(lines,
@@ -1566,8 +1738,7 @@ func (m Model) viewResult() string {
 				shown = m.current.Answer
 			}
 			if shown != "" {
-				isGo := m.current.Kind == puzzle.KindCode || m.current.Kind == puzzle.KindFix
-				lines = append(lines, "", renderCodeBlock(shown, isGo))
+				lines = append(lines, "", renderCodeBlock(shown, codeLang(m.current)))
 			} else {
 				lines = append(lines, "", "  "+styleHint.Render("No suggested solution available for this puzzle."))
 			}
@@ -1632,8 +1803,8 @@ func (m Model) viewHelp() string {
 		{"↑ ↓  j k", "move cursor"},
 		{"g  G", "first / last puzzle"},
 		{"pgup  pgdn", "page up / down"},
-		{"enter", "open puzzle"},
-		{"tab", "collapse / expand source"},
+		{"enter", "open puzzle (or toggle a collapsed section/source/language)"},
+		{"space  tab", "toggle collapse on the highlighted row's container"},
 		{"/", "search puzzles"},
 		{"u", "toggle solved on highlighted puzzle"},
 		{"R", "reset all progress"},
