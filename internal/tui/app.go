@@ -169,7 +169,7 @@ func (m *Model) rebuildRows() {
 	lastLang, lastSource, lastSection := "", "", ""
 	for _, p := range filtered {
 		if p.Lang != lastLang {
-			rows = append(rows, browseRow{isHeader: true, isLanguage: true, headerTxt: displayLanguage(p.Lang), language: p.Lang})
+			rows = append(rows, browseRow{isHeader: true, isLanguage: true, headerTxt: puzzle.DisplayLanguage(p.Lang), language: p.Lang})
 			lastLang = p.Lang
 			lastSource = ""
 			lastSection = ""
@@ -927,6 +927,8 @@ func (m Model) requestAIReview() tea.Cmd {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 		review, err := ai.Review(ctx, ai.ReviewRequest{
+			Language:    puzzle.DisplayLanguage(cur.Lang),
+			Source:      puzzle.DisplaySource(cur.Source),
 			Title:       cur.Title,
 			Description: cur.Description,
 			Canonical:   cur.Solution,
@@ -953,6 +955,8 @@ func (m Model) requestAIHint() tea.Cmd {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 		hint, err := ai.Hint(ctx, ai.HintRequest{
+			Language:    puzzle.DisplayLanguage(cur.Lang),
+			Source:      puzzle.DisplaySource(cur.Source),
 			Title:       cur.Title,
 			Description: cur.Description,
 			UserCode:    user,

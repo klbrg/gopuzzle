@@ -52,6 +52,33 @@ type Puzzle struct {
 // Dir is the path to the puzzles directory, set by main.
 var Dir string
 
+// DisplayLanguage humanises a language ID for the UI / AI prompts
+// ("go" -> "Go").
+func DisplayLanguage(lang string) string {
+	switch lang {
+	case "go":
+		return "Go"
+	case "python":
+		return "Python"
+	case "":
+		return "(unknown language)"
+	default:
+		return strings.ToUpper(lang[:1]) + lang[1:]
+	}
+}
+
+// DisplaySource humanises a source directory ID for the UI / AI prompts.
+// Falls back to the raw ID for unknown sources.
+func DisplaySource(source string) string {
+	switch source {
+	case "learning_go":
+		return "Learning Go, 2nd Edition"
+	case "effective_python":
+		return "Effective Python, 3rd Edition"
+	}
+	return source
+}
+
 // inferLang derives a language from the source directory name when the
 // YAML doesn't supply an explicit `lang:` field. Today's sources:
 //

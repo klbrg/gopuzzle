@@ -163,21 +163,6 @@ func stripLeadingComments(s string) string {
 	return ""
 }
 
-// displayLanguage humanises a language ID for the UI ("go" -> "Go").
-func displayLanguage(lang string) string {
-	switch lang {
-	case "go":
-		return "Go"
-	case "python":
-		return "Python"
-	case "":
-		return "(unknown language)"
-	default:
-		// Capitalise first byte (good enough for short lowercase IDs).
-		return strings.ToUpper(lang[:1]) + lang[1:]
-	}
-}
-
 // codeLang returns the language string to pass to renderCodeBlock for
 // content that is genuinely code (the user's submitted solution, the
 // canonical solution, a fix-puzzle scratch). Quiz answers and

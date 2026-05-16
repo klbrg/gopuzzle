@@ -17,21 +17,29 @@ const (
 	apiURL     = "https://api.anthropic.com/v1/messages"
 	apiVersion = "2023-06-01"
 	model      = "claude-sonnet-4-6"
+)
 
-	// reviewSystem and hintSystem are ephemeral-cached so back-to-back
-	// AI calls in the same 5-minute window hit the prompt cache.
-	reviewSystem = `You are a senior Go developer giving a short, friendly review of a beginner's solution to a puzzle from "Learning Go, 2nd Edition".
+// reviewSystemTmpl builds the system prompt for a code review. The
+// language and source title get interpolated. Same text for the same
+// (language, source) pair → cache hits across calls in the 5-minute
+// ephemeral window.
+func reviewSystemTmpl(language, source string) string {
+	return fmt.Sprintf(`You are a senior %s developer giving a short, friendly review of a beginner's solution to a puzzle from "%s".
 
 Rules:
 - Keep your response to 2-4 sentences total. Be concise.
-- Focus on whether the code is idiomatic Go and what (if anything) you'd change.
+- Focus on whether the code is idiomatic %s and what (if anything) you'd change.
 - If the student's solution is genuinely BETTER than the canonical — more robust, clearer naming, or handling edge cases the canonical doesn't — say so explicitly. Give credit for good engineering judgment, not just for matching the canonical. The puzzle author may have stopped at the minimum that passes the tests.
 - If the student added validation, guards, or error handling that the puzzle's tests don't exercise, frame it as good production-quality instinct, NOT as redundancy or over-engineering. Briefly note which inputs the extra logic would protect against.
 - If the solution matches the canonical and is already clean, say so briefly and stop.
 - Be encouraging but honest. Plain prose only — no headings, no lists, no markdown formatting.
-- The student is learning the basics. Don't reach for advanced patterns they haven't met yet.`
+- The student is learning the basics. Don't reach for advanced patterns they haven't met yet.`, language, source, language)
+}
 
-	hintSystem = `You are a senior Go developer giving a short, targeted hint to a beginner whose code FAILED its tests in a puzzle from "Learning Go, 2nd Edition".
+// hintSystemTmpl builds the system prompt for a hint on a failing
+// attempt. Same caching behaviour as reviewSystemTmpl.
+func hintSystemTmpl(language, source string) string {
+	return fmt.Sprintf(`You are a senior %s developer giving a short, targeted hint to a beginner whose code FAILED its tests in a puzzle from "%s".
 
 Rules:
 - Keep your response to 2-4 sentences total. Be concise.
@@ -39,11 +47,13 @@ Rules:
 - Give a HINT, not the answer. Point at the rule or concept they're missing; suggest what to try.
 - DO NOT paste a corrected version of their code or the canonical solution. They are learning by struggling productively — don't deprive them of that.
 - Be encouraging. Plain prose only — no headings, no lists, no markdown formatting.
-- The student is learning the basics. Don't reach for advanced patterns they haven't met yet.`
-)
+- The student is learning the basics. Don't reach for advanced patterns they haven't met yet.`, language, source)
+}
 
 // ReviewRequest is the per-puzzle context passed to Review (PASS case).
 type ReviewRequest struct {
+	Language    string // "Go", "Python", ... (display form)
+	Source      string // "Learning Go, 2nd Edition", "Effective Python, 3rd Edition", ...
 	Title       string
 	Description string
 	Canonical   string
@@ -54,6 +64,8 @@ type ReviewRequest struct {
 // intentionally does NOT include the canonical solution — we don't want
 // the model tempted to leak it as a "hint".
 type HintRequest struct {
+	Language    string
+	Source      string
 	Title       string
 	Description string
 	UserCode    string
@@ -124,7 +136,7 @@ Give the student a short review.`,
 		strings.TrimSpace(r.Canonical),
 		strings.TrimSpace(r.UserCode),
 	)
-	return call(ctx, reviewSystem, userPrompt)
+	return call(ctx, reviewSystemTmpl(r.Language, r.Source), userPrompt)
 }
 
 // Hint calls the Anthropic API and returns a short, targeted hint for a
@@ -147,7 +159,7 @@ Give the student one short hint to help them unstick. Do NOT paste a corrected v
 		strings.TrimSpace(r.UserCode),
 		strings.TrimSpace(r.Failure),
 	)
-	return call(ctx, hintSystem, userPrompt)
+	return call(ctx, hintSystemTmpl(r.Language, r.Source), userPrompt)
 }
 
 // call performs the actual Anthropic Messages API request with prompt
