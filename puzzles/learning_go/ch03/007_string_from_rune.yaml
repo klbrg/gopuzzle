@@ -1,14 +1,11 @@
 id: "lg-ch03-007"
-title: "string(int) Is the Character, Not the Digits"
+title: "Converting int to string"
 concept: "strings"
 kind: "predict_output"
 description: |
-  `string(intValue)` is one of Go's classic gotchas: it produces the
-  character at that Unicode code point, NOT the decimal-text form of
-  the number. For digits-as-text, use `strconv.Itoa(n)`.
-
-  Predict the output. For reference, decimal 65 is the Unicode code
-  point for the uppercase letter 'A'.
+  This snippet converts an integer to a string with `string(n)`,
+  measures the length of the resulting string, and compares it to
+  the digit text "65". Predict the output.
 snippet: |
   package main
 
@@ -16,20 +13,24 @@ snippet: |
 
   func main() {
   	n := 65
-  	fmt.Println(string(n))
+  	s := string(n)
+  	fmt.Println(len(s), s == "65")
   }
 expected_output: |
-  A
-hint: "The output is NOT \"65\". `string(intValue)` reads the integer as a code point, not as digits."
+  1 false
+hint: "`string(intValue)` doesn't return the digit text. It returns something else — figure out what, and the length and comparison fall out from that."
 explanation: |
   `string(intValue)` interprets the integer as a Unicode code point
-  and returns the corresponding one-rune UTF-8 string. This is almost
-  always what you want when the integer represents a code point — and
-  almost never what you want when it represents a number.
+  and returns the corresponding one-rune UTF-8 string. So
+  `string(65)` is the one-character string for the letter 'A', not
+  the two-character digit text "65". That's why:
+    - `len(s)` is 1 (one character, encoded as 1 byte because the
+      code point is in the ASCII range), not 2.
+    - `s == "65"` is false — different strings entirely.
 
-  Since Go 1.15 `go vet` warns when you do this with a plain `int`,
-  exactly to flag the gotcha. The fixes:
-    - To convert a code point to a character: use `string(rune(n))`
-      so the intent is explicit.
-    - To convert a number to its decimal text: use `strconv.Itoa(n)`.
+  Since Go 1.15 `go vet` warns when you do this conversion with a
+  plain `int`, exactly to flag the gotcha. The fixes:
+    - To convert a code point to a character: `string(rune(n))` makes
+      the intent explicit and quiets the warning.
+    - To convert a number to its decimal text: `strconv.Itoa(n)`.
 reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html#strings_runes_bytes"
