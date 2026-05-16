@@ -1,0 +1,31 @@
+id: "ep-examples-002"
+title: "is vs =="
+concept: "data_model"
+kind: "quiz"
+description: |
+  Python has two comparison operators that look similar but mean
+  different things. Pick the option that correctly characterises
+  when to prefer `is` over `==`.
+question: "When should you use `is` rather than `==`?"
+choices:
+  - "Only when comparing against None, True, False, or other known singletons."
+  - "Whenever the two operands are objects (i.e. not primitives)."
+  - "When you want structural equality of nested data structures."
+  - "Always — `is` is the safer default and `==` is for legacy code."
+answer: "Only when comparing against None, True, False, or other known singletons."
+hint: "`is` checks whether two names refer to the SAME object. `==` checks whether they hold equal values. Which question are you actually asking when you write `if x is None`?"
+explanation: |
+  `is` tests *identity*: are these two names bound to the same object
+  in memory? `==` tests *equality*: do these two values compare equal
+  (calls `__eq__`)?
+
+  For Python's singletons — `None`, `True`, `False`, and a small
+  number of cached small ints / interned strings — there is only ever
+  one instance. The idiomatic check for None is `if x is None`, both
+  because it expresses intent and because it can't be tricked by an
+  `__eq__` override.
+
+  For anything else, use `==`. Using `is` to compare arbitrary objects
+  is a common source of bugs in code that "works" on small inputs
+  (where Python happens to cache values) and breaks on larger ones.
+reference: "https://learning.oreilly.com/library/view/effective-python-third/9780138177263/"

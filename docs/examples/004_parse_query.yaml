@@ -1,0 +1,72 @@
+id: "ep-examples-004"
+title: "Parse a Query String"
+concept: "pythonic_thinking"
+description: |
+  Implement `parse_query_string(qs)` that takes a URL-style query
+  string and returns a dict mapping keys to values. Empty
+  components should be skipped. You can assume there's at most one
+  `=` per pair; if there's no `=`, treat the whole piece as the key
+  with an empty value.
+
+      parse_query_string("a=1&b=2")    == {"a": "1", "b": "2"}
+      parse_query_string("")           == {}
+      parse_query_string("a=1&b=")     == {"a": "1", "b": ""}
+      parse_query_string("flag")       == {"flag": ""}
+template: |
+  def parse_query_string(qs: str) -> dict[str, str]:
+      # TODO: split qs on '&', skip empty pieces, split each remaining
+      # piece on '=' once, and collect into a dict.
+      ...
+test_code: |
+  from main import parse_query_string
+
+  def test_basic():
+      assert parse_query_string("a=1&b=2") == {"a": "1", "b": "2"}
+
+  def test_empty():
+      assert parse_query_string("") == {}
+
+  def test_blank_value():
+      assert parse_query_string("a=1&b=") == {"a": "1", "b": ""}
+
+  def test_skips_empty_pairs():
+      assert parse_query_string("a=1&&b=2") == {"a": "1", "b": "2"}
+
+  def test_no_equals():
+      assert parse_query_string("flag") == {"flag": ""}
+
+  def test_value_contains_equals():
+      assert parse_query_string("eq=1=2") == {"eq": "1=2"}
+hint: "Iterate `qs.split('&')`, skip empty parts, and use `part.partition('=')` which returns (before, sep, after) for a single split."
+solution: |
+  def parse_query_string(qs: str) -> dict[str, str]:
+      result: dict[str, str] = {}
+      for part in qs.split("&"):
+          if not part:
+              continue
+          k, _, v = part.partition("=")
+          result[k] = v
+      return result
+explanation: |
+  `str.partition(sep)` is the idiomatic way to split on the FIRST
+  occurrence of a separator: it returns a 3-tuple `(before, sep,
+  after)`. If the separator isn't present, you get `(whole_string,
+  "", "")` — so `flag` becomes `("flag", "", "")` and `result["flag"]
+  = ""` as expected.
+
+  Compare with `str.split("=", 1)`, which returns a list of length 1
+  or 2 depending on whether the separator was found — you'd need to
+  unpack carefully or check the length. `partition` always returns a
+  3-tuple, making the unpack uniform.
+
+  This is the kind of helper you'd usually write as a one-liner with
+  a dict comprehension:
+
+      return {p.split("=", 1)[0]: (p.split("=", 1) + [""])[1]
+              for p in qs.split("&") if p}
+
+  but the explicit loop reads much better. *Effective Python* Item 5
+  ("Prefer Multiple Assignment Unpacking Over Indexing") and Item 27
+  ("Use Comprehensions Instead of map and filter") both bear on the
+  trade-off here.
+reference: "https://learning.oreilly.com/library/view/effective-python-third/9780138177263/"

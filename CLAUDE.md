@@ -2,7 +2,13 @@
 
 A terminal puzzle app for practicing Go, organized by chapter. Each puzzle
 ships as a single YAML file under `puzzles/<source>/<section>/` (currently
-`learning_go/ch02/`).
+`learning_go/ch02/`, `learning_go/ch03/`, `learning_go/ch04/`).
+
+The pedagogical model is language-agnostic. A plan to generalise the
+runner so Python (and beyond) can become a second source language lives
+in `docs/multi-language-plan.md`. See also `docs/architecture.md`,
+`docs/puzzle-format.md`, and `docs/puzzle-authoring.md` for the
+extracted design notes.
 
 ## Layout
 
@@ -90,13 +96,17 @@ for a short review of the user's solution.
 
 ## Scratch lifecycle
 
-Scratch files live at `~/.gopuzzle/scratch/<id>.go`. Behavior:
+Scratch files live at `~/.gopuzzle/scratch/<id>/main.go`, with a tiny
+per-puzzle `go.mod` so each one is its own standalone module — gopls
+treats them independently and doesn't surface cross-puzzle "main
+redeclared" diagnostics. Code-kind puzzles use `package scratch` (no
+`func main()` needed); fix-kind puzzles use `package main`. Behavior:
 
 - `ensureScratch` writes the template only when the file is missing OR when
   the on-disk content no longer contains every `func` signature declared in
   the puzzle's template (drift detection — catches puzzles renamed/reshaped
   since the scratch was last opened). Otherwise prior edits are preserved.
-- `r` rewrites the template in place; `D` deletes the file entirely.
+- `r` rewrites the template in place; `D` deletes the whole subdirectory.
 - `make clean-scratch` wipes `~/.gopuzzle/scratch/`.
 
 ## Progress lifecycle
