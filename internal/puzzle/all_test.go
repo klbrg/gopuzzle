@@ -39,7 +39,7 @@ func TestAllSolutionsPass(t *testing.T) {
 				if p.TestCode == "" {
 					t.Fatalf("missing test_code")
 				}
-				res, err := runner.Run(p.Solution, p.TestCode)
+				res, err := runner.For(p.Lang).Run(p.Solution, p.TestCode)
 				if err != nil {
 					t.Fatalf("runner error: %v", err)
 				}
@@ -53,7 +53,7 @@ func TestAllSolutionsPass(t *testing.T) {
 				if p.ExpectedOutput == "" {
 					t.Fatalf("missing expected_output")
 				}
-				out, err := runner.RunSnippet(p.Snippet)
+				out, err := runner.For(p.Lang).RunSnippet(p.Snippet)
 				if err != nil {
 					t.Fatalf("snippet runner error: %v\n%s", err, out)
 				}
@@ -87,7 +87,7 @@ func TestAllSolutionsPass(t *testing.T) {
 				if p.ExpectedOutput == "" {
 					t.Fatalf("missing expected_output")
 				}
-				out, err := runner.RunSnippet(p.Solution)
+				out, err := runner.For(p.Lang).RunSnippet(p.Solution)
 				if err != nil {
 					t.Fatalf("fixed-snippet runner error: %v\n%s", err, out)
 				}

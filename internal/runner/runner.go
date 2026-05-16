@@ -1,3 +1,10 @@
+// Package runner executes puzzle code in a sandbox per source language.
+// Each language has its own Runner implementation; the For(lang) factory
+// returns the right one.
+//
+// Today only Go is wired up. The interface is shaped so adding a Python
+// runner (Phase 2 of docs/multi-language-plan.md) is a self-contained
+// addition rather than a refactor.
 package runner
 
 import (
@@ -10,17 +17,56 @@ import (
 	"time"
 )
 
+// Result is the outcome of a Runner.Run call.
 type Result struct {
 	Passed bool
 	Output string
 }
+
+// Lang identifies a source language.
+type Lang = string
+
+const (
+	LangGo     Lang = "go"
+	LangPython Lang = "python" // runner not yet implemented; will fail loudly via For
+)
+
+// Runner is the language-agnostic interface for compiling, testing, and
+// running puzzle code.
+type Runner interface {
+	// Run compiles and runs solutionCode against testCode (the test
+	// file or its equivalent for the language). Returns pass/fail plus
+	// combined output.
+	Run(solutionCode, testCode string) (*Result, error)
+
+	// RunSnippet executes a self-contained program and returns stdout.
+	// Used to verify predict_output and fix puzzles.
+	RunSnippet(code string) (string, error)
+}
+
+// For returns the Runner implementation for the given language. An empty
+// string defaults to Go. Unknown languages return a Runner that errors
+// on every call with a clear message — so puzzles authored for a
+// language whose runner isn't built yet fail loudly rather than silently.
+func For(lang Lang) Runner {
+	switch lang {
+	case "", LangGo:
+		return &goRunner{}
+	default:
+		return &unsupportedRunner{lang: lang}
+	}
+}
+
+// ---- Go runner ----
 
 const goModTemplate = `module puzzle
 
 go 1.23
 `
 
-func Run(solutionCode, testCode string) (*Result, error) {
+type goRunner struct{}
+
+func (g *goRunner) Run(solutionCode, testCode string) (*Result, error) {
 	dir, err := os.MkdirTemp("", "gopuzzle-*")
 	if err != nil {
 		return nil, fmt.Errorf("creating temp dir: %w", err)
@@ -54,9 +100,7 @@ func Run(solutionCode, testCode string) (*Result, error) {
 	return &Result{Passed: passed, Output: output}, nil
 }
 
-// RunSnippet compiles a self-contained main package and returns its stdout.
-// Used to verify predict-output puzzles by actually running the snippet.
-func RunSnippet(code string) (string, error) {
+func (g *goRunner) RunSnippet(code string) (string, error) {
 	dir, err := os.MkdirTemp("", "gopuzzle-snippet-*")
 	if err != nil {
 		return "", fmt.Errorf("creating temp dir: %w", err)
@@ -83,4 +127,16 @@ func RunSnippet(code string) (string, error) {
 		return string(out), fmt.Errorf("go run: %w\n%s", err, string(out))
 	}
 	return string(out), nil
+}
+
+// ---- Unsupported fallback ----
+
+type unsupportedRunner struct{ lang Lang }
+
+func (u *unsupportedRunner) Run(string, string) (*Result, error) {
+	return nil, fmt.Errorf("runner for language %q is not implemented yet", u.lang)
+}
+
+func (u *unsupportedRunner) RunSnippet(string) (string, error) {
+	return "", fmt.Errorf("runner for language %q is not implemented yet", u.lang)
 }

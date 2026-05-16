@@ -22,6 +22,7 @@ type Puzzle struct {
 	Title       string `yaml:"title"`
 	Concept     string `yaml:"concept"`
 	Kind        string `yaml:"kind"` // default: "code"
+	Lang        string `yaml:"lang"` // default: derived from Source path; falls back to "go"
 	Description string `yaml:"description"`
 	Hint        string `yaml:"hint"`
 	Explanation string `yaml:"explanation"`
@@ -51,6 +52,24 @@ type Puzzle struct {
 // Dir is the path to the puzzles directory, set by main.
 var Dir string
 
+// inferLang derives a language from the source directory name when the
+// YAML doesn't supply an explicit `lang:` field. Today's sources:
+//
+//	learning_go/...    -> "go"
+//	effective_python/... -> "python"
+//
+// Anything else defaults to "go" so existing Go puzzles keep working
+// without churn.
+func inferLang(source string) string {
+	s := strings.ToLower(source)
+	switch {
+	case strings.HasSuffix(s, "_python"), strings.Contains(s, "python"):
+		return "python"
+	default:
+		return "go"
+	}
+}
+
 func LoadAll() ([]*Puzzle, error) {
 	var puzzles []*Puzzle
 
@@ -79,6 +98,9 @@ func LoadAll() ([]*Puzzle, error) {
 		p.Stem = strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
 		if p.Kind == "" {
 			p.Kind = KindCode
+		}
+		if p.Lang == "" {
+			p.Lang = inferLang(p.Source)
 		}
 		puzzles = append(puzzles, &p)
 		return nil

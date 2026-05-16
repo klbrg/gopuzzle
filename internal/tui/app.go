@@ -331,9 +331,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			var res *runner.Result
 			var err error
+			r := runner.For(cur.Lang)
 			switch cur.Kind {
 			case puzzle.KindFix:
-				out, runErr := runner.RunSnippet(string(solution))
+				out, runErr := r.RunSnippet(string(solution))
 				passed := runErr == nil && strings.TrimRight(out, " \t\n") == strings.TrimRight(cur.ExpectedOutput, " \t\n")
 				output := out
 				if !passed {
@@ -344,7 +345,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				res = &runner.Result{Passed: passed, Output: output}
 			default:
-				res, err = runner.Run(string(solution), cur.TestCode)
+				res, err = r.Run(string(solution), cur.TestCode)
 			}
 			if err == nil && res != nil && res.Passed {
 				_ = progress.SaveSolution(cur.ID, cur.Title, cur.Dir, cur.Stem, string(solution))
