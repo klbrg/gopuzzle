@@ -1,0 +1,67 @@
+id: "lg-ch04-013"
+title: "Index of First Match"
+concept: "loops"
+description: |
+  Implement `indexOf(nums, target)` that returns the index of the
+  first occurrence of `target` in `nums`, or `-1` if it isn't there.
+  Use the for-range form that gives you both index and value.
+
+      indexOf([]int{10, 20, 30, 20}, 20) == 1
+      indexOf([]int{1, 2, 3}, 5)         == -1
+      indexOf(nil, 1)                    == -1
+template: |
+  package scratch
+
+  func indexOf(nums []int, target int) int {
+  	// TODO: range with (index, value). Return the index as soon
+  	// as you find a match. If the loop completes without finding
+  	// one, return -1.
+  }
+test_code: |
+  package scratch
+
+  import "testing"
+
+  func TestIndexOf(t *testing.T) {
+  	cases := []struct {
+  		nums   []int
+  		target int
+  		want   int
+  	}{
+  		{[]int{10, 20, 30, 20}, 20, 1},
+  		{[]int{1, 2, 3}, 5, -1},
+  		{nil, 1, -1},
+  		{[]int{}, 1, -1},
+  		{[]int{42}, 42, 0},
+  		{[]int{1, 1, 1}, 1, 0},
+  	}
+  	for _, c := range cases {
+  		if got := indexOf(c.nums, c.target); got != c.want {
+  			t.Errorf("indexOf(%v, %d) = %d, want %d", c.nums, c.target, got, c.want)
+  		}
+  	}
+  }
+hint: "`for i, n := range nums { if n == target { return i } }` then `return -1` after the loop."
+solution: |
+  package scratch
+
+  func indexOf(nums []int, target int) int {
+  	for i, n := range nums {
+  		if n == target {
+  			return i
+  		}
+  	}
+  	return -1
+  }
+explanation: |
+  When you need both the index and the value, the two-variable
+  for-range form is the cleanest:
+
+      for i, v := range slice { ... }
+
+  Early return on the match is idiomatic Go — it avoids a flag
+  variable and makes the intent obvious.
+
+  Go 1.21+ added `slices.Index(nums, target)` to the standard
+  library which does this for any comparable type via generics.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch04.html#for_range"

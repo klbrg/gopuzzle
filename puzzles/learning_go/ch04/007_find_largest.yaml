@@ -1,0 +1,66 @@
+id: "lg-ch04-007"
+title: "Largest Number in a Slice"
+concept: "loops"
+description: |
+  Implement `largest(nums)` that returns the largest value in a
+  non-empty slice. Use whichever loop form reads clearest.
+
+      largest([]int{3, 1, 4, 1, 5, 9, 2, 6}) == 9
+      largest([]int{-5})                     == -5
+      largest([]int{-1, -2, -3})             == -1
+
+  You may assume `nums` is non-empty.
+template: |
+  package scratch
+
+  func largest(nums []int) int {
+  	// TODO: track the max seen so far and return it at the end.
+  }
+test_code: |
+  package scratch
+
+  import "testing"
+
+  func TestLargest(t *testing.T) {
+  	cases := []struct {
+  		in   []int
+  		want int
+  	}{
+  		{[]int{3, 1, 4, 1, 5, 9, 2, 6}, 9},
+  		{[]int{-5}, -5},
+  		{[]int{1, 2, 3}, 3},
+  		{[]int{10, -10, 5}, 10},
+  		{[]int{-1, -2, -3}, -1},
+  		{[]int{0, 0, 0}, 0},
+  	}
+  	for _, c := range cases {
+  		if got := largest(c.in); got != c.want {
+  			t.Errorf("largest(%v) = %d, want %d", c.in, got, c.want)
+  		}
+  	}
+  }
+hint: "Start with `max := nums[0]`, range over `nums[1:]`, and bump `max` whenever you see a larger value."
+solution: |
+  package scratch
+
+  func largest(nums []int) int {
+  	max := nums[0]
+  	for _, n := range nums[1:] {
+  		if n > max {
+  			max = n
+  		}
+  	}
+  	return max
+  }
+explanation: |
+  A linear scan: start with the first element as "max so far", then
+  compare every subsequent element and update.
+
+  Starting with `nums[0]` (and ranging from `nums[1:]`) is cleaner
+  than seeding `max` with `math.MinInt`. It also handles the
+  all-negatives case correctly.
+
+  Go 1.21+ has `slices.Max(nums)` in the standard library which does
+  this for any ordered type via generics — worth knowing for real
+  code.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch04.html#id226"

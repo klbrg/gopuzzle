@@ -1,0 +1,46 @@
+id: "lg-ch04-009"
+title: "switch Cases Don't Fall Through"
+concept: "control flow"
+kind: "predict_output"
+description: |
+  Unlike C and Java, Go's `switch` does NOT fall through from one
+  case to the next. Each case is its own branch and ends at the
+  next `case` keyword. To match multiple values in one case, list
+  them comma-separated.
+
+  Predict the output.
+snippet: |
+  package main
+
+  import "fmt"
+
+  func main() {
+  	n := 2
+  	switch n {
+  	case 1, 2:
+  		fmt.Println("small")
+  	case 3, 4:
+  		fmt.Println("medium")
+  	case 5:
+  		fmt.Println("five")
+  	default:
+  		fmt.Println("other")
+  	}
+  }
+expected_output: |
+  small
+hint: "Find the case whose list contains the value of `n`. Only that case runs — Go does NOT continue into the next case."
+explanation: |
+  `n` is 2, which matches the first case `case 1, 2:`. The body
+  runs and the switch ends — Go inserts an implicit `break` at the
+  end of each case body.
+
+  Two important properties of Go's switch:
+    - **No fall-through by default.** (You can opt into the next
+      case with the `fallthrough` keyword, but it's rare and most
+      Go code never uses it.)
+    - **Multiple values per case** via comma-separated lists.
+
+  These defaults make Go's switch safer than C's. You can't
+  accidentally fall into the wrong branch by forgetting a `break`.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch04.html#switch_statement"

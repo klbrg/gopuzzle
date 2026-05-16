@@ -1,0 +1,36 @@
+id: "lg-ch04-012"
+title: "Map Iteration Order"
+concept: "loops"
+kind: "quiz"
+description: |
+  Pick the statement that's true about iterating over a map in Go
+  with `for k, v := range m { ... }`.
+question: "What's the iteration order when you for-range over a Go map?"
+choices:
+  - "Keys are visited in the order they were inserted."
+  - "Keys are visited in sorted order."
+  - "The order is randomised on each iteration."
+  - "The order is undefined but stays the same within a program run."
+answer: "The order is randomised on each iteration."
+hint: "Go deliberately randomises map iteration so you can't accidentally depend on the order."
+explanation: |
+  Go runs map iteration in a deliberately random order. This isn't
+  just "undefined" — the runtime actively shuffles the starting
+  position each time you start a new iteration.
+
+  The reason is twofold:
+    1. It prevents bugs from relying on an implementation-detail
+       order that might change between Go versions or compilers.
+    2. It defends against hash-DoS attacks where an attacker
+       crafts inputs that all hash to the same bucket.
+
+  If you need sorted iteration, collect the keys into a slice and
+  sort them first:
+
+      keys := make([]string, 0, len(m))
+      for k := range m {
+          keys = append(keys, k)
+      }
+      sort.Strings(keys)
+      for _, k := range keys { /* use m[k] */ }
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch04.html#id53"

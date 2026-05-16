@@ -1,0 +1,103 @@
+id: "lg-ch04-008"
+title: "Labeled break Out of Nested Loops"
+concept: "loops"
+description: |
+  A plain `break` inside a nested loop only exits the inner loop.
+  To break out of an outer loop too, label the outer loop and use
+  `break label`:
+
+      outer:
+          for i := range rows {
+              for j := range cols {
+                  if found(i, j) {
+                      break outer   // exits both loops
+                  }
+              }
+          }
+
+  Implement `findInGrid(grid, target)` that returns the `(row, col)`
+  of the first occurrence of `target` in row-major order. Return
+  `(-1, -1)` if `target` isn't present.
+
+      findInGrid([][]int{{1,2,3},{4,5,6}}, 5)  == (1, 1)
+      findInGrid([][]int{{1,2,3},{4,5,6}}, 99) == (-1, -1)
+      findInGrid([][]int{{1,2},{1,3}}, 1)      == (0, 0)
+template: |
+  package scratch
+
+  func findInGrid(grid [][]int, target int) (int, int) {
+  	// TODO: scan row-major. When you find target, return its
+  	// (row, col). Use a labeled outer loop and `break outer` to
+  	// exit both loops cleanly when you record the match.
+  }
+test_code: |
+  package scratch
+
+  import "testing"
+
+  func TestFindInGrid(t *testing.T) {
+  	cases := []struct {
+  		name        string
+  		grid        [][]int
+  		target      int
+  		wantR, wantC int
+  	}{
+  		{"middle", [][]int{{1, 2, 3}, {4, 5, 6}}, 5, 1, 1},
+  		{"first cell", [][]int{{5, 2}, {3, 4}}, 5, 0, 0},
+  		{"last row", [][]int{{1, 2}, {3, 4}, {5, 6}}, 6, 2, 1},
+  		{"not found", [][]int{{1, 2}, {3, 4}}, 99, -1, -1},
+  		{"empty grid", [][]int{}, 1, -1, -1},
+  		{"empty inner row", [][]int{{}, {1, 2}}, 1, 1, 0},
+  		{"first of duplicates", [][]int{{1, 2}, {1, 2}}, 1, 0, 0},
+  		{"single cell match", [][]int{{42}}, 42, 0, 0},
+  	}
+  	for _, c := range cases {
+  		gotR, gotC := findInGrid(c.grid, c.target)
+  		if gotR != c.wantR || gotC != c.wantC {
+  			t.Errorf("%s: findInGrid(...) = (%d, %d), want (%d, %d)",
+  				c.name, gotR, gotC, c.wantR, c.wantC)
+  		}
+  	}
+  }
+hint: "Declare `row, col := -1, -1` before the loop. Label the outer loop `outer:`. Inside, when `v == target`, set `row, col = i, j` and `break outer`. Return `(row, col)` after the loops."
+solution: |
+  package scratch
+
+  func findInGrid(grid [][]int, target int) (int, int) {
+  	row, col := -1, -1
+  outer:
+  	for i, r := range grid {
+  		for j, v := range r {
+  			if v == target {
+  				row, col = i, j
+  				break outer
+  			}
+  		}
+  	}
+  	return row, col
+  }
+explanation: |
+  A label is just a name followed by `:` placed before a `for`,
+  `switch`, or `select`. Inside the labeled loop, `break label` and
+  `continue label` apply to that specific outer construct, not the
+  innermost one.
+
+  The labeled-break form is genuinely useful for searches over
+  nested structures where you also want to do work after the loops.
+
+  If all you need to do is return the position, an early return is
+  even cleaner — no label needed:
+
+      for i, r := range grid {
+          for j, v := range r {
+              if v == target {
+                  return i, j
+              }
+          }
+      }
+      return -1, -1
+
+  Both are idiomatic Go. The chapter says: use labels when you need
+  to exit nested loops *and* keep going; reach for an early return
+  when you don't.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch04.html#id55"

@@ -1,0 +1,33 @@
+id: "lg-ch04-002"
+title: "if with a Scoped Variable"
+concept: "control flow"
+kind: "quiz"
+description: |
+  Go's `if` lets you declare a variable as part of the condition,
+  using the form `if x := expr(); condition { ... }`. This is the
+  most common pattern in Go for handling errors:
+
+      if err := doSomething(); err != nil {
+          return err
+      }
+
+  Where is that `err` visible?
+question: "In `if err := doSomething(); err != nil { A } else { B }`, in which scopes is `err` accessible?"
+choices:
+  - "only inside the if block (A)"
+  - "the if block and the else block (A and B)"
+  - "the if block, the else block, and the surrounding function"
+  - "the entire program — variables declared in if persist forever"
+answer: "the if block and the else block (A and B)"
+hint: "The whole point of declaring err in the if header is to keep it OUT of the surrounding scope."
+explanation: |
+  A variable declared with `if x := ...; cond { ... }` is scoped to
+  the condition expression, the if block, and any else / else-if
+  blocks attached to it. Once those blocks end, the variable goes
+  out of scope.
+
+  This narrow scoping is the feature. It lets you write many
+  consecutive `if err := ...` statements without each one polluting
+  the surrounding function with a stale `err`. It also encourages
+  the "check and return immediately" pattern that pervades Go.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch04.html#id47"

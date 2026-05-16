@@ -1,0 +1,39 @@
+id: "lg-ch04-005"
+title: "continue Skips the Rest of an Iteration"
+concept: "loops"
+kind: "predict_output"
+description: |
+  `continue` inside a loop skips the rest of the current iteration
+  and jumps to the loop's condition (or to the next range element).
+  Idiomatic Go uses `continue` to flatten nested if/else chains.
+
+  Predict the output.
+snippet: |
+  package main
+
+  import "fmt"
+
+  func main() {
+  	sum := 0
+  	for i := 1; i <= 5; i++ {
+  		if i%2 == 0 {
+  			continue
+  		}
+  		sum += i
+  	}
+  	fmt.Println(sum)
+  }
+expected_output: |
+  9
+hint: "Sum only the values of i for which `i % 2 == 0` is false — i.e. the odd numbers between 1 and 5."
+explanation: |
+  The loop runs i = 1..5. When i is even (2, 4), `continue` skips
+  the `sum += i` line and jumps to the next iteration. Only the odd
+  values get added: 1 + 3 + 5 = 9.
+
+  `continue` and `break` are the two ways to control a loop from
+  inside its body. `break` exits the loop entirely; `continue` jumps
+  to the next iteration. The chapter recommends using them (and
+  early returns) to keep loop bodies flat instead of building deep
+  if/else nests.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch04.html#id51"

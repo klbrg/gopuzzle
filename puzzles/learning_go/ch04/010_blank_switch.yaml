@@ -1,0 +1,73 @@
+id: "lg-ch04-010"
+title: "Blank Switch"
+concept: "control flow"
+description: |
+  A `switch` without an expression after the keyword treats each
+  case as a boolean condition. This is the idiomatic Go shape when
+  you have several mutually exclusive conditions to check — it
+  reads more cleanly than a long `if / else if` chain.
+
+  Implement `classify(n)` that returns:
+
+      "negative"  if n < 0
+      "zero"      if n == 0
+      "small"     if 1 <= n <= 9
+      "large"     if n >= 10
+template: |
+  package scratch
+
+  func classify(n int) string {
+  	// TODO: use a blank switch (`switch { case cond: ... }`) to
+  	// pick the right label.
+  }
+test_code: |
+  package scratch
+
+  import "testing"
+
+  func TestClassify(t *testing.T) {
+  	cases := []struct {
+  		in   int
+  		want string
+  	}{
+  		{-5, "negative"},
+  		{-1, "negative"},
+  		{0, "zero"},
+  		{1, "small"},
+  		{5, "small"},
+  		{9, "small"},
+  		{10, "large"},
+  		{100, "large"},
+  	}
+  	for _, c := range cases {
+  		if got := classify(c.in); got != c.want {
+  			t.Errorf("classify(%d) = %q, want %q", c.in, got, c.want)
+  		}
+  	}
+  }
+hint: "Write `switch { case n < 0: return \"negative\"; case n == 0: return \"zero\"; case n < 10: return \"small\"; default: return \"large\" }`. Each case is a boolean expression."
+solution: |
+  package scratch
+
+  func classify(n int) string {
+  	switch {
+  	case n < 0:
+  		return "negative"
+  	case n == 0:
+  		return "zero"
+  	case n < 10:
+  		return "small"
+  	default:
+  		return "large"
+  	}
+  }
+explanation: |
+  A blank `switch { ... }` is shorthand for an `if / else if` chain:
+  each case is a boolean condition, and the first one that matches
+  runs. It often reads better than the equivalent if-chain,
+  especially when each branch has the same return-or-assign shape.
+
+  Cases are evaluated top to bottom, so order matters. Since we
+  already handled `n < 0` and `n == 0` above, the `n < 10` case
+  effectively means "1..9". The `default` catches everything else.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch04.html#id58"

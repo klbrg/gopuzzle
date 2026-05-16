@@ -1,0 +1,65 @@
+id: "lg-ch04-006"
+title: "Sum a Slice"
+concept: "loops"
+description: |
+  Implement `sum(nums)` that returns the sum of all integers in the
+  slice. Use a for-range loop to iterate — that's the idiomatic
+  shape for "do something with each element."
+
+      sum([]int{1, 2, 3, 4}) == 10
+      sum([]int{})           == 0
+      sum(nil)               == 0
+template: |
+  package scratch
+
+  func sum(nums []int) int {
+  	// TODO: iterate with for-range and accumulate the total.
+  }
+test_code: |
+  package scratch
+
+  import "testing"
+
+  func TestSum(t *testing.T) {
+  	cases := []struct {
+  		in   []int
+  		want int
+  	}{
+  		{[]int{1, 2, 3, 4}, 10},
+  		{[]int{}, 0},
+  		{nil, 0},
+  		{[]int{-1, 1}, 0},
+  		{[]int{5}, 5},
+  		{[]int{10, 20, 30}, 60},
+  	}
+  	for _, c := range cases {
+  		if got := sum(c.in); got != c.want {
+  			t.Errorf("sum(%v) = %d, want %d", c.in, got, c.want)
+  		}
+  	}
+  }
+hint: "Start with `total := 0`. Range over `nums` (use `_` for the index since you don't need it) and add each value to total. Return total."
+solution: |
+  package scratch
+
+  func sum(nums []int) int {
+  	total := 0
+  	for _, n := range nums {
+  		total += n
+  	}
+  	return total
+  }
+explanation: |
+  Range gives you `(index, value)`. Here we don't care about the
+  index, so we discard it with `_`. `for _, n := range nums { ... }`
+  is the most common loop shape you'll see in Go.
+
+  Two convenient details:
+    - Ranging over a nil slice iterates zero times — no special
+      case needed for the nil input.
+    - The chapter's general advice: "favor for-range for built-in
+      compound types." This is exactly the case it has in mind.
+
+  Go 1.21+ also adds `slices` helpers (e.g. `slices.Min`, `slices.Max`)
+  but no direct sum — writing it yourself is idiomatic.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch04.html#for_range"

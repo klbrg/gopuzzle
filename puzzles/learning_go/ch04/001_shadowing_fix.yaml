@@ -1,0 +1,57 @@
+id: "lg-ch04-001"
+title: "Shadowing Bug"
+concept: "blocks"
+kind: "fix"
+description: |
+  Inside a nested block, `:=` always creates new variables in the
+  inner scope — even if a name with the same identifier already
+  exists in an outer scope. That's called *shadowing*, and it's a
+  common source of subtle bugs.
+
+  The code below tries to set `count` from inside an if block but
+  doesn't actually change the outer `count`. Fix it so the program
+  prints `3`.
+template: |
+  package main
+
+  import "fmt"
+
+  func main() {
+  	count := 0
+  	if true {
+  		// BUG: := creates a NEW count that shadows the outer one.
+  		count := 3
+  		_ = count
+  	}
+  	fmt.Println(count)
+  }
+expected_output: |
+  3
+hint: "Change `:=` to `=` on the inner line. `=` reuses the outer variable instead of declaring a new one."
+solution: |
+  package main
+
+  import "fmt"
+
+  func main() {
+  	count := 0
+  	if true {
+  		count = 3
+  	}
+  	fmt.Println(count)
+  }
+explanation: |
+  `:=` is the short declaration operator: it declares a NEW variable.
+  When you use it inside a nested block with the same name as an
+  outer variable, you create a fresh inner variable that lives only
+  for that block. The outer variable is unchanged — it's just
+  temporarily hidden.
+
+  To assign to the existing outer variable, use `=` (plain
+  assignment) instead.
+
+  This trap shows up often with `if err := foo(); err != nil { ... }`
+  patterns when you accidentally re-declare `err` in a nested block.
+  Tools like `go vet -shadow` and linters in `golangci-lint` can
+  flag shadowing if you enable them.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch04.html#shadowing"

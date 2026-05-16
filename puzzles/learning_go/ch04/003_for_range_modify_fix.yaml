@@ -1,0 +1,54 @@
+id: "lg-ch04-003"
+title: "for-range Loop Variable Is a Copy"
+concept: "loops"
+kind: "fix"
+description: |
+  In a `for _, v := range slice` loop, `v` is a COPY of the element,
+  not a reference into the slice. Modifying it doesn't modify the
+  underlying slice.
+
+  The code below tries to double each number but doesn't actually
+  change `nums`. Fix it so the program prints `[2 4 6]`.
+template: |
+  package main
+
+  import "fmt"
+
+  func main() {
+  	nums := []int{1, 2, 3}
+  	// BUG: n is a copy of nums[i], not a reference.
+  	for _, n := range nums {
+  		n *= 2
+  	}
+  	fmt.Println(nums)
+  }
+expected_output: |
+  [2 4 6]
+hint: "Loop by INDEX (`for i := range nums`) and modify `nums[i]` directly. That writes into the actual slice."
+solution: |
+  package main
+
+  import "fmt"
+
+  func main() {
+  	nums := []int{1, 2, 3}
+  	for i := range nums {
+  		nums[i] *= 2
+  	}
+  	fmt.Println(nums)
+  }
+explanation: |
+  In `for i, v := range slice`, `v` is a fresh local variable that
+  receives a copy of `slice[i]` on each iteration. Writing to `v`
+  changes that local copy, not the underlying slice.
+
+  To mutate the slice itself you have to address it by index:
+
+      for i := range nums {
+          nums[i] *= 2
+      }
+
+  The same gotcha applies to ranging over maps and arrays: the
+  value variable is always a copy. If you need to mutate, work
+  through the index or key.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch04.html#for_range_copy"

@@ -1,0 +1,33 @@
+id: "lg-ch04-014"
+title: "When to Use switch vs if-else"
+concept: "control flow"
+kind: "quiz"
+description: |
+  Go has both `if / else if` chains and `switch` (including the
+  blank-switch form). Pick the option that matches the chapter's
+  guidance for when each is the better fit.
+question: "When does the chapter recommend reaching for a switch over a chain of if/else if?"
+choices:
+  - "Always — switch is more idiomatic in every situation."
+  - "When checking one value against several specific values that are related to each other."
+  - "Only when the values are integers; otherwise use if."
+  - "Never — switch is mostly for translating C code."
+answer: "When checking one value against several specific values that are related to each other."
+hint: "The chapter's argument is about readability: switch makes the relationship between the cases explicit when they all compare against the same value."
+explanation: |
+  The chapter's guidance: prefer `switch` when you're checking one
+  value (or a set of related conditions in the blank-switch form)
+  against several alternatives. Switch makes the parallel structure
+  visually clear, the cases stand alone, and it forbids accidental
+  fall-through.
+
+  Use `if / else if` when:
+    - the conditions are unrelated to each other
+    - you need short-circuiting between conditions that affect each
+      other
+    - early returns + plain `if` would be flatter than a switch
+
+  Both `if err := ...; err != nil { ... }` (scoped variable) and the
+  blank switch exist because they optimise for different patterns;
+  reach for whichever one expresses your intent more directly.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch04.html#id228"

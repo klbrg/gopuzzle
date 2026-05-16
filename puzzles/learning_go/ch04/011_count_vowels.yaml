@@ -1,0 +1,71 @@
+id: "lg-ch04-011"
+title: "Count Vowels"
+concept: "loops"
+description: |
+  Implement `countVowels(s)` that counts how many vowels appear in
+  the string. Treat both lower- and uppercase a/e/i/o/u as vowels.
+  Use a for-range loop so each iteration gives you a rune, and a
+  switch with comma-separated cases to test for vowel-ness.
+
+      countVowels("hello")         == 2
+      countVowels("AEIOU")         == 5
+      countVowels("xyz")           == 0
+      countVowels("Go is awesome") == 6
+template: |
+  package scratch
+
+  func countVowels(s string) int {
+  	// TODO: range over s; each iteration gives you a rune.
+  	// Use a switch with comma-separated cases to bump the counter
+  	// when the rune is a vowel.
+  }
+test_code: |
+  package scratch
+
+  import "testing"
+
+  func TestCountVowels(t *testing.T) {
+  	cases := []struct {
+  		in   string
+  		want int
+  	}{
+  		{"", 0},
+  		{"xyz", 0},
+  		{"hello", 2},
+  		{"AEIOU", 5},
+  		{"Go is awesome", 6},
+  		{"PROGRAMMING", 3},
+  	}
+  	for _, c := range cases {
+  		if got := countVowels(c.in); got != c.want {
+  			t.Errorf("countVowels(%q) = %d, want %d", c.in, got, c.want)
+  		}
+  	}
+  }
+hint: "`switch r { case 'a', 'e', 'i', 'o', 'u', 'A', 'E', 'I', 'O', 'U': count++ }` — one case listing all ten rune literals."
+solution: |
+  package scratch
+
+  func countVowels(s string) int {
+  	count := 0
+  	for _, r := range s {
+  		switch r {
+  		case 'a', 'e', 'i', 'o', 'u', 'A', 'E', 'I', 'O', 'U':
+  			count++
+  		}
+  	}
+  	return count
+  }
+explanation: |
+  This puzzle combines two Ch04 ideas: for-range gives you each rune
+  in the string (decoding UTF-8 along the way), and `switch` with a
+  comma-separated case matches any of several values cleanly.
+
+  Other ways to write the same check:
+    - `if r == 'a' || r == 'e' || ... { count++ }` — verbose
+    - `strings.ContainsRune("aeiouAEIOU", r)` — relies on stdlib
+    - `unicode.ToLower(r)` then a single 5-case switch
+
+  Switch is what Go style guides typically recommend when you have
+  a fixed, finite set of equal-value matches.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch04.html#for_range"
