@@ -11,7 +11,7 @@ choices:
   - 'delete(m, "a")'
   - 'm["a"] = nil'
   - 'm.Remove("a")'
-  - 'm["a"]--'
+  - 'm["a"] = 0'
 answer: 'delete(m, "a")'
 hint: "`delete` is a built-in function. It takes the map and the key, and silently does nothing if the key isn't present."
 explanation: |
@@ -20,12 +20,13 @@ explanation: |
   does nothing — no error).
 
   Why these don't work:
-    m["a"] = nil   — nil isn't the zero value for int, this is a
-                     compile error. For `map[string]any` it would
-                     "delete" the value in a sense, but the key
-                     would still be in the map.
-    m.Remove("a")  — maps have no methods.
-    m["a"]--       — this just sets m["a"] to its current value
-                     minus one (and brings it into the map if it
-                     wasn't there).
+    m["a"] = nil   — nil isn't a valid int value, compile error.
+                     Even for `map[string]any` it would just set
+                     the VALUE to nil; the KEY would still be in
+                     the map and `len(m)` unchanged.
+    m.Remove("a")  — maps have no methods. Java/C# habit.
+    m["a"] = 0     — sets the value to 0, which is the zero value
+                     for int. But the key is still present:
+                     `_, ok := m["a"]` would say `true`, and
+                     `len(m)` is unchanged.
 reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html#id41"

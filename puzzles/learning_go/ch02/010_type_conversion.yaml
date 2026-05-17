@@ -18,13 +18,13 @@ template: |
   func main() {
   	var x int = 10
   	var y float64 = 30.5
-  	// TODO: fix this line — int can't be added to float64 without converting.
+  	// TODO
   	var sum float64 = x + y
   	fmt.Println(sum)
   }
 expected_output: |
   40.5
-hint: "Wrap x in float64(...) so both operands are the same type before the +."
+hint: "The compile error tells you the types don't match. Go won't auto-promote — you have to spell the conversion. Which direction (int → float64, or float64 → int) doesn't lose information?"
 solution: |
   package main
 

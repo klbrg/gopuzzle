@@ -17,13 +17,13 @@ description: |
       secondsToHMS(3661)  == (1, 1, 1)
       secondsToHMS(86399) == (23, 59, 59)
 template: |
-  package scratch
+  package puzzle
 
   func secondsToHMS(total int) (int, int, int) {
-  	// TODO: return total split into hours, minutes, and seconds.
+  	// TODO
   }
 test_code: |
-  package scratch
+  package puzzle
 
   import "testing"
 
@@ -51,9 +51,9 @@ test_code: |
   		}
   	}
   }
-hint: "Hours come from `total / 3600`. After that, the remaining seconds are `total % 3600`; divide those by 60 to get minutes. The seconds part is whatever's left after dividing by 60: `total % 60`."
+hint: "Two operators do all the work here: one for 'how many of these chunks fit', and one for 'what's left over'. You'll need both, applied at two different scales (3600 and 60)."
 solution: |
-  package scratch
+  package puzzle
 
   func secondsToHMS(total int) (int, int, int) {
   	h := total / 3600

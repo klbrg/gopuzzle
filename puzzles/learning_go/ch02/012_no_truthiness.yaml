@@ -17,7 +17,7 @@ template: |
 
   func main() {
   	count := 5
-  	// TODO: fix the condition — Go has no truthiness.
+  	// TODO
   	if count {
   		fmt.Println("non-zero")
   	} else {
@@ -26,7 +26,7 @@ template: |
   }
 expected_output: |
   non-zero
-hint: "Compare count to 0 with `!=`. Comparison operators are how you build a bool."
+hint: "The compile error tells you what `if` actually wants. How would you produce that type FROM an int? (Go's rule: no implicit conversion to bool.)"
 solution: |
   package main
 

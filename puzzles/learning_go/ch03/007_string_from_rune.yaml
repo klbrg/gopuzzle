@@ -14,10 +14,10 @@ snippet: |
   func main() {
   	n := 65
   	s := string(n)
-  	fmt.Println(len(s), s == "65")
+  	fmt.Println(len(s))
   }
 expected_output: |
-  1 false
+  1
 hint: "`string(intValue)` doesn't return the digit text. It returns something else — figure out what, and the length and comparison fall out from that."
 explanation: |
   `string(intValue)` interprets the integer as a Unicode code point

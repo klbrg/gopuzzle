@@ -3,12 +3,8 @@ title: "switch Cases Don't Fall Through"
 concept: "control flow"
 kind: "predict_output"
 description: |
-  Unlike C and Java, Go's `switch` does NOT fall through from one
-  case to the next. Each case is its own branch and ends at the
-  next `case` keyword. To match multiple values in one case, list
-  them comma-separated.
-
-  Predict the output.
+  Predict the output. Trace through carefully — Go's `switch` may
+  not behave the way C, C++, or Java programmers expect.
 snippet: |
   package main
 
@@ -29,7 +25,7 @@ snippet: |
   }
 expected_output: |
   small
-hint: "Find the case whose list contains the value of `n`. Only that case runs — Go does NOT continue into the next case."
+hint: "If you came from C/Java/JS, your gut might predict multiple lines (one per case after the match). Does Go's switch ACTUALLY fall through?"
 explanation: |
   `n` is 2, which matches the first case `case 1, 2:`. The body
   runs and the switch ends — Go inserts an implicit `break` at the

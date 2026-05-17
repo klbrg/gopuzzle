@@ -2,6 +2,7 @@ package puzzle
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -74,7 +75,11 @@ func DisplaySource(source string) string {
 	case "learning_go":
 		return "Learning Go, 2nd Edition"
 	case "effective_python":
-		return "Effective Python, 3rd Edition"
+		return "Effective Python: 125 Specific Ways to Write Better Python, 3rd Edition"
+	case "100_go_mistakes":
+		return "100 Go Mistakes and How to Avoid Them"
+	case "gobyexample":
+		return "Go by Example"
 	}
 	return source
 }
@@ -97,17 +102,28 @@ func inferLang(source string) string {
 	}
 }
 
+// LoadAll walks the filesystem directory at Dir for puzzle YAMLs.
+// Preserved for tests and for backward compatibility; main.go uses
+// LoadAllFS so it can read from an embedded fs.FS or from a runtime
+// override directory.
 func LoadAll() ([]*Puzzle, error) {
+	return LoadAllFS(os.DirFS(Dir))
+}
+
+// LoadAllFS walks any fs.FS rooted at the puzzles tree (puzzles
+// directly under root, no "puzzles/" prefix). Works for embed.FS via
+// fs.Sub and for filesystem paths via os.DirFS.
+func LoadAllFS(root fs.FS) ([]*Puzzle, error) {
 	var puzzles []*Puzzle
 
-	err := filepath.WalkDir(Dir, func(path string, d os.DirEntry, err error) error {
+	err := fs.WalkDir(root, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 		if d.IsDir() || filepath.Ext(path) != ".yaml" {
 			return nil
 		}
-		data, err := os.ReadFile(path)
+		data, err := fs.ReadFile(root, path)
 		if err != nil {
 			return fmt.Errorf("reading %s: %w", path, err)
 		}
@@ -115,8 +131,8 @@ func LoadAll() ([]*Puzzle, error) {
 		if err := yaml.Unmarshal(data, &p); err != nil {
 			return fmt.Errorf("parsing %s: %w", path, err)
 		}
-		rel, _ := filepath.Rel(Dir, path)
-		p.Dir = filepath.Dir(rel)
+		// fs.FS paths use forward slashes; convert to native for Dir.
+		p.Dir = filepath.Dir(filepath.FromSlash(path))
 		parts := strings.SplitN(p.Dir, string(filepath.Separator), 2)
 		p.Source = parts[0]
 		if len(parts) > 1 {

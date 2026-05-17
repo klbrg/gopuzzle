@@ -1,66 +1,99 @@
 id: "lg-ch04-007"
-title: "Largest Number in a Slice"
+title: "Second Largest"
 concept: "loops"
 description: |
-  Implement `largest(nums)` that returns the largest value in a
-  non-empty slice. Use whichever loop form reads clearest.
+  `slices.Max(nums)` gives you the maximum element. What about
+  the SECOND largest? You can't just sort and pick index -2 —
+  that's O(n log n) when O(n) is enough — and the off-by-one
+  traps around duplicates and small slices are real.
 
-      largest([]int{3, 1, 4, 1, 5, 9, 2, 6}) == 9
-      largest([]int{-5})                     == -5
-      largest([]int{-1, -2, -3})             == -1
+  Implement `secondLargest(nums)` that returns the second-largest
+  element in the slice. Duplicates of the maximum count toward
+  "second" — i.e. if the sorted-descending order is `[9, 9, 6, 2]`,
+  the second largest is `9`.
 
-  You may assume `nums` is non-empty.
+  You may assume `len(nums) >= 2`.
+
+      secondLargest([]int{3, 1, 4, 1, 5, 9, 2, 6})  == 6
+      secondLargest([]int{9, 9, 6})                  == 9
+      secondLargest([]int{1, 2})                     == 1
+      secondLargest([]int{-5, -10, -3})              == -5
+      secondLargest([]int{5, 5})                     == 5
 template: |
-  package scratch
+  package puzzle
 
-  func largest(nums []int) int {
-  	// TODO: track the max seen so far and return it at the end.
+  import "math"
+
+  func secondLargest(nums []int) int {
+  	// TODO
+  	_ = math.MinInt
+  	return 0
   }
 test_code: |
-  package scratch
+  package puzzle
 
   import "testing"
 
-  func TestLargest(t *testing.T) {
+  func TestSecondLargest(t *testing.T) {
   	cases := []struct {
+  		name string
   		in   []int
   		want int
   	}{
-  		{[]int{3, 1, 4, 1, 5, 9, 2, 6}, 9},
-  		{[]int{-5}, -5},
-  		{[]int{1, 2, 3}, 3},
-  		{[]int{10, -10, 5}, 10},
-  		{[]int{-1, -2, -3}, -1},
-  		{[]int{0, 0, 0}, 0},
+  		{"classic", []int{3, 1, 4, 1, 5, 9, 2, 6}, 6},
+  		{"duplicates of max count", []int{9, 9, 6}, 9},
+  		{"all duplicates", []int{5, 5}, 5},
+  		{"length 2 ascending", []int{1, 2}, 1},
+  		{"length 2 descending", []int{2, 1}, 1},
+  		{"length 2 equal", []int{7, 7}, 7},
+  		{"all negatives", []int{-5, -10, -3}, -5},
+  		{"max appears last", []int{1, 2, 3}, 2},
+  		{"max appears first", []int{10, 1, 2}, 2},
+  		{"large slice", []int{4, 4, 4, 4, 5}, 4},
   	}
   	for _, c := range cases {
-  		if got := largest(c.in); got != c.want {
-  			t.Errorf("largest(%v) = %d, want %d", c.in, got, c.want)
+  		if got := secondLargest(c.in); got != c.want {
+  			t.Errorf("%s: secondLargest(%v) = %d, want %d", c.name, c.in, got, c.want)
   		}
   	}
   }
-hint: "Start with `max := nums[0]`, range over `nums[1:]`, and bump `max` whenever you see a larger value."
+hint: "Track TWO running values: `first` (best so far) and `second` (best so far that isn't strictly bigger than first). Seed both with `math.MinInt` so any real number replaces them. On each new element decide: does it dethrone `first`, replace `second`, or get ignored?"
 solution: |
-  package scratch
+  package puzzle
 
-  func largest(nums []int) int {
-  	max := nums[0]
-  	for _, n := range nums[1:] {
-  		if n > max {
-  			max = n
+  import "math"
+
+  func secondLargest(nums []int) int {
+  	first, second := math.MinInt, math.MinInt
+  	for _, n := range nums {
+  		if n > first {
+  			second = first
+  			first = n
+  		} else if n > second {
+  			second = n
   		}
   	}
-  	return max
+  	return second
   }
 explanation: |
-  A linear scan: start with the first element as "max so far", then
-  compare every subsequent element and update.
+  The trick is the SEED. If you start `first, second := nums[0], nums[0]`,
+  the case `[2, 1]` breaks: `first=2, second=2`, then `n=1` doesn't
+  beat either, so `second` stays at the bogus seed value `2`.
+  Returns `2`, want `1`.
 
-  Starting with `nums[0]` (and ranging from `nums[1:]`) is cleaner
-  than seeding `max` with `math.MinInt`. It also handles the
-  all-negatives case correctly.
+  Seeding both with `math.MinInt` lets the first iteration genuinely
+  populate `first`, and the second iteration populate `second`
+  (because any real number > `MinInt`). Duplicates of `first` slot
+  into `second` correctly:
 
-  Go 1.21+ has `slices.Max(nums)` in the standard library which does
-  this for any ordered type via generics — worth knowing for real
-  code.
+      [9, 9, 6]   → first=9, second=MinInt; then second=9 (the
+                    second 9 dethrones MinInt); then 6 < 9
+                    twice, no change                → return 9
+      [5, 5]      → first=5, second=MinInt; then second=5  → return 5
+      [2, 1]      → first=2, second=MinInt; then second=1  → return 1
+
+  This is a one-pass O(n) algorithm with two integers of state.
+  Compare to sort-and-pick which is O(n log n) and allocates a
+  copy of the slice. For "top K" generalisations, look at
+  `container/heap` for a min-heap of size K.
 reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch04.html#id226"

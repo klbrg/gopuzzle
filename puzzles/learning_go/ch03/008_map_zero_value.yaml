@@ -3,12 +3,8 @@ title: "Map: Zero Value for Missing Keys"
 concept: "maps"
 kind: "predict_output"
 description: |
-  Reading a key that isn't in a map returns the zero value of the
-  value type — no error, no panic, no special case. This is the
-  foundation of the "counter map" idiom: `m[key]++` works even when
-  the key isn't there yet.
-
-  Predict the output.
+  Predict the output. The map starts with one entry. The script
+  reads three keys; only one of them was explicitly set.
 snippet: |
   package main
 
@@ -17,11 +13,11 @@ snippet: |
   func main() {
   	m := map[string]int{"x": 1}
   	m["y"]++
-  	fmt.Println(m["x"], m["y"], m["missing"])
+  	fmt.Println(m["missing"])
   }
 expected_output: |
-  1 1 0
-hint: "Reading an absent key gives the int zero value. `++` reads (gets 0) then writes (1)."
+  0
+hint: "Two of the three reads are for keys that aren't in the map. Does that panic, return some sentinel, or something else? Trace `m[\"y\"]++` carefully — it reads, then writes."
 explanation: |
   Maps return the zero value for any missing key. For `int`, that's
   0; for `bool`, false; for `string`, the empty string; for a slice

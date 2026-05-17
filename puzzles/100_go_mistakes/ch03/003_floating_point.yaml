@@ -1,0 +1,50 @@
+id: "gm-ch03-003"
+title: "Mistake #19: Floating-Point Arithmetic"
+concept: "floats"
+kind: "predict_output"
+description: |
+  Mistake #19 from the book. Predict the output. (Note: the values
+  are stored in variables first; see the explanation for why that
+  detail matters in Go specifically.)
+snippet: |
+  package main
+
+  import "fmt"
+
+  func main() {
+      a := 0.1
+      b := 0.2
+      fmt.Println(a + b)
+  }
+expected_output: |
+  0.30000000000000004
+hint: "If your gut answer is 0.3, the answer involves more digits. `float64` is base-2, but 0.1 and 0.2 in decimal aren't clean in base-2."
+explanation: |
+  In IEEE 754 binary floating point, 0.1 is actually stored as
+  approximately 0.1000000000000000055511151231257827021181583404541015625.
+  Same story for 0.2. Their sum is slightly off from the exact
+  0.3, and `fmt.Println` reveals it.
+
+  Go-specific catch: if you write `fmt.Println(0.1 + 0.2)` with
+  literal operands, Go computes `0.1 + 0.2` at COMPILE TIME using
+  untyped constants with arbitrary precision — the result is
+  exactly 0.3, which then converts to a float64 once. To see the
+  runtime float64 gotcha, you must store the operands in variables
+  (typed float64) and let arithmetic happen at runtime.
+
+  This is also why `==` on floats is almost always a bug at
+  runtime:
+
+      a, b := 0.1, 0.2
+      if a + b == 0.3 { ... }  // false — never enters the block
+
+  Recommended approaches from the book:
+    - Compare with a tolerance: `math.Abs(a - b) < epsilon`
+    - For monetary calculations, store amounts in integer cents
+    - For arbitrary-precision decimal math, use a library like
+      `shopspring/decimal`
+
+  Order of operations also matters for floats: `(a + b) + c` can
+  differ from `a + (b + c)` due to rounding. Reduce error by
+  summing similarly-sized values together first.
+reference: "https://learning.oreilly.com/library/view/100-go-mistakes/9781617299599/OEBPS/Text/03.htm#heading_id_9"

@@ -35,6 +35,18 @@ func filePath() (string, error) {
 	return filepath.Join(dir, "progress.json"), nil
 }
 
+// LoadSolution returns the last saved solution bytes for the given
+// puzzle (path under ~/.gopuzzle/solutions/<puzzleDir>/<stem>.go).
+// Returns an error if the file doesn't exist or can't be read —
+// callers should treat that as "no saved solution, fall back".
+func LoadSolution(puzzleDir, stem string) ([]byte, error) {
+	base, err := gopuzzleDir()
+	if err != nil {
+		return nil, err
+	}
+	return os.ReadFile(filepath.Join(base, "solutions", puzzleDir, stem+".go"))
+}
+
 // SaveSolution writes the passing solution to ~/.gopuzzle/solutions/<dir>/<stem>.go
 // and commits it to a git repo in the solutions directory.
 func SaveSolution(puzzleID, title, puzzleDir, stem, code string) error {
@@ -127,7 +139,41 @@ func (p *Progress) Save() error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, data, 0644)
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		return err
+	}
+	// Snapshot into the solutions git repo so progress is recoverable
+	// from history even if progress.json is wiped. Best-effort: errors
+	// are ignored (the file is already saved).
+	p.snapshotIntoSolutionsRepo(data)
+	return nil
+}
+
+// snapshotIntoSolutionsRepo copies progress.json into the auto-managed
+// solutions/ git repo and commits it (if the repo exists and the file
+// actually changed). Silent — failures don't propagate, since saving
+// progress.json itself already succeeded by the time we get here.
+func (p *Progress) snapshotIntoSolutionsRepo(data []byte) {
+	base, err := gopuzzleDir()
+	if err != nil {
+		return
+	}
+	solutionsDir := filepath.Join(base, "solutions")
+	if _, err := os.Stat(filepath.Join(solutionsDir, ".git")); err != nil {
+		// No solutions repo yet — it's created on first successful
+		// code/fix solve. Skip silently.
+		return
+	}
+	dst := filepath.Join(solutionsDir, "progress.json")
+	if err := os.WriteFile(dst, data, 0644); err != nil {
+		return
+	}
+	if err := git(solutionsDir, "add", "progress.json"); err != nil {
+		return
+	}
+	// `git commit` errors if nothing staged actually changed; that's
+	// fine — there was no progress to snapshot.
+	_ = git(solutionsDir, "commit", "-m", fmt.Sprintf("chore(progress): %d solved", p.TotalSolved))
 }
 
 func (p *Progress) RecordAttempt(puzzleID string, solved bool) {
@@ -135,12 +181,6 @@ func (p *Progress) RecordAttempt(puzzleID string, solved bool) {
 		p.TotalSolved++
 		p.Solved[puzzleID] = true
 	}
-}
-
-// Reset wipes all solved state. TotalSolved goes back to 0.
-func (p *Progress) Reset() {
-	p.Solved = make(map[string]bool)
-	p.TotalSolved = 0
 }
 
 // ToggleSolved flips a puzzle's solved status and returns the new state.

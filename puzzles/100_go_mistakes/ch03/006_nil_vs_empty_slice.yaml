@@ -1,0 +1,37 @@
+id: "gm-ch03-006"
+title: "Mistake #22: Nil vs Empty Slice"
+concept: "slices"
+kind: "quiz"
+description: |
+  Mistake #22 from the book. Go distinguishes a `nil` slice from
+  an empty (length 0) slice. Both have `len() == 0`, both can be
+  ranged over without panic, and both can be `append`-ed to. But
+  `s == nil` is true for only one of them.
+
+  Pick the declaration that produces a nil slice.
+question: "Which declaration produces a slice s for which `s == nil` is true?"
+choices:
+  - "var s []int"
+  - "s := []int{}"
+  - "s := make([]int, 0)"
+  - "s := make([]int, 0, 5)"
+answer: "var s []int"
+hint: "Three of these four forms call `make` or use a literal that allocates a slice header. The fourth is just a type declaration with no initialiser."
+explanation: |
+  - `var s []int` — zero value, nil slice. `s == nil` → true.
+  - `s := []int{}` — empty literal, allocates a slice header. Not nil.
+  - `s := make([]int, 0)` — same as above with capacity 0. Not nil.
+  - `s := make([]int, 0, 5)` — same idea with backing array. Not nil.
+
+  When does the distinction matter?
+
+  - **JSON encoding** marshals nil slice to `null` but empty slice
+    to `[]`. Often a difference your API consumers care about.
+  - **Reflection / equality** — `s == nil` only matches the first form.
+  - Most other operations (`len`, `cap`, `range`, `append`) behave
+    identically on nil and empty slices, so most code doesn't care.
+
+  Idiomatic guidance: return `nil` (not `[]int{}`) when you have
+  nothing to return. It's the zero value and avoids unnecessary
+  allocation.
+reference: "https://learning.oreilly.com/library/view/100-go-mistakes/9781617299599/OEBPS/Text/03.htm#heading_id_12"

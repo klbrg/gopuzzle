@@ -3,10 +3,6 @@ title: "for-range Over a UTF-8 String"
 concept: "loops"
 kind: "predict_output"
 description: |
-  When you `range` over a string, Go decodes the UTF-8 bytes into
-  runes — so the iteration count is the number of CODE POINTS, not
-  bytes. `len(s)` still returns the byte count.
-
   Predict the output. For reference, the character `é` takes 2 bytes
   in UTF-8; plain ASCII letters take 1 byte each.
 snippet: |
@@ -20,11 +16,11 @@ snippet: |
   	for range s {
   		count++
   	}
-  	fmt.Println(count, len(s))
+  	fmt.Println(count)
   }
 expected_output: |
-  5 6
-hint: "Count the visible characters of 'héllo' first (that's the rune count). Then count the bytes — only `é` is multi-byte."
+  5
+hint: "`count` and `len(s)` are different things — only one of them would equal the number of visible characters. Trace what `range s` actually emits."
 explanation: |
   `for range s` iterates once per Unicode code point, decoding UTF-8
   as it goes. "héllo" is 5 runes (h, é, l, l, o) so the counter

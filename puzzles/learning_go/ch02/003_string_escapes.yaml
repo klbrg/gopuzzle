@@ -1,30 +1,27 @@
 id: "lg-ch02-003"
 title: "Interpreted String Escapes"
 concept: "types"
-kind: "predict_output"
+kind: "quiz"
 description: |
-  Interpreted string literals use double quotes and process backslash
-  escapes. Inside one, `\\` means a literal backslash and `\"` means
-  a literal double quote.
-
-  Predict the output.
-snippet: |
-  package main
-
-  import "fmt"
-
-  func main() {
-  	fmt.Print("a \"b\" c\\d")
-  }
-expected_output: |
-  a "b" c\d
-hint: "Each backslash-escape turns into one character: `\\\"` produces `\"`, `\\\\` produces `\\`."
+  The script below uses a double-quoted (interpreted) string
+  literal with backslash escapes. Which line does it print?
+question: 'What does `fmt.Print("a \"b\" c\\d")` print?'
+choices:
+  - 'a \"b\" c\\d'
+  - 'a "b" c\d'
+  - 'a b c d'
+  - 'compile error — backslash and double quote aren''t valid inside double quotes'
+answer: 'a "b" c\d'
+hint: "Each `\\X` in the source produces ONE character in the output. Count source backslash-escapes vs printed characters."
 explanation: |
   Inside double-quoted strings, the most common backslash escapes:
     \n   newline
     \t   tab
     \\   literal backslash
     \"   literal double quote
+
+  So `"a \"b\" c\\d"` produces `a "b" c\d` (six printable
+  characters plus the spaces).
 
   Compare with raw string literals (backticks), which include every
   character between the backticks verbatim — no escape processing.

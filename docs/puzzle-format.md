@@ -76,13 +76,13 @@ description: |
   Implement sum(nums) that returns the sum of all integers in the
   slice. Use a for-range loop to iterate.
 template: |
-  package scratch
+  package puzzle
 
   func sum(nums []int) int {
   	// TODO: iterate with for-range and accumulate the total.
   }
 test_code: |
-  package scratch
+  package puzzle
 
   import "testing"
 
@@ -92,7 +92,7 @@ test_code: |
   	}
   }
 solution: |
-  package scratch
+  package puzzle
 
   func sum(nums []int) int {
   	total := 0

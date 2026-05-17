@@ -1,0 +1,39 @@
+id: "gm-ch03-002"
+title: "Mistake #18: Integer Overflow"
+concept: "integers"
+kind: "predict_output"
+description: |
+  Mistake #18 from the book. Predict the output. `math.MaxInt32`
+  is the largest value an `int32` can hold.
+snippet: |
+  package main
+
+  import (
+      "fmt"
+      "math"
+  )
+
+  func main() {
+      var x int32 = math.MaxInt32
+      x++
+      fmt.Println(x)
+  }
+expected_output: |
+  -2147483648
+hint: "Go integers have FIXED bit widths. What happens to int32 arithmetic that produces a result outside the type's range? (No panic, no error — what then?)"
+explanation: |
+  `int32` ranges from -2^31 to 2^31 - 1. Adding 1 to the maximum
+  wraps to the minimum: -2147483648.
+
+  Go does not insert overflow checks — the runtime is fast but
+  silent. The mistakes-book recommendation: use the `math/big`
+  package when you need arbitrary precision, or explicitly check
+  bounds before arithmetic when a quantity could plausibly approach
+  type limits:
+
+      // Adding two int32 values safely.
+      if a > 0 && b > math.MaxInt32 - a { return errOverflow }
+
+  The standard library provides `math.MaxInt32`, `math.MaxInt64`,
+  etc. for the bounds checks.
+reference: "https://learning.oreilly.com/library/view/100-go-mistakes/9781617299599/OEBPS/Text/03.htm#heading_id_4"

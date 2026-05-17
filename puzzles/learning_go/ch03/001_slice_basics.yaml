@@ -3,11 +3,8 @@ title: "Slice Basics: nil and len"
 concept: "slices"
 kind: "predict_output"
 description: |
-  A slice declared with `var` but never assigned is the slice zero value:
-  `nil`. A `nil` slice has length 0 and compares equal to `nil`. You can
-  still read its length safely (and even append to it).
-
-  Predict the output.
+  Predict the output. The slice `s` is declared with `var` but never
+  assigned — what's its initial state?
 snippet: |
   package main
 
@@ -15,11 +12,11 @@ snippet: |
 
   func main() {
   	var s []int
-  	fmt.Println(s == nil, len(s))
+  	fmt.Println(len(s))
   }
 expected_output: |
-  true 0
-hint: "Both conditions hold for a nil slice — it equals nil, and len(nil) is defined to be 0."
+  0
+hint: "What's the zero value of a slice type? And does calling `len()` on that zero value panic, or does it have a defined answer?"
 explanation: |
   The zero value for a slice is `nil`, distinct from an empty slice
   literal `[]int{}`. A nil slice has no backing array, no length, and

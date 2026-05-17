@@ -12,15 +12,13 @@ description: |
       countVowels("xyz")           == 0
       countVowels("Go is awesome") == 6
 template: |
-  package scratch
+  package puzzle
 
   func countVowels(s string) int {
-  	// TODO: range over s; each iteration gives you a rune.
-  	// Use a switch with comma-separated cases to bump the counter
-  	// when the rune is a vowel.
+  	// TODO
   }
 test_code: |
-  package scratch
+  package puzzle
 
   import "testing"
 
@@ -42,9 +40,9 @@ test_code: |
   		}
   	}
   }
-hint: "`switch r { case 'a', 'e', 'i', 'o', 'u', 'A', 'E', 'I', 'O', 'U': count++ }` — one case listing all ten rune literals."
+hint: "Go's `switch` cases can list multiple match values separated by commas — perfect when you have a fixed set of equal-value checks. Treat each upper- and lowercase letter as a separate literal."
 solution: |
-  package scratch
+  package puzzle
 
   func countVowels(s string) int {
   	count := 0

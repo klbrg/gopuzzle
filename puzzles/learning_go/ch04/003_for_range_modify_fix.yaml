@@ -3,12 +3,8 @@ title: "for-range Loop Variable Is a Copy"
 concept: "loops"
 kind: "fix"
 description: |
-  In a `for _, v := range slice` loop, `v` is a COPY of the element,
-  not a reference into the slice. Modifying it doesn't modify the
-  underlying slice.
-
-  The code below tries to double each number but doesn't actually
-  change `nums`. Fix it so the program prints `[2 4 6]`.
+  The code below tries to double each element of `nums`. Run it
+  as-is — the print doesn't match `[2 4 6]`. Fix it.
 template: |
   package main
 
@@ -16,7 +12,7 @@ template: |
 
   func main() {
   	nums := []int{1, 2, 3}
-  	// BUG: n is a copy of nums[i], not a reference.
+  	// BUG
   	for _, n := range nums {
   		n *= 2
   	}
@@ -24,7 +20,7 @@ template: |
   }
 expected_output: |
   [2 4 6]
-hint: "Loop by INDEX (`for i := range nums`) and modify `nums[i]` directly. That writes into the actual slice."
+hint: "Add `fmt.Println(nums)` BEFORE the loop and AFTER to see what changed. Is `n` actually the same memory as `nums[i]`?"
 solution: |
   package main
 

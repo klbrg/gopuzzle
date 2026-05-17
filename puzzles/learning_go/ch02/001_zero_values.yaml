@@ -11,11 +11,11 @@ description: |
 question: "Which row lists the correct zero values for bool, int, string, and pointer?"
 choices:
   - 'false, 0, "", nil'
-  - 'true, 0, "", nil'
-  - 'false, 0, "empty", null'
-  - '0, 0, 0, nil'
+  - 'false, 0, nil, nil'
+  - 'false, 0, "", 0'
+  - '0, 0, "", nil'
 answer: 'false, 0, "", nil'
-hint: "Bool defaults to its falsy keyword, all numeric types share one literal, the empty string is two quotes with nothing between, and reference types use a single keyword."
+hint: "Go's zero values come from one consistent rule: pick the value that means 'nothing of that type'. Each WRONG row gets one element wrong in a way that mirrors a different language's convention. Spot the row where ALL four match Go."
 explanation: |
   Zero values for the predeclared types:
     bool                 -> false

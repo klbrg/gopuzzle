@@ -1,59 +1,55 @@
 id: "lg-ch02-009"
-title: "String Concatenation"
+title: "Strings Are Immutable"
 concept: "types"
+kind: "fix"
 description: |
-  Strings in Go are immutable — you cannot mutate the bytes of an
-  existing string. You build a new string instead, and the +
-  operator concatenates two strings into a fresh one.
-
-  Implement greet(name) that returns "Hello, <name>!", built from
-  the literal pieces "Hello, " and "!" plus the supplied name.
-
-      greet("Go")    == "Hello, Go!"
-      greet("World") == "Hello, World!"
+  Go strings are not what they look like — they're not mutable byte
+  arrays. The code below tries to capitalise the first character by
+  indexed assignment. It doesn't compile. Fix it so the program
+  prints `Hello`.
 template: |
-  package scratch
+  package main
 
-  func greet(name string) string {
-  	// TODO: return "Hello, <name>!" — substitute the supplied name.
+  import "fmt"
+
+  func main() {
+  	s := "hello"
+  	// BUG
+  	s[0] = 'H'
+  	fmt.Println(s)
   }
-test_code: |
-  package scratch
-
-  import "testing"
-
-  func TestGreet(t *testing.T) {
-  	cases := []struct {
-  		in, want string
-  	}{
-  		{"Go", "Hello, Go!"},
-  		{"World", "Hello, World!"},
-  		{"", "Hello, !"},
-  		{"Alice", "Hello, Alice!"},
-  		{"Bob Smith", "Hello, Bob Smith!"},
-  	}
-  	for _, c := range cases {
-  		if got := greet(c.in); got != c.want {
-  			t.Errorf("greet(%q): expected %q, got %q", c.in, c.want, got)
-  		}
-  	}
-  }
-hint: "Three pieces joined with +: `\"Hello, \" + name + \"!\"`."
+expected_output: |
+  Hello
+hint: "You can READ s[0] but you can't assign to it. To get a 'modified' string, build a fresh one — what part of the original can you keep?"
 solution: |
-  package scratch
+  package main
 
-  func greet(name string) string {
-  	return "Hello, " + name + "!"
+  import "fmt"
+
+  func main() {
+  	s := "hello"
+  	s = "H" + s[1:]
+  	fmt.Println(s)
   }
 explanation: |
-  Go strings are immutable. `s[0] = 'X'` is a compile error. To
-  "change" a string you build a new one and reassign:
-    s = s + " more"
-    s += " more"     // shorthand
+  Strings in Go are immutable. The compiler rejects `s[0] = 'H'`
+  with `cannot assign to s[0] (strings are immutable)`. To
+  "modify" a string you build a NEW one and reassign — there's
+  no in-place edit operation, anywhere, ever.
 
-  The + operator allocates a new string and copies both operands'
-  bytes into it. For loops that build strings, reach for
-  strings.Builder (covered in Chapter 3) to avoid intermediate
-  copies. Strings also support ==, !=, <, <=, >, >= for
-  lexicographic ordering on bytes.
+  Idioms for building strings:
+
+      s = s + " more"          // concat
+      s += " more"             // shorthand
+      s = "H" + s[1:]          // replace first character
+      s = s[:n] + s[n+1:]      // delete index n
+
+  Each one allocates a new string and copies bytes. For loops
+  that build big strings, reach for `strings.Builder` (Chapter 3)
+  to avoid intermediate copies.
+
+  Why immutable? Strings can be safely shared across goroutines
+  without locks. They can be used as map keys. The runtime can
+  store identical strings once (string interning is allowed by
+  the spec). Mutability would break all three.
 reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html#string_rune"

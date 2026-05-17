@@ -1,14 +1,19 @@
 # gopuzzle
 
-A terminal puzzle app for practicing Go, organized by chapter. Each puzzle
-ships as a single YAML file under `puzzles/<source>/<section>/` (currently
-`learning_go/ch02/`, `learning_go/ch03/`, `learning_go/ch04/`).
+A terminal puzzle app for working through programming-language books
+chapter by chapter. Today it ships Go puzzles (Learning Go, 2nd ed.) and
+Python puzzles (Effective Python, 3rd ed.); the puzzle/runner/AI/TUI
+layers are language-agnostic and adding more languages is a small
+addition rather than a refactor.
 
-The pedagogical model is language-agnostic. A plan to generalise the
-runner so Python (and beyond) can become a second source language lives
-in `docs/multi-language-plan.md`. See also `docs/architecture.md`,
-`docs/puzzle-format.md`, and `docs/puzzle-authoring.md` for the
-extracted design notes.
+Each puzzle ships as a single YAML file under
+`puzzles/<source>/<section>/`, e.g. `learning_go/ch02/`,
+`effective_python/ch01/`.
+
+The binary is still called `gopuzzle` for historical reasons (Go was
+the first runner). See `docs/architecture.md`, `docs/puzzle-format.md`,
+`docs/puzzle-authoring.md`, and `docs/multi-language-plan.md` for the
+design notes.
 
 ## Layout
 
@@ -99,7 +104,7 @@ for a short review of the user's solution.
 Scratch files live at `~/.gopuzzle/scratch/<id>/main.go`, with a tiny
 per-puzzle `go.mod` so each one is its own standalone module — gopls
 treats them independently and doesn't surface cross-puzzle "main
-redeclared" diagnostics. Code-kind puzzles use `package scratch` (no
+redeclared" diagnostics. Code-kind puzzles use `package puzzle` (no
 `func main()` needed); fix-kind puzzles use `package main`. Behavior:
 
 - `ensureScratch` writes the template only when the file is missing OR when

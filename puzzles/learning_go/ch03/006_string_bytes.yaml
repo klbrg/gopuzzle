@@ -3,11 +3,8 @@ title: "Strings Are Bytes, Not Runes"
 concept: "strings"
 kind: "predict_output"
 description: |
-  A Go string is a sequence of bytes. When you index one with `s[i]`,
-  you get back a single byte — not a character, not a rune. The `%T`
-  format verb prints the underlying type of a value.
-
-  Predict the output.
+  Predict the output. `%T` prints the TYPE of its argument, not the
+  value.
 snippet: |
   package main
 
@@ -19,7 +16,7 @@ snippet: |
   }
 expected_output: |
   uint8
-hint: "`byte` is just an alias for one of Go's predeclared integer types. `%T` prints the underlying type, not the alias."
+hint: "What type does indexing into a string actually return? If you say `byte` — what's `byte` an alias for? `%T` prints the underlying type, not the alias name."
 explanation: |
   `s[i]` returns a `byte`. `byte` is an alias for `uint8`, so `%T`
   prints `uint8` (the underlying named type) rather than `byte`.

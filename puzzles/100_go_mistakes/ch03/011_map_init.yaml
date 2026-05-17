@@ -1,0 +1,45 @@
+id: "gm-ch03-011"
+title: "Mistake #27: Inefficient Map Initialization"
+concept: "maps"
+kind: "quiz"
+description: |
+  Mistake #27 from the book. Same idea as Mistake #21 (slices)
+  applied to maps. Maps in Go use hash buckets that get rehashed
+  as the map grows. Each rehash copies every existing key/value
+  pair into a larger bucket array — work you can avoid if you
+  know roughly how many entries you'll insert.
+
+  `make(map[K]V, hint)` accepts a SIZE HINT — not a strict
+  capacity. The runtime sizes the initial bucket array so it can
+  hold `hint` entries without rehashing.
+
+  Pick the initialisation that minimises rehashing when you'll
+  insert 1 million entries.
+question: "You will insert 1 million entries into a map. Which initialisation minimises rehashes during the inserts?"
+choices:
+  - "m := map[string]int{}"
+  - "m := make(map[string]int)"
+  - "m := make(map[string]int, 1_000_000)"
+  - "var m map[string]int"
+answer: "m := make(map[string]int, 1_000_000)"
+hint: "`make(map[K]V, X)` accepts a second argument — what does it do? (Note: one of these forms is a nil map and would panic on first write. Spot it.)"
+explanation: |
+  - `map[string]int{}` and `make(map[string]int)` — both create a
+    map with the default small initial bucket count. Inserting 1
+    million keys triggers ~20 rehashes (the bucket array roughly
+    doubles each time).
+  - `make(map[string]int, 1_000_000)` — the runtime allocates
+    enough buckets up front for 1M entries. Zero or one rehash.
+  - `var m map[string]int` — that's a NIL map. You CAN read from
+    it (returns zero values), but writing to it panics with
+    "assignment to entry in nil map". Always `make` before write.
+
+  Unlike slices, the hint is not a hard cap. The map happily grows
+  past it — the hint is just a sizing optimisation. Underestimating
+  is fine (you pay for some rehashing later); over-estimating
+  wastes memory.
+
+  Combined with map memory leaks from deletions (covered separately
+  in the book), this is why sizing maps deliberately matters when
+  you have a known scale.
+reference: "https://learning.oreilly.com/library/view/100-go-mistakes/9781617299599/OEBPS/Text/03.htm#heading_id_19"

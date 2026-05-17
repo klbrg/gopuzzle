@@ -3,11 +3,7 @@ title: "Slices Share Memory"
 concept: "slices"
 kind: "predict_output"
 description: |
-  Slicing a slice does NOT copy the elements — both slices point into
-  the same backing array. Mutating one is visible through the other.
-  This trips up a lot of newcomers.
-
-  Predict the output.
+  Predict the output of `fmt.Println(x)` after `y[0] = 99`.
 snippet: |
   package main
 
@@ -17,11 +13,11 @@ snippet: |
   	x := []int{1, 2, 3, 4}
   	y := x[1:3]
   	y[0] = 99
-  	fmt.Println(x)
+  	fmt.Println(x[1])
   }
 expected_output: |
-  [1 99 3 4]
-hint: "`y` shares storage with `x`. Writing to `y[0]` writes to the same byte that `x[1]` references."
+  99
+hint: "What does `x[1:3]` actually return? A slice is a small header — does the act of slicing allocate a new array, or reuse the existing one?"
 explanation: |
   `x[1:3]` returns a slice with length 2 that shares the same backing
   array as `x` — it just records a different start, length, and

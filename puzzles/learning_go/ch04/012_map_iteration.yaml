@@ -12,7 +12,7 @@ choices:
   - "The order is randomised on each iteration."
   - "The order is undefined but stays the same within a program run."
 answer: "The order is randomised on each iteration."
-hint: "Go deliberately randomises map iteration so you can't accidentally depend on the order."
+hint: "Try writing a small program that ranges over the same map twice (or run a program with the same map literal twice) and compares the orders. What do you observe — and what does that imply the runtime is doing?"
 explanation: |
   Go runs map iteration in a deliberately random order. This isn't
   just "undefined" — the runtime actively shuffles the starting

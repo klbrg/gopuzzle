@@ -3,12 +3,10 @@ title: "Untyped Constants"
 concept: "constants"
 kind: "predict_output"
 description: |
-  An untyped constant behaves like a literal — it has no fixed type
-  and adopts whatever type fits where you use it. So the SAME
-  constant can flow into an int, a float64, or a byte without any
-  explicit conversion.
-
-  Predict the output.
+  Predict the output. Note that `score` is declared with `const`
+  but no type. Compare to what would happen if it were declared as
+  `const score int = 100` — would all three `var` lines still
+  compile?
 snippet: |
   package main
 
@@ -19,11 +17,12 @@ snippet: |
   	var i int = score
   	var f float64 = score
   	var b byte = score
-  	fmt.Println(i, f, b)
+  	_, _ = i, f
+  	fmt.Println(b)
   }
 expected_output: |
-  100 100 100
-hint: "An untyped constant adopts whichever numeric type it's assigned to. All three vars hold 100 in their own type."
+  100
+hint: "If `score` had an explicit type, mixing it with a different type would need a conversion (see the earlier numeric-conversion puzzles). Why doesn't this snippet hit that rule?"
 explanation: |
   Because `score` has no explicit type, it is an untyped constant.
   Each `var` assignment picks the right interpretation:

@@ -1,0 +1,44 @@
+id: "gm-ch03-010"
+title: "Mistake #26: Slices and Memory Leaks"
+concept: "slices"
+kind: "quiz"
+description: |
+  Mistake #26 from the book. A function loads a 1 GB file into a
+  byte slice and returns just the first 100 bytes via
+  `return data[:100]`. The caller holds the returned slice
+  indefinitely. Some time later, the program's memory footprint
+  hasn't dropped.
+
+  Pick the explanation.
+question: "A function returns `data[:100]` from a 1 GB slice. Why does the program still hold 1 GB of memory?"
+choices:
+  - "The returned slice still references the full 1 GB backing array; GC cannot collect it while the slice header is live."
+  - "`data[:100]` is a debug-only operator; in release builds Go automatically copies sub-slices to fresh arrays."
+  - "Go's GC only frees a backing array when ALL slices pointing into it (including capacity overlap) go out of scope — and the original `data` is still in scope inside the caller's goroutine."
+  - "Sub-slices retain the original `len` field internally for safety; only `cap` actually shrinks, so the full memory stays reserved."
+answer: "The returned slice still references the full 1 GB backing array; GC cannot collect it while the slice header is live."
+hint: "What does a slice value actually consist of? Three small fields. What does the POINTER field of `data[:100]` point at?"
+explanation: |
+  A slice header is just `{ptr, len, cap}`. `data[:100]` produces
+  a new HEADER but the `ptr` still points into the original 1 GB
+  backing array. As long as any slice header pointing into that
+  array is alive, the GC keeps the whole array.
+
+  Two well-known fixes:
+
+  1. **Copy what you need**:
+
+         out := make([]byte, 100)
+         copy(out, data[:100])
+         return out   // out points to its own 100-byte array
+
+  2. **Use `slices.Clone`** (Go 1.21+):
+
+         return slices.Clone(data[:100])
+
+  Same gotcha applies to slices of slices of structs that hold
+  pointers: a small surviving slice can keep entire chains of
+  large objects alive. The mistakes book recommends an explicit
+  copy at the boundary whenever a function returns a sub-slice of
+  something significantly larger than what it returns.
+reference: "https://learning.oreilly.com/library/view/100-go-mistakes/9781617299599/OEBPS/Text/03.htm#heading_id_16"

@@ -14,14 +14,13 @@ description: |
       "small"     if 1 <= n <= 9
       "large"     if n >= 10
 template: |
-  package scratch
+  package puzzle
 
   func classify(n int) string {
-  	// TODO: use a blank switch (`switch { case cond: ... }`) to
-  	// pick the right label.
+  	// TODO
   }
 test_code: |
-  package scratch
+  package puzzle
 
   import "testing"
 
@@ -45,9 +44,9 @@ test_code: |
   		}
   	}
   }
-hint: "Write `switch { case n < 0: return \"negative\"; case n == 0: return \"zero\"; case n < 10: return \"small\"; default: return \"large\" }`. Each case is a boolean expression."
+hint: "A switch with no expression after the keyword turns each case into a boolean condition. Order them so the simplest tests come first — once a case has matched, the rest don't run."
 solution: |
-  package scratch
+  package puzzle
 
   func classify(n int) string {
   	switch {

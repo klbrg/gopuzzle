@@ -3,13 +3,9 @@ title: "Independent Slice Copy"
 concept: "slices"
 kind: "fix"
 description: |
-  Assigning one slice to another does NOT copy the elements — both
-  variables now point into the same backing array. To get an
-  independent copy you have to allocate a new slice and use the
-  built-in `copy` function.
-
-  The code below mutates `b` and expects `a` to be untouched. Fix it
-  so `a` is unchanged after the mutation.
+  The code below assigns `b := a`, mutates `b`, and expects `a` to
+  be untouched. Run it as-is to see what actually happens. Then fix
+  it so `a` prints `[1 2 3]`.
 template: |
   package main
 
@@ -17,14 +13,14 @@ template: |
 
   func main() {
   	a := []int{1, 2, 3}
-  	// BUG: this just aliases a — make b an independent copy.
+  	// BUG
   	b := a
   	b[0] = 99
   	fmt.Println(a)
   }
 expected_output: |
   [1 2 3]
-hint: "Allocate b with `make([]int, len(a))`, then call `copy(b, a)`."
+hint: "`b := a` copies the slice HEADER, not the elements. To get independent elements you need a fresh backing array — what built-in does that, and what built-in fills it?"
 solution: |
   package main
 

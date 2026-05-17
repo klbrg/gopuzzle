@@ -13,13 +13,13 @@ description: |
       alphabetPosition('c') == 3
       alphabetPosition('z') == 26
 template: |
-  package scratch
+  package puzzle
 
   func alphabetPosition(r rune) int {
-  	// TODO: return r's 1-based position in the alphabet.
+  	// TODO
   }
 test_code: |
-  package scratch
+  package puzzle
 
   import "testing"
 
@@ -36,9 +36,9 @@ test_code: |
   		}
   	}
   }
-hint: "Convert (r - 'a' + 1) back to int. The literal 'a' has numeric value 97."
+hint: "A rune is just int32 — so you can do integer arithmetic with rune literals. 'a' minus 'a' is 0; what gives you 1-based instead?"
 solution: |
-  package scratch
+  package puzzle
 
   func alphabetPosition(r rune) int {
   	return int(r - 'a' + 1)

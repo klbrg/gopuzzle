@@ -43,23 +43,26 @@ func predictFormatHint(expected string) string {
 }
 
 // normalizePrediction loosens the predict-output comparison so trivial
-// formatting differences don't fail otherwise-correct answers. Per line:
-//   - leading and trailing whitespace is trimmed
-//   - whitespace adjacent to a non-word character (e.g. `, `, ` ]`,
-//     ` = `) is collapsed away
+// formatting differences don't fail otherwise-correct answers:
+//   - leading and trailing whitespace on every line is trimmed
+//   - any whitespace (including newlines) adjacent to a non-word
+//     character is collapsed
 //
-// So `[1, 1]` and `[1,1]` compare equal, and `a = 1` matches `a=1`. But
-// `hello world` still differs from `helloworld` because the space sits
-// between two word characters.
+// So `[1, 1]` and `[1,1]` compare equal, `a = 1` matches `a=1`, and
+// jq's pretty `[\n  "alice",\n  "bob"\n]` matches a typed
+// `["alice","bob"]`. But `hello world` still differs from
+// `helloworld` because the space sits between two word characters,
+// and `1\n2\n3` still differs from `123` (line-separated scalars
+// remain distinct).
 func normalizePrediction(s string) string {
 	lines := strings.Split(s, "\n")
 	for i, line := range lines {
-		line = strings.TrimSpace(line)
-		line = wsAfterNonWord.ReplaceAllString(line, "$1")
-		line = wsBeforeNonWord.ReplaceAllString(line, "$1")
-		lines[i] = line
+		lines[i] = strings.TrimSpace(line)
 	}
-	return strings.TrimRight(strings.Join(lines, "\n"), "\n \t")
+	joined := strings.Join(lines, "\n")
+	joined = wsAfterNonWord.ReplaceAllString(joined, "$1")
+	joined = wsBeforeNonWord.ReplaceAllString(joined, "$1")
+	return strings.TrimRight(joined, "\n \t")
 }
 
 var (

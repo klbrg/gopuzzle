@@ -12,13 +12,13 @@ description: |
       toggleBit(0b0101, 0) == 0b0100
       toggleBit(0b0101, 2) == 0b0001
 template: |
-  package scratch
+  package puzzle
 
   func toggleBit(n int, pos int) int {
-  	// TODO: return n with the bit at position pos flipped.
+  	// TODO
   }
 test_code: |
-  package scratch
+  package puzzle
 
   import "testing"
 
@@ -38,9 +38,9 @@ test_code: |
   		}
   	}
   }
-hint: "XOR with `1 << pos`. The shift positions a 1 bit; XOR flips exactly that bit."
+hint: "Of Go's bitwise operators, which one flips a bit when XOR'd with 1 and leaves it alone when XOR'd with 0? Combine that with a shift to position the 1."
 solution: |
-  package scratch
+  package puzzle
 
   func toggleBit(n int, pos int) int {
   	return n ^ (1 << pos)

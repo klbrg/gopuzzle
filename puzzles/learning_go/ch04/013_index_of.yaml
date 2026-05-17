@@ -1,67 +1,94 @@
 id: "lg-ch04-013"
-title: "Index of First Match"
+title: "All Indices of a Target"
 concept: "loops"
 description: |
-  Implement `indexOf(nums, target)` that returns the index of the
-  first occurrence of `target` in `nums`, or `-1` if it isn't there.
-  Use the for-range form that gives you both index and value.
+  `slices.Index` returns the first occurrence of a value. Real
+  code often needs ALL occurrences — for highlighting, batch
+  deletion, or auditing. Implement that.
 
-      indexOf([]int{10, 20, 30, 20}, 20) == 1
-      indexOf([]int{1, 2, 3}, 5)         == -1
-      indexOf(nil, 1)                    == -1
+  `allIndices(nums, target)` returns a slice of every index at
+  which `target` appears in `nums`, in order. Return an empty
+  slice (not nil) when there are no matches OR when `nums` is
+  empty / nil.
+
+      allIndices([]int{10, 20, 30, 20}, 20) == []int{1, 3}
+      allIndices([]int{1, 1, 1}, 1)         == []int{0, 1, 2}
+      allIndices([]int{1, 2, 3}, 5)         == []int{}
+      allIndices(nil, 1)                    == []int{}
 template: |
-  package scratch
+  package puzzle
 
-  func indexOf(nums []int, target int) int {
-  	// TODO: range with (index, value). Return the index as soon
-  	// as you find a match. If the loop completes without finding
-  	// one, return -1.
+  func allIndices(nums []int, target int) []int {
+  	// TODO
   }
 test_code: |
-  package scratch
+  package puzzle
 
-  import "testing"
+  import (
+  	"slices"
+  	"testing"
+  )
 
-  func TestIndexOf(t *testing.T) {
+  func TestAllIndices(t *testing.T) {
   	cases := []struct {
-  		nums   []int
-  		target int
-  		want   int
+  		name    string
+  		nums    []int
+  		target  int
+  		want    []int
   	}{
-  		{[]int{10, 20, 30, 20}, 20, 1},
-  		{[]int{1, 2, 3}, 5, -1},
-  		{nil, 1, -1},
-  		{[]int{}, 1, -1},
-  		{[]int{42}, 42, 0},
-  		{[]int{1, 1, 1}, 1, 0},
+  		{"two matches", []int{10, 20, 30, 20}, 20, []int{1, 3}},
+  		{"all match", []int{1, 1, 1}, 1, []int{0, 1, 2}},
+  		{"no matches", []int{1, 2, 3}, 5, []int{}},
+  		{"nil slice", nil, 1, []int{}},
+  		{"empty slice", []int{}, 1, []int{}},
+  		{"single match at start", []int{5, 1, 2}, 5, []int{0}},
+  		{"single match at end", []int{1, 2, 5}, 5, []int{2}},
+  		{"alternating", []int{0, 1, 0, 1, 0}, 0, []int{0, 2, 4}},
   	}
   	for _, c := range cases {
-  		if got := indexOf(c.nums, c.target); got != c.want {
-  			t.Errorf("indexOf(%v, %d) = %d, want %d", c.nums, c.target, got, c.want)
+  		got := allIndices(c.nums, c.target)
+  		if got == nil {
+  			t.Errorf("%s: returned nil; tests expect a non-nil empty slice for the no-match case", c.name)
+  			continue
+  		}
+  		if !slices.Equal(got, c.want) {
+  			t.Errorf("%s: got %v, want %v", c.name, got, c.want)
   		}
   	}
   }
-hint: "`for i, n := range nums { if n == target { return i } }` then `return -1` after the loop."
+hint: "Initialise the result with a non-nil empty slice (`[]int{}`, not `var result []int`) so the 'no matches' case still returns non-nil. Then append the index every time you find a match."
 solution: |
-  package scratch
+  package puzzle
 
-  func indexOf(nums []int, target int) int {
+  func allIndices(nums []int, target int) []int {
+  	result := []int{}
   	for i, n := range nums {
   		if n == target {
-  			return i
+  			result = append(result, i)
   		}
   	}
-  	return -1
+  	return result
   }
 explanation: |
-  When you need both the index and the value, the two-variable
-  for-range form is the cleanest:
+  The nil-vs-empty distinction matters here: `var result []int`
+  gives you a nil slice, and the "no match" path would return
+  nil. The tests treat that as a bug — the contract says "empty
+  slice", not nil.
 
-      for i, v := range slice { ... }
+  Why pick that contract? It's friendlier for callers who want to
+  `range` (both behave the same) but want to also write code like
+  `result = append(result, ...)` later without first checking for
+  nil. And it serialises cleanly to `[]` in JSON instead of `null`.
 
-  Early return on the match is idiomatic Go — it avoids a flag
-  variable and makes the intent obvious.
+  Performance notes:
 
-  Go 1.21+ added `slices.Index(nums, target)` to the standard
-  library which does this for any comparable type via generics.
+  - `append` to a non-nil empty slice still grows the same way as
+    appending to nil; there's no penalty for the `[]int{}`
+    initialisation in the no-match case.
+  - If you know an upper bound on matches, pre-size with
+    `make([]int, 0, len(nums))` to avoid intermediate reallocs.
+
+  Go 1.21+ added `slices.Index(nums, target)` for the first-only
+  version, but there's no built-in `slices.IndexAll`. Useful
+  building block to keep around.
 reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch04.html#for_range"

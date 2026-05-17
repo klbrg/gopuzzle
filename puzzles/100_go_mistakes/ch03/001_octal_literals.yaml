@@ -1,0 +1,35 @@
+id: "gm-ch03-001"
+title: "Mistake #17: Octal Literals"
+concept: "literals"
+kind: "predict_output"
+description: |
+  Mistake #17 from the book. Predict the output.
+snippet: |
+  package main
+
+  import "fmt"
+
+  func main() {
+      fmt.Println(010 + 10)
+  }
+expected_output: |
+  18
+hint: "Go inherits a C-style convention for integer literal prefixes — `0x`, `0b`, and one more you might not have thought about. Re-examine `010`."
+explanation: |
+  A leading `0` on an integer literal makes it octal. `010` is 8 in
+  decimal, so the program prints 18 (8 + 10).
+
+  Go also accepts a more explicit `0o` octal prefix introduced for
+  readability:
+
+      010   // == 8  (legacy C-style)
+      0o10  // == 8  (clearer)
+      0x10  // == 16 (hex)
+      0b10  // == 2  (binary)
+
+  The unprefixed form is dangerous because it looks like a zero-padded
+  decimal — a `0644` file mode is correctly octal, but `0123` as a
+  "count" is almost certainly a typo. Prefer `0o` when octal is
+  intentional and never write a leading `0` when you actually mean
+  decimal.
+reference: "https://learning.oreilly.com/library/view/100-go-mistakes/9781617299599/OEBPS/Text/03.htm#heading_id_3"

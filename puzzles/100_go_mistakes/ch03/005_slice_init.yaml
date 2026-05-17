@@ -1,0 +1,40 @@
+id: "gm-ch03-005"
+title: "Mistake #21: Inefficient Slice Initialization"
+concept: "slices"
+kind: "quiz"
+description: |
+  Mistake #21 from the book. When you know up-front how many
+  elements you will append to a slice, you can avoid the runtime
+  cost of repeated re-allocations as the backing array grows.
+
+  Pick the slice initialisation that minimises allocations when
+  you intend to append exactly 1000 elements via `append`.
+question: "You will `append` exactly 1000 elements to a slice. Which initialisation does the FEWEST allocations during the append loop?"
+choices:
+  - "var s []int"
+  - "s := []int{}"
+  - "s := make([]int, 0, 1000)"
+  - "s := make([]int, 1000)"
+answer: "s := make([]int, 0, 1000)"
+hint: "Each form starts the slice in a different state. For three of them, the append loop has to grow the backing array (sometimes many times). For one, it doesn't. Trace what `append` does in each case."
+explanation: |
+  `make([]int, 0, 1000)` is the only option that gives you an
+  empty slice (length 0) backed by an array large enough for all
+  1000 appends. Each `append` slots an element into the existing
+  backing array — zero reallocations.
+
+  The others:
+
+  - `var s []int` — nil slice, capacity 0. The append loop
+    triggers ~10 reallocations (1, 2, 4, 8, ... 1024) and copies
+    elements forward each time.
+  - `s := []int{}` — empty but non-nil. Same allocation pattern as
+    above.
+  - `make([]int, 1000)` — length AND capacity 1000, full of zeros.
+    Now `append` adds elements at index 1000, 1001, ... causing
+    new reallocations AND you have 1000 leading zeros you didn't
+    want.
+
+  The book benchmarks show this can be a 4-5x speedup for large
+  slices. The same idea applies to maps via `make(map[K]V, hint)`.
+reference: "https://learning.oreilly.com/library/view/100-go-mistakes/9781617299599/OEBPS/Text/03.htm#heading_id_11"

@@ -1,69 +1,97 @@
 id: "lg-ch03-010"
-title: "The comma ok Idiom"
+title: "Cascading Lookup"
 concept: "maps"
 description: |
-  Reading a map with a single variable always returns a value — even
-  when the key is missing (you get the zero value). To distinguish
-  "key missing" from "key present with the zero value", read with two
-  variables: `v, ok := m[key]`. The second one is a bool that's true
-  exactly when the key is in the map.
+  Many configuration systems look up a key through layered
+  sources in priority order: command-line flags, environment
+  variables, on-disk config, hard-coded defaults. The first
+  layer that HAS the key wins; missing layers fall through.
 
-  Implement `lookup(m, key)` that returns the value associated with
-  `key` and a bool indicating whether the key was present.
+  Implement `cascadingLookup(layers, key)` that walks
+  `layers` in order, returns the value from the first map that
+  contains `key`, and reports whether any layer had it.
 
-      lookup({"a": 1, "b": 0}, "a") == (1, true)
-      lookup({"a": 1, "b": 0}, "b") == (0, true)   // present, value happens to be zero
-      lookup({"a": 1, "b": 0}, "c") == (0, false)
+      cascadingLookup([
+          {"port": 9000},          // highest priority
+          {"port": 8080, "host": "localhost"},
+          {"host": "0.0.0.0"},
+      ], "port")                   == (9000, true)
+
+      cascadingLookup([
+          {"port": 9000},
+          {"port": 8080, "host": "localhost"},
+          {"host": "0.0.0.0"},
+      ], "host")                   == ("localhost", true)
+
+      cascadingLookup([{"a": 1}], "missing")  == (0, false)
+      cascadingLookup(nil, "x")               == (0, false)
 template: |
-  package scratch
+  package puzzle
 
-  func lookup(m map[string]int, key string) (int, bool) {
-  	// TODO: return both the value and whether the key was present.
+  func cascadingLookup(layers []map[string]int, key string) (int, bool) {
+  	// TODO
   }
 test_code: |
-  package scratch
+  package puzzle
 
   import "testing"
 
-  func TestLookup(t *testing.T) {
-  	m := map[string]int{"a": 1, "b": 0, "c": -5}
+  func TestCascadingLookup(t *testing.T) {
+  	layers := []map[string]int{
+  		{"port": 9000},
+  		{"port": 8080, "host": 1024},
+  		{"host": 80},
+  	}
   	cases := []struct {
+  		name   string
+  		layers []map[string]int
   		key    string
   		wantV  int
   		wantOK bool
   	}{
-  		{"a", 1, true},
-  		{"b", 0, true},
-  		{"c", -5, true},
-  		{"missing", 0, false},
-  		{"", 0, false},
+  		{"first layer wins", layers, "port", 9000, true},
+  		{"second layer wins when first lacks", layers, "host", 1024, true},
+  		{"missing in every layer", layers, "missing", 0, false},
+  		{"nil layers", nil, "x", 0, false},
+  		{"empty layers", []map[string]int{}, "x", 0, false},
+  		{"zero-value present beats missing", []map[string]int{{"x": 0}}, "x", 0, true},
+  		{"single layer hit", []map[string]int{{"x": 5}}, "x", 5, true},
   	}
   	for _, c := range cases {
-  		v, ok := lookup(m, c.key)
+  		v, ok := cascadingLookup(c.layers, c.key)
   		if v != c.wantV || ok != c.wantOK {
-  			t.Errorf("lookup(%q): got (%d, %v), want (%d, %v)",
-  				c.key, v, ok, c.wantV, c.wantOK)
+  			t.Errorf("%s: got (%d, %v), want (%d, %v)", c.name, v, ok, c.wantV, c.wantOK)
   		}
   	}
   }
-hint: "`v, ok := m[key]` does exactly this — just return both."
+hint: "You need to distinguish 'this layer doesn't have the key' from 'this layer has the key with value 0'. The comma-ok form of a map read is the only way to tell them apart. Return as soon as you find a hit."
 solution: |
-  package scratch
+  package puzzle
 
-  func lookup(m map[string]int, key string) (int, bool) {
-  	v, ok := m[key]
-  	return v, ok
+  func cascadingLookup(layers []map[string]int, key string) (int, bool) {
+  	for _, m := range layers {
+  		if v, ok := m[key]; ok {
+  			return v, true
+  		}
+  	}
+  	return 0, false
   }
 explanation: |
-  The two-variable form of a map read is built into the language —
-  there's no API to opt into, no special function. The compiler
-  recognizes the shape and synthesizes the `ok` bool.
+  The puzzle's trap: if you write `if v := m[key]; v != 0`, you
+  silently treat "missing" and "value happens to be zero" as the
+  same case. The "zero-value present beats missing" test case
+  exercises that — `{"x": 0}` HAS the key (so we return
+  `(0, true)`), and you can only see that with comma-ok.
 
-  This same comma-ok shape shows up later for:
-    - Channel receives: `v, ok := <-ch` (ok is false if the channel is closed)
-    - Type assertions: `v, ok := x.(int)` (ok is false if the assertion would have panicked)
+  This is exactly why Go made the comma-ok form part of the
+  language rather than relying on a sentinel value: zero is a
+  legitimate value, not a "not found" marker.
 
-  Reading without the bool: `v := m[key]` is fine when you don't care
-  about presence — useful with counter maps where 0 is the right
-  default.
+  Same pattern shows up for:
+    - Channel receives: `v, ok := <-ch` (ok is false if channel closed)
+    - Type assertions: `v, ok := x.(int)` (ok is false on type mismatch)
+
+  Real config-loading libraries do exactly this layered lookup
+  with sources like `flag` → `os.Getenv` → file → default. The
+  shape is identical, just with different lookup primitives.
 reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html#comma_ok_section"

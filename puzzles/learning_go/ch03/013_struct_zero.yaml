@@ -23,7 +23,7 @@ choices:
   - 'Name: "", Age: 0, Active: false, Friends: []string{}'
   - 'all fields are undefined until you assign them'
 answer: 'Name: "", Age: 0, Active: false, Friends: nil'
-hint: "Each field gets the zero value of its declared type: string → empty, int → 0, bool → false, slice → nil. Not undefined, not an empty literal — the actual zero value."
+hint: "Each field gets the zero value of ITS type, recursively. The slice field is the one that distinguishes two plausible-looking options — what's the zero value of a slice, exactly?"
 explanation: |
   Every field gets its type's zero value:
     string  → ""

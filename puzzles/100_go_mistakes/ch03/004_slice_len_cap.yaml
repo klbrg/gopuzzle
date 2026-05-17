@@ -1,0 +1,38 @@
+id: "gm-ch03-004"
+title: "Mistake #20: Slice Length vs Capacity"
+concept: "slices"
+kind: "predict_output"
+description: |
+  Mistake #20 from the book. Predict the output of `len` and `cap`
+  for the slice below.
+snippet: |
+  package main
+
+  import "fmt"
+
+  func main() {
+      s := make([]int, 3, 6)
+      fmt.Println(cap(s))
+  }
+expected_output: |
+  6
+hint: "`make` has a three-arg form. The second and third arguments are NOT both \"length\". Look up what each one means."
+explanation: |
+  The two-argument form `make([]int, 3, 6)` allocates a backing
+  array of 6 ints but exposes a slice view with length 3. You can
+  read or write `s[0]` through `s[2]`. `s[3]` would panic with
+  "index out of range" even though the backing slot exists.
+
+  As you `append` past length 3, Go reuses the unused backing slots
+  (no reallocation) up to capacity 6. The 7th append triggers a
+  fresh allocation, typically doubling the capacity.
+
+  This is the key intuition behind Mistake #21 (efficient slice
+  init): when you know how many items you'll append, pre-size the
+  capacity to avoid intermediate reallocations:
+
+      s := make([]int, 0, 1000)  // length 0, capacity 1000
+      for i := 0; i < 1000; i++ {
+          s = append(s, i)        // no reallocation
+      }
+reference: "https://learning.oreilly.com/library/view/100-go-mistakes/9781617299599/OEBPS/Text/03.htm#heading_id_10"

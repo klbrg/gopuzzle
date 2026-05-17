@@ -16,17 +16,17 @@ description: |
       hasDuplicate([]int{1, 2, 3, 2})    == true
       hasDuplicate(nil)                  == false
 template: |
-  package scratch
+  package puzzle
 
   func hasDuplicate(nums []int) bool {
   	seen := map[int]bool{}
   	for _, n := range nums {
-  		// TODO: if n is already in seen, return true. Otherwise add it.
+  		// TODO
   	}
   	return false
   }
 test_code: |
-  package scratch
+  package puzzle
 
   import "testing"
 
@@ -50,9 +50,9 @@ test_code: |
   		}
   	}
   }
-hint: "Two lines: `if seen[n] { return true }` and then `seen[n] = true`."
+hint: "For a `map[int]bool`, what does `seen[n]` return for a key you haven't added? Use that as the membership test BEFORE you record the new element."
 solution: |
-  package scratch
+  package puzzle
 
   func hasDuplicate(nums []int) bool {
   	seen := map[int]bool{}

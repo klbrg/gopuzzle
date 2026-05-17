@@ -1,0 +1,50 @@
+id: "gm-ch03-009"
+title: "Mistake #25: Slice Append Side Effects"
+concept: "slices"
+kind: "predict_output"
+description: |
+  Mistake #25 from the book. Predict the output.
+
+  Useful background: `s1 := []int{1, 2, 3}` produces a slice with
+  length 3 AND capacity 3 (literals don't over-provision).
+snippet: |
+  package main
+
+  import "fmt"
+
+  func main() {
+      s1 := []int{1, 2, 3}
+      s2 := s1[1:2]
+      s2 = append(s2, 10)
+      fmt.Println(s1[2])
+  }
+expected_output: |
+  10
+hint: "`s2 := s1[1:2]` doesn't allocate — what backing storage does s2 use? When you `append` to s2, does it need to allocate a new array? Insert `fmt.Println(len(s2), cap(s2))` after the slice to see."
+explanation: |
+  Slicing inherits the backing array:
+
+      s1: [1, 2, 3]   len=3, cap=3, ptr → A[0]
+      s2: [2]         len=1, cap=2, ptr → A[1]   (sub-slice of s1)
+
+  `append(s2, 10)` checks `len(s2) < cap(s2)` (1 < 2 — yes), so
+  it writes 10 into backing array slot 2 instead of allocating a
+  new array. That slot is also `s1[2]`, which silently becomes 10.
+
+  This is the most surprising slice gotcha in Go. Two defences:
+
+  1. **Three-index slicing** caps the sub-slice's capacity:
+
+         s2 := s1[1:2:2]   // [low : high : max] → cap = max - low
+
+     Now `cap(s2) == 1`, so the next append must allocate, and
+     `s1` is left alone.
+
+  2. **`slices.Clone`** (Go 1.21+) makes a deep copy of the slice
+     header AND backing storage:
+
+         s2 := slices.Clone(s1[1:2])
+
+  The book's prescription: when handing a sub-slice to code you
+  don't control, default to one of these defences.
+reference: "https://learning.oreilly.com/library/view/100-go-mistakes/9781617299599/OEBPS/Text/03.htm#heading_id_15"

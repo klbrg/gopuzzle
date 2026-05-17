@@ -18,13 +18,13 @@ template: |
   func main() {
   	var b byte = 100
   	var n int = 200
-  	// TODO: fix this line — byte can't be added to int without converting.
+  	// TODO
   	var total int = b + n
   	fmt.Println(total)
   }
 expected_output: |
   300
-hint: "Convert b to int before adding. Widening to int also avoids any byte-range overflow."
+hint: "Even between integer types, Go won't auto-convert. The conversion syntax looks like a function call. Pick the safer widening direction (small → big) over the lossy one."
 solution: |
   package main
 

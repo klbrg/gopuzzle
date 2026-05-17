@@ -1,0 +1,68 @@
+id: "gm-ch03-013"
+title: "Mistake #29: Comparing Values Incorrectly"
+concept: "comparison"
+kind: "fix"
+description: |
+  Mistake #29 from the book. Go's `==` operator works on many
+  value types (numbers, strings, booleans, channels, pointers,
+  arrays of comparable types, and structs of comparable types).
+  It does NOT work on slices, maps, or functions — slice equality
+  with `==` won't even compile.
+
+  The standard library provides `slices.Equal` (Go 1.21+) for
+  element-wise slice equality.
+
+  Fix the code so it compiles and prints `equal`.
+template: |
+  package main
+
+  import "fmt"
+
+  func main() {
+      a := []int{1, 2, 3}
+      b := []int{1, 2, 3}
+      // BUG
+      if a == b {
+          fmt.Println("equal")
+      } else {
+          fmt.Println("not equal")
+      }
+  }
+expected_output: |
+  equal
+hint: "Try to compile the script. The error message names exactly what's wrong with comparing slices. The fix is in the standard library — search for a `slices.X` function."
+solution: |
+  package main
+
+  import (
+      "fmt"
+      "slices"
+  )
+
+  func main() {
+      a := []int{1, 2, 3}
+      b := []int{1, 2, 3}
+      if slices.Equal(a, b) {
+          fmt.Println("equal")
+      } else {
+          fmt.Println("not equal")
+      }
+  }
+explanation: |
+  The compile error is `invalid operation: a == b (slice can only
+  be compared to nil)`. You can compare a slice to nil, but not
+  to another slice.
+
+  Options for element-wise equality:
+
+  - **`slices.Equal(a, b)`** (Go 1.21+) — preferred, allocation-free.
+  - **`maps.Equal(m1, m2)`** for maps.
+  - **`reflect.DeepEqual(a, b)`** — works on anything but is slow
+    (uses reflection) and surprising for things like comparing
+    `[]byte` with `[]byte("")`. Avoid in hot paths.
+  - **Hand-written loop** — when you need custom equality (e.g.
+    case-insensitive strings, approximate floats).
+
+  Same rule for maps: `m1 == m2` does not compile. Same fix using
+  the `maps` standard library package.
+reference: "https://learning.oreilly.com/library/view/100-go-mistakes/9781617299599/OEBPS/Text/03.htm#heading_id_23"

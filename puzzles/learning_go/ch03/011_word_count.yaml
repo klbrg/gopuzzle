@@ -13,17 +13,17 @@ description: |
           map[string]int{"a": 3, "b": 2, "c": 1}
       wordCount(nil) == map[string]int{}
 template: |
-  package scratch
+  package puzzle
 
   func wordCount(words []string) map[string]int {
   	counts := map[string]int{}
   	for _, w := range words {
-  		// TODO: bump the counter for w.
+  		// TODO
   	}
   	return counts
   }
 test_code: |
-  package scratch
+  package puzzle
 
   import (
   	"maps"
@@ -48,9 +48,9 @@ test_code: |
   		}
   	}
   }
-hint: "Inside the loop, one line: `counts[w]++`. The zero-value-for-missing-keys rule means this works on first sight."
+hint: "What does `counts[w]` return for a word you haven't seen yet? Use that to your advantage with a single increment operation."
 solution: |
-  package scratch
+  package puzzle
 
   func wordCount(words []string) map[string]int {
   	counts := map[string]int{}

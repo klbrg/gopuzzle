@@ -25,7 +25,7 @@ snippet: |
   }
 expected_output: |
   9
-hint: "Sum only the values of i for which `i % 2 == 0` is false — i.e. the odd numbers between 1 and 5."
+hint: "Trace each iteration: when does `continue` fire, and what gets added to `sum` when it doesn't?"
 explanation: |
   The loop runs i = 1..5. When i is even (2, 4), `continue` skips
   the `sum += i` line and jumps to the next iteration. Only the odd

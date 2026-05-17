@@ -17,7 +17,7 @@ choices:
   - "only inside the if block (A)"
   - "the if block and the else block (A and B)"
   - "the if block, the else block, and the surrounding function"
-  - "the entire program — variables declared in if persist forever"
+  - "only inside the condition expression itself — neither A nor B can see it"
 answer: "the if block and the else block (A and B)"
 hint: "The whole point of declaring err in the if header is to keep it OUT of the surrounding scope."
 explanation: |

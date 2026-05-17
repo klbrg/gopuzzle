@@ -3,22 +3,19 @@ title: "Integer Literals in Different Bases"
 concept: "types"
 kind: "predict_output"
 description: |
-  Go integer literals are base 10 by default, but you can write them
-  in binary (0b), octal (0o), or hexadecimal (0x). The prefix only
-  changes the spelling — the stored value is identical.
-
-  Predict the output.
+  Predict the output. Each of the three literals has a prefix that
+  tells the compiler what base to read it in.
 snippet: |
   package main
 
   import "fmt"
 
   func main() {
-  	fmt.Println(0b1010, 0o17, 0x10)
+  	fmt.Println(0o17)
   }
 expected_output: |
-  10 15 16
-hint: "Convert each literal to base 10 mentally: 0b1010 is binary, 0o17 octal, 0x10 hex."
+  15
+hint: "The three prefixes are the same as in C-family languages. One you use every day for colour codes (`0x`), one comes from binary representation, and one comes from POSIX file modes."
 explanation: |
   Integer literals can be written in four bases by their prefix:
     base 10 (no prefix)  1234

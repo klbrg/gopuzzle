@@ -1,65 +1,101 @@
 id: "lg-ch04-006"
-title: "Sum a Slice"
+title: "Running Maximum"
 concept: "loops"
 description: |
-  Implement `sum(nums)` that returns the sum of all integers in the
-  slice. Use a for-range loop to iterate — that's the idiomatic
-  shape for "do something with each element."
+  Implement `runningMax(nums)` that returns a slice the same
+  length as `nums` where each element is the LARGEST value seen
+  in `nums` from index 0 through the current position
+  (inclusive).
 
-      sum([]int{1, 2, 3, 4}) == 10
-      sum([]int{})           == 0
-      sum(nil)               == 0
+      runningMax([]int{3, 1, 4, 1, 5, 9, 2, 6}) == []int{3, 3, 4, 4, 5, 9, 9, 9}
+      runningMax([]int{5})                       == []int{5}
+      runningMax([]int{-1, -5, -2})              == []int{-1, -1, -1}
+      runningMax(nil)                            == []int{}
+
+  Return an empty slice (not nil) for the nil/empty input case.
 template: |
-  package scratch
+  package puzzle
 
-  func sum(nums []int) int {
-  	// TODO: iterate with for-range and accumulate the total.
+  func runningMax(nums []int) []int {
+  	// TODO
   }
 test_code: |
-  package scratch
+  package puzzle
 
-  import "testing"
+  import (
+  	"slices"
+  	"testing"
+  )
 
-  func TestSum(t *testing.T) {
+  func TestRunningMax(t *testing.T) {
   	cases := []struct {
+  		name string
   		in   []int
-  		want int
+  		want []int
   	}{
-  		{[]int{1, 2, 3, 4}, 10},
-  		{[]int{}, 0},
-  		{nil, 0},
-  		{[]int{-1, 1}, 0},
-  		{[]int{5}, 5},
-  		{[]int{10, 20, 30}, 60},
+  		{"classic", []int{3, 1, 4, 1, 5, 9, 2, 6}, []int{3, 3, 4, 4, 5, 9, 9, 9}},
+  		{"single", []int{5}, []int{5}},
+  		{"strictly increasing", []int{1, 2, 3, 4}, []int{1, 2, 3, 4}},
+  		{"strictly decreasing", []int{4, 3, 2, 1}, []int{4, 4, 4, 4}},
+  		{"all negatives", []int{-1, -5, -2}, []int{-1, -1, -1}},
+  		{"plateau then jump", []int{5, 5, 5, 7, 7}, []int{5, 5, 5, 7, 7}},
+  		{"nil", nil, []int{}},
+  		{"empty", []int{}, []int{}},
   	}
   	for _, c := range cases {
-  		if got := sum(c.in); got != c.want {
-  			t.Errorf("sum(%v) = %d, want %d", c.in, got, c.want)
+  		got := runningMax(c.in)
+  		if got == nil {
+  			t.Errorf("%s: returned nil; expected non-nil empty slice", c.name)
+  			continue
+  		}
+  		if !slices.Equal(got, c.want) {
+  			t.Errorf("%s: got %v, want %v", c.name, got, c.want)
   		}
   	}
   }
-hint: "Start with `total := 0`. Range over `nums` (use `_` for the index since you don't need it) and add each value to total. Return total."
+hint: "Pre-allocate the result to the right length with `make`. Seed `result[0]` with `nums[0]`. From index 1 onward, each cell is either `result[i-1]` (no new max) or `nums[i]` (new max). Decide which by comparison."
 solution: |
-  package scratch
+  package puzzle
 
-  func sum(nums []int) int {
-  	total := 0
-  	for _, n := range nums {
-  		total += n
+  func runningMax(nums []int) []int {
+  	if len(nums) == 0 {
+  		return []int{}
   	}
-  	return total
+  	result := make([]int, len(nums))
+  	result[0] = nums[0]
+  	for i := 1; i < len(nums); i++ {
+  		result[i] = result[i-1]
+  		if nums[i] > result[i] {
+  			result[i] = nums[i]
+  		}
+  	}
+  	return result
   }
 explanation: |
-  Range gives you `(index, value)`. Here we don't care about the
-  index, so we discard it with `_`. `for _, n := range nums { ... }`
-  is the most common loop shape you'll see in Go.
+  The puzzle exercises three things in one go:
 
-  Two convenient details:
-    - Ranging over a nil slice iterates zero times — no special
-      case needed for the nil input.
-    - The chapter's general advice: "favor for-range for built-in
-      compound types." This is exactly the case it has in mind.
+  1. **Edge-case handling**: nil/empty inputs need explicit
+     handling because `result[0] = nums[0]` would panic on an
+     empty slice.
+  2. **Right-sized allocation**: `make([]int, len(nums))` is
+     more efficient than starting nil and appending — you know
+     the exact length up front.
+  3. **Carry the running state**: each output cell depends on
+     the PREVIOUS output cell, not just the current input.
 
-  Go 1.21+ also adds `slices` helpers (e.g. `slices.Min`, `slices.Max`)
-  but no direct sum — writing it yourself is idiomatic.
+  Equivalent but slower alternatives:
+
+      // Inefficient: O(n²) — recomputes max from scratch each step.
+      for i := range nums {
+          result[i] = nums[0]
+          for j := 1; j <= i; j++ {
+              if nums[j] > result[i] {
+                  result[i] = nums[j]
+              }
+          }
+      }
+
+  The one-pass version is the classic "scan" pattern — used for
+  cumulative sums (prefix sums), cumulative products, and any
+  reduction-as-you-go.
 reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch04.html#for_range"

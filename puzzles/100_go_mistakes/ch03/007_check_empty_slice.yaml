@@ -1,0 +1,64 @@
+id: "gm-ch03-007"
+title: "Mistake #23: Check for Empty Slice"
+concept: "slices"
+kind: "fix"
+description: |
+  Mistake #23 from the book. A common bug: code checks whether a
+  slice is empty by comparing to nil. That works for slices the
+  caller never touched, but as soon as a caller passes an empty
+  literal `[]int{}` or a slice that has been cleared with
+  `s = s[:0]`, the nil check fails silently and the function takes
+  the wrong branch.
+
+  The expected output is `no items`. Fix the bug so the function
+  treats an empty slice the same as a nil slice.
+template: |
+  package main
+
+  import "fmt"
+
+  func describe(s []int) string {
+      // BUG
+      if s == nil {
+          return "no items"
+      }
+      return fmt.Sprintf("%d items", len(s))
+  }
+
+  func main() {
+      fmt.Println(describe([]int{}))
+  }
+expected_output: |
+  no items
+hint: "For `[]int{}` (the caller's input), `s == nil` is false but `len(s)` is 0. Pick a check whose answer is the same for both shapes."
+solution: |
+  package main
+
+  import "fmt"
+
+  func describe(s []int) string {
+      if len(s) == 0 {
+          return "no items"
+      }
+      return fmt.Sprintf("%d items", len(s))
+  }
+
+  func main() {
+      fmt.Println(describe([]int{}))
+  }
+explanation: |
+  `[]int{}` is non-nil but has length 0. The `== nil` check is true
+  only for the zero-value form `var s []int`. Callers can hand you
+  either form (or a slice that's been emptied with `s = s[:0]`),
+  and a well-behaved function should treat them all the same.
+
+  The book's rule: **never use `s == nil` to mean "empty"**. Use
+  `len(s) == 0`. The nil check has narrow legitimate uses (e.g.
+  "did the caller explicitly pass nothing vs. an empty list?"),
+  but most code wants the length check.
+
+  Same rule for maps: `len(m) == 0` over `m == nil`. And it also
+  protects you against the surprising fact that ranging over a nil
+  slice does NOT panic — it just executes the loop zero times — so
+  forgetting the nil check is silent.
+reference: "https://learning.oreilly.com/library/view/100-go-mistakes/9781617299599/OEBPS/Text/03.htm#heading_id_13"

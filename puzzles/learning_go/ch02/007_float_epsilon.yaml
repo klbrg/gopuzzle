@@ -13,15 +13,15 @@ description: |
       floatsClose(0.1+0.2, 0.3, 1e-9) == true
       floatsClose(1.0, 1.1, 0.01)     == false
 template: |
-  package scratch
+  package puzzle
 
   import "math"
 
   func floatsClose(a, b, epsilon float64) bool {
-  	// TODO: return whether a and b are within epsilon of each other.
+  	// TODO
   }
 test_code: |
-  package scratch
+  package puzzle
 
   import "testing"
 
@@ -44,9 +44,9 @@ test_code: |
   		}
   	}
   }
-hint: "Use math.Abs(a - b) and compare to epsilon. The import is already in the template."
+hint: "What does 'within epsilon' mean as a comparison? Hint: it doesn't matter which of a and b is larger. The `math` package has the operation you need for that."
 solution: |
-  package scratch
+  package puzzle
 
   import "math"
 

@@ -1,0 +1,42 @@
+id: "gm-ch03-012"
+title: "Mistake #28: Maps and Memory Leaks"
+concept: "maps"
+kind: "quiz"
+description: |
+  Mistake #28 from the book. A program inserts 10 million entries
+  into a map, then `delete`s all of them. It then runs for hours
+  without inserting anything new. The map's memory footprint never
+  recovers. What's the runtime behaviour that explains this?
+question: "After inserting 10 million entries into a map and then deleting all of them, what happens to the map's memory footprint?"
+choices:
+  - "It shrinks back to roughly its initial footprint as `delete` frees the buckets it empties."
+  - "It shrinks once a background goroutine notices the underutilisation (this is the bucket-shrink cycle the runtime runs every few minutes)."
+  - "It stays at the peak working-set size — `delete` clears entries inside buckets but the bucket array itself is never shrunk by the runtime."
+  - "It drops by about 50% on the next GC cycle, since half-empty buckets are merged then."
+answer: "It stays at the peak working-set size — `delete` clears entries inside buckets but the bucket array itself is never shrunk by the runtime."
+hint: "Think about what `delete(m, k)` would actually have to do to reclaim memory. Move the entries from a half-full bucket? Rebuild the bucket index? That's expensive — does the runtime do it?"
+explanation: |
+  The map runtime grows the bucket array when load gets high but
+  never shrinks it. `delete(m, k)` clears the entry inside a
+  bucket and decrements `len(m)`, but the bucket array allocation
+  is unchanged. A map that briefly grew to 10M entries holds the
+  memory footprint of 10M entries indefinitely.
+
+  The book's fixes:
+
+  1. **Replace the map** when you've cleared a large fraction of it:
+
+         m = make(map[K]V)    // old map becomes unreachable, GC eventually frees it
+
+  2. **Avoid maps with high churn at high scale**. If your
+     workload is "grow to 10M, then drop to 100", consider a
+     different data structure — or rotate maps periodically
+     (insert into a fresh map, drop the old one).
+
+  3. **For interleaved insert/delete at scale**, accept that the
+     map will plateau at its peak working set's memory footprint
+     and budget accordingly.
+
+  Same trap can appear with slices retaining capacity: `s = s[:0]`
+  keeps the backing array. Use `s = nil` or `s = []T{}` to drop it.
+reference: "https://learning.oreilly.com/library/view/100-go-mistakes/9781617299599/OEBPS/Text/03.htm#heading_id_22"

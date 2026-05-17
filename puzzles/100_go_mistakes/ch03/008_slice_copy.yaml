@@ -1,0 +1,58 @@
+id: "gm-ch03-008"
+title: "Mistake #24: Copying Slices Correctly"
+concept: "slices"
+kind: "fix"
+description: |
+  Mistake #24 from the book. The built-in `copy(dst, src)` copies
+  `min(len(dst), len(src))` elements. The catch: it's LENGTH that
+  matters, not CAPACITY. A common bug is to allocate `dst` with
+  the right capacity but length 0 — and then wonder why `copy`
+  copies nothing.
+
+  The expected output is `[1 2 3]`. Fix the bug.
+template: |
+  package main
+
+  import "fmt"
+
+  func main() {
+      src := []int{1, 2, 3}
+      // BUG
+      dst := make([]int, 0, len(src))
+      copy(dst, src)
+      fmt.Println(dst)
+  }
+expected_output: |
+  [1 2 3]
+hint: "Insert `fmt.Println(copy(dst, src))` and look at what `copy` returns. That number tells you how many elements were actually transferred — and reveals which sizing of `dst` is wrong."
+solution: |
+  package main
+
+  import "fmt"
+
+  func main() {
+      src := []int{1, 2, 3}
+      dst := make([]int, len(src))
+      copy(dst, src)
+      fmt.Println(dst)
+  }
+explanation: |
+  `copy(dst, src)` returns `min(len(dst), len(src))`. In the broken
+  version, `len(dst) == 0`, so the call copies zero elements and
+  returns 0. The slice prints as `[]`.
+
+  Fix: allocate `dst` with the right LENGTH:
+
+      dst := make([]int, len(src))    // length AND capacity = len(src)
+      copy(dst, src)
+
+  Alternative for Go 1.21+: `slices.Clone(src)` does the right
+  thing in one line:
+
+      dst := slices.Clone(src)
+
+  Why the gotcha exists: `make([]T, 0, N)` is the right pattern for
+  "I'll append N items" — length 0, capacity N. But for `copy`,
+  length is what controls the number of elements transferred. Easy
+  to mix up in code that's been thinking in append-then-fill terms.
+reference: "https://learning.oreilly.com/library/view/100-go-mistakes/9781617299599/OEBPS/Text/03.htm#heading_id_14"

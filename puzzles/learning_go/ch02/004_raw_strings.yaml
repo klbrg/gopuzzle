@@ -1,32 +1,28 @@
 id: "lg-ch02-004"
 title: "Raw String Literals"
 concept: "types"
-kind: "predict_output"
+kind: "quiz"
 description: |
-  Raw string literals are delimited by backticks and include every
-  character verbatim — no escape processing.
+  The script uses a BACKTICK-delimited raw string literal. Which
+  line does it print?
 
-  Predict the output. The input text looks like the previous puzzle
-  but the delimiter is different.
-snippet: |
-  package main
-
-  import "fmt"
-
-  func main() {
-  	fmt.Print(`a \"b\" c\\d`)
-  }
-expected_output: |
-  a \"b\" c\\d
-hint: "Inside backticks every character appears literally — backslashes and quotes are not interpreted."
+      fmt.Print(`a \"b\" c\\d`)
+question: "What does the snippet print?"
+choices:
+  - 'a "b" c\d'
+  - 'a \"b\" c\\d'
+  - 'a b c d'
+  - 'compile error — raw strings can''t contain backslashes'
+answer: 'a \"b\" c\\d'
+hint: "Backticks change everything about how the literal is interpreted. What other use case for backticks would be broken if `\\n` was treated as a newline?"
 explanation: |
-  Backtick-delimited raw strings do no interpretation:
+  Backtick-delimited raw strings do no escape interpretation:
     `\n`    is the two characters backslash and n
     `\"`    is the two characters backslash and double-quote
     `\\`    is the two characters backslash and backslash
 
-  They are useful when the text contains many backslashes (regex,
-  Windows paths), many double quotes (HTML, JSON, SQL), or spans
-  multiple lines. The only character a raw string cannot contain
-  is a backtick.
+  Useful when the text contains many backslashes (regex, Windows
+  paths), many double quotes (HTML, JSON, SQL), or spans multiple
+  lines. The only character a raw string cannot contain is a
+  backtick.
 reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html#goliterals"

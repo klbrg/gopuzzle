@@ -1,10 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"io/fs"
 	"os"
-	"path/filepath"
+	"os/exec"
 	"runtime/debug"
+	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -22,28 +25,27 @@ func main() {
 		}
 	}
 
-	var candidates []string
-	if env := os.Getenv("GOPUZZLE_DIR"); env != "" {
-		candidates = append(candidates, env)
-	}
-	candidates = append(candidates, "puzzles")
-	if home, err := os.UserHomeDir(); err == nil {
-		candidates = append(candidates, filepath.Join(home, ".config", "gopuzzle", "puzzles"))
-	}
-	var puzzleDir string
-	for _, c := range candidates {
-		if _, err := os.Stat(c); err == nil {
-			puzzleDir = c
-			break
+	// Default: read puzzles from the binary's embedded fs.FS so
+	// `gopuzzle` works identically from any cwd. GOPUZZLE_DIR
+	// overrides for puzzle authoring (no rebuild needed).
+	var puzzleFS fs.FS
+	if override := os.Getenv("GOPUZZLE_DIR"); override != "" {
+		if _, err := os.Stat(override); err != nil {
+			fmt.Fprintf(os.Stderr, "GOPUZZLE_DIR=%q not found: %v\n", override, err)
+			os.Exit(1)
 		}
+		puzzleFS = os.DirFS(override)
+		puzzle.Dir = override
+	} else {
+		sub, err := fs.Sub(embeddedPuzzles, "puzzles")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "embedded puzzles unreachable: %v\n", err)
+			os.Exit(1)
+		}
+		puzzleFS = sub
 	}
-	if puzzleDir == "" {
-		fmt.Fprintln(os.Stderr, "puzzles/ directory not found (set GOPUZZLE_DIR, run from a directory with puzzles/, or install to ~/.config/gopuzzle/puzzles)")
-		os.Exit(1)
-	}
-	puzzle.Dir = puzzleDir
 
-	puzzles, err := puzzle.LoadAll()
+	puzzles, err := puzzle.LoadAllFS(puzzleFS)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error loading puzzles: %v\n", err)
 		os.Exit(1)
@@ -59,7 +61,11 @@ func main() {
 		prog, _ = progress.Load()
 	}
 
-	model := tui.New(prog, puzzles)
+	// Skip orphan pruning when running with a runtime override —
+	// the override set might be a deliberate subset, and we don't
+	// want to wipe canonical progress.
+	pruneOrphans := os.Getenv("GOPUZZLE_DIR") == ""
+	model := tui.New(prog, puzzles, pruneOrphans)
 	p := tea.NewProgram(model, tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error running app: %v\n", err)
@@ -100,4 +106,51 @@ func printVersion() {
 	fmt.Printf("  committed: %s\n", commitTime)
 	fmt.Printf("  built:     %s\n", buildTime)
 	fmt.Printf("  go:        %s\n", info.GoVersion)
+	fmt.Println("  runners:")
+	for _, r := range probeRunners() {
+		mark := "✓"
+		if !r.available {
+			mark = "✗"
+		}
+		fmt.Printf("    %s  %-7s  %s\n", mark, r.lang, r.detail)
+	}
+}
+
+type runnerProbe struct {
+	lang      string
+	available bool
+	detail    string
+}
+
+// probeRunners checks each supported source language's runtime by
+// running its version-printing subcommand. Useful so you can see at a
+// glance whether a Python puzzle will actually run on this machine.
+func probeRunners() []runnerProbe {
+	return []runnerProbe{
+		probeCmd("go", "go run / go test", "go", "version"),
+		probeCmd("python", "python -m unittest / python main.py", "python3", "--version"),
+	}
+}
+
+func probeCmd(lang, description, bin string, args ...string) runnerProbe {
+	if _, err := exec.LookPath(bin); err != nil {
+		// Try the alias "python" as a fallback for Python.
+		if lang == "python" {
+			if _, err := exec.LookPath("python"); err == nil {
+				bin = "python"
+			} else {
+				return runnerProbe{lang: lang, detail: description + " (not installed)"}
+			}
+		} else {
+			return runnerProbe{lang: lang, detail: description + " (not installed)"}
+		}
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, bin, args...).CombinedOutput()
+	version := strings.TrimSpace(string(out))
+	if err != nil || version == "" {
+		return runnerProbe{lang: lang, available: true, detail: description + " (" + bin + " present)"}
+	}
+	return runnerProbe{lang: lang, available: true, detail: version + "  —  " + description}
 }

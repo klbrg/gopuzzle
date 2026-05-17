@@ -1,77 +1,94 @@
 id: "lg-ch03-014"
-title: "Build a Struct"
+title: "Merge Two Persons"
 concept: "structs"
 description: |
-  A struct literal can be written two ways:
-    - positional:  `Person{"Alice", 30}` — values in field order
-    - named:       `Person{Name: "Alice", Age: 30}` — explicit names
+  A common pattern in config layering and partial updates: take
+  two records of the same type, return a record where each field
+  is taken from the SECOND if non-zero, otherwise from the FIRST.
+  "Non-zero" means the field's value differs from its type's zero
+  value.
 
-  The named form is more verbose but readable and forward-compatible
-  (adding a new field doesn't break it). It's the idiomatic choice
-  outside of small, obviously-ordered structs.
+  Implement `merge(base, override Person) Person`. For each field
+  on `override` that is non-zero, use it; otherwise fall back to
+  the corresponding field on `base`.
 
-  The `Person` type is defined for you. Implement `newPerson(name, age)`
-  that returns a `Person` with those fields set.
-
-      newPerson("Alice", 30)   == Person{Name: "Alice", Age: 30}
-      newPerson("", 0)         == Person{Name: "", Age: 0}
+      merge(Person{"Alice", 30}, Person{Name: "Bob"})       == Person{"Bob", 30}
+      merge(Person{"Alice", 30}, Person{Age: 99})           == Person{"Alice", 99}
+      merge(Person{"Alice", 30}, Person{})                  == Person{"Alice", 30}
+      merge(Person{}, Person{"Carol", 40})                  == Person{"Carol", 40}
+      merge(Person{"Alice", 30}, Person{"Bob", 25})         == Person{"Bob", 25}
 template: |
-  package scratch
+  package puzzle
 
   type Person struct {
   	Name string
   	Age  int
   }
 
-  func newPerson(name string, age int) Person {
-  	// TODO: return a Person with Name and Age set from the arguments.
+  func merge(base, override Person) Person {
+  	// TODO
   }
 test_code: |
-  package scratch
+  package puzzle
 
   import "testing"
 
-  func TestNewPerson(t *testing.T) {
+  func TestMerge(t *testing.T) {
   	cases := []struct {
-  		name string
-  		age  int
-  		want Person
+  		name           string
+  		base, override Person
+  		want           Person
   	}{
-  		{"Alice", 30, Person{Name: "Alice", Age: 30}},
-  		{"Bob", 0, Person{Name: "Bob", Age: 0}},
-  		{"", 100, Person{Name: "", Age: 100}},
-  		{"", 0, Person{}},
-  		{"Eve", -1, Person{Name: "Eve", Age: -1}},
+  		{"override name only", Person{"Alice", 30}, Person{Name: "Bob"}, Person{"Bob", 30}},
+  		{"override age only", Person{"Alice", 30}, Person{Age: 99}, Person{"Alice", 99}},
+  		{"empty override keeps base", Person{"Alice", 30}, Person{}, Person{"Alice", 30}},
+  		{"empty base takes override", Person{}, Person{"Carol", 40}, Person{"Carol", 40}},
+  		{"both fields overridden", Person{"Alice", 30}, Person{"Bob", 25}, Person{"Bob", 25}},
+  		{"both empty", Person{}, Person{}, Person{}},
+  		{"override age is zero, base keeps", Person{"Alice", 30}, Person{Name: "Bob", Age: 0}, Person{"Bob", 30}},
   	}
   	for _, c := range cases {
-  		got := newPerson(c.name, c.age)
+  		got := merge(c.base, c.override)
   		if got != c.want {
-  			t.Errorf("newPerson(%q, %d): got %+v, want %+v", c.name, c.age, got, c.want)
+  			t.Errorf("%s: merge(%+v, %+v) = %+v, want %+v", c.name, c.base, c.override, got, c.want)
   		}
   	}
   }
-hint: "One line: `return Person{Name: name, Age: age}`."
+hint: "Two field-by-field checks against each field's zero value. Modify `base` (it's a copy — Go passes structs by value) and return it. Watch out: the test cases distinguish 'Age = 0 means use base' from 'Age was explicitly set'."
 solution: |
-  package scratch
+  package puzzle
 
   type Person struct {
   	Name string
   	Age  int
   }
 
-  func newPerson(name string, age int) Person {
-  	return Person{Name: name, Age: age}
+  func merge(base, override Person) Person {
+  	if override.Name != "" {
+  		base.Name = override.Name
+  	}
+  	if override.Age != 0 {
+  		base.Age = override.Age
+  	}
+  	return base
   }
 explanation: |
-  The named-field literal `Person{Name: name, Age: age}` is the
-  idiomatic way to build a struct in production code. It documents
-  what each value means and survives the addition of new fields.
+  Struct arguments are passed BY VALUE in Go, so `base` is your
+  own local copy — mutating it doesn't affect the caller. Set the
+  fields you want and return.
 
-  Two things to know about comparing structs:
-    - Two structs of the same type are `==` if every field is `==`.
-      Structs are usable as map keys, in sets, etc., as long as all
-      fields are comparable.
-    - Slices, maps, and functions are NOT comparable, so any struct
-      containing one of those is not comparable either (you'd need
-      a custom equality function).
+  This puzzle exposes a real-world wart: there's no way to tell
+  "the caller explicitly set Age to 0" from "the caller didn't
+  set Age at all". Both look like `Age: 0`. If you genuinely
+  need to distinguish them, the standard tricks are:
+
+    - **Pointer fields**: `Age *int`. nil = not set, &0 = set to 0.
+    - **Wrapper types**: a `Maybe[T]` or `option` type with a `Set` bool.
+    - **JSON tags + raw messages**: parse with `json.RawMessage` so
+      you can ask "was the key even present?"
+
+  The puzzle's spec — "non-zero wins" — is a simplification, but
+  it's exactly the rule used by lots of real config-merging code
+  (Viper, mergo, similar). It works fine as long as zero genuinely
+  isn't a meaningful value for the field.
 reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html#struct_first_look"

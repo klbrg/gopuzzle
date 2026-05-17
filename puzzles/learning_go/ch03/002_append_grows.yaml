@@ -3,11 +3,8 @@ title: "append Grows Capacity"
 concept: "slices"
 kind: "predict_output"
 description: |
-  When append needs to add an element and the slice has no spare capacity,
-  the runtime allocates a bigger backing array and copies the data over.
-  For small slices it doubles the capacity each time.
-
-  Predict the final length and capacity.
+  Predict the final length AND capacity of `x` after the appends.
+  The starting slice has length 0 and capacity 0.
 snippet: |
   package main
 
@@ -20,11 +17,11 @@ snippet: |
   	x = append(x, 3)
   	x = append(x, 4)
   	x = append(x, 5)
-  	fmt.Println(len(x), cap(x))
+  	fmt.Println(cap(x))
   }
 expected_output: |
-  5 8
-hint: "len matches the number of appends. Cap doubles each time the slice runs out of room: 0 → 1 → 2 → 4 → 8."
+  8
+hint: "Length is easy. For capacity, ask yourself: when append runs out of room, what does it allocate next? Look up Go's small-slice growth pattern."
 explanation: |
   Each append that fits within the current capacity is cheap. When the
   slice is full, append allocates a new backing array, copies the old

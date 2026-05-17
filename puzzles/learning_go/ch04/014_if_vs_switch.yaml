@@ -8,10 +8,10 @@ description: |
   guidance for when each is the better fit.
 question: "When does the chapter recommend reaching for a switch over a chain of if/else if?"
 choices:
-  - "Always — switch is more idiomatic in every situation."
+  - "When you have more than 3 conditions — at that point switch is faster than chained `if` because the compiler builds a jump table."
   - "When checking one value against several specific values that are related to each other."
-  - "Only when the values are integers; otherwise use if."
-  - "Never — switch is mostly for translating C code."
+  - "Only when the values are integers; for strings or floats use if."
+  - "When you need explicit fall-through behaviour — that's switch's main reason for existing."
 answer: "When checking one value against several specific values that are related to each other."
 hint: "The chapter's argument is about readability: switch makes the relationship between the cases explicit when they all compare against the same value."
 explanation: |
