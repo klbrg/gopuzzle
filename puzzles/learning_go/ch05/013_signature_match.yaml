@@ -1,0 +1,39 @@
+id: "lg-ch05-013"
+title: "Does It Fit?"
+concept: "functions as values"
+kind: "quiz"
+description: |
+  You define a function type and a couple of plain functions:
+
+      type binOp func(int, int) int
+
+      func add(i, j int) int { return i + j }
+      func sub(a, b int) int { return a - b }
+
+  You want to store both in a `map[string]binOp`.
+question: "Can add and sub be used as binOp values directly, with no conversion?"
+choices:
+  - "Yes — any function whose parameter and return types match the signature satisfies binOp automatically; parameter names don't matter."
+  - "No — add and sub must be explicitly converted with binOp(add) and binOp(sub) first."
+  - "Only add works; sub uses different parameter names (a, b vs i, j), so its type differs."
+  - "No — you must declare them as `var add binOp = func(...)` for them to have the binOp type."
+answer: "Yes — any function whose parameter and return types match the signature satisfies binOp automatically; parameter names don't matter."
+hint: "A function's type is its signature: the number and types of parameters and return values. Are parameter NAMES part of the type?"
+explanation: |
+  A function type in Go is defined purely by its signature — the
+  number and types of parameters and return values. Parameter names
+  are not part of the type. Both `add` (params `i, j int`) and `sub`
+  (params `a, b int`) have signature `func(int, int) int`, which is
+  exactly what `binOp` names, so both go straight into a
+  `map[string]binOp` with no conversion:
+
+      var ops = map[string]binOp{"+": add, "-": sub}
+
+  Naming a function type with `type binOp func(int, int) int` doesn't
+  create an incompatible, must-convert type here: an unnamed function
+  value (`add`'s type is the unnamed `func(int, int) int`) is
+  assignable to a named type with the same underlying type. The payoff
+  of the named type is documentation and brevity when the signature is
+  long or repeated. This same structural matching is what later lets a
+  function value satisfy an interface.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch05.html#id232"

@@ -1,0 +1,58 @@
+id: "lg-review-005"
+title: "The Flattened Average"
+concept: "conversions"
+kind: "fix"
+description: |
+  This program sums a slice of ints and tries to print their average
+  as a decimal. The true average of 1, 2, and 4 is about 2.333, but
+  the program prints something else. Run it, see what's wrong, and fix
+  it so it prints the real average.
+template: |
+  package main
+
+  import "fmt"
+
+  func main() {
+  	nums := []int{1, 2, 4}
+  	sum := 0
+  	for _, n := range nums {
+  		sum += n
+  	}
+  	// BUG
+  	avg := float64(sum / len(nums))
+  	fmt.Println(avg)
+  }
+expected_output: |
+  2.3333333333333335
+hint: "Look closely at the order of operations on the BUG line. Inside the parentheses, what are the types of `sum` and `len(nums)`, and what kind of division does Go do between two of that type? When does the conversion to float64 actually happen?"
+solution: |
+  package main
+
+  import "fmt"
+
+  func main() {
+  	nums := []int{1, 2, 4}
+  	sum := 0
+  	for _, n := range nums {
+  		sum += n
+  	}
+  	avg := float64(sum) / float64(len(nums))
+  	fmt.Println(avg)
+  }
+explanation: |
+  In the broken line, `sum / len(nums)` is computed FIRST, and both
+  operands are `int`. Integer division truncates: `7 / 3` is `2`, not
+  `2.333`. Only then does `float64(...)` convert the already-truncated
+  `2` into `2.0`. The conversion happens too late to help.
+
+  The fix is to convert each operand to `float64` BEFORE dividing:
+  `float64(sum) / float64(len(nums))`. Now Go performs floating-point
+  division and you get `2.3333333333333335` (the trailing digits are
+  the usual binary floating-point representation).
+
+  This bug blends two Ch2 ideas: Go does no implicit numeric
+  conversions, and integer division truncates. The trap is that the
+  expression *looks* like it produces a float because the result is
+  stored in one — but the division's type is decided by its operands,
+  not by where the result goes.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html#type_conversion"

@@ -1,0 +1,78 @@
+id: "lg-ch05-008"
+title: "It Remembers"
+concept: "closures"
+description: |
+  Implement `makeCounter() func() int`. It returns a function that
+  returns 1 the first time it's called, 2 the second time, 3 the
+  third, and so on — counting up by one on every call.
+
+      c := makeCounter()
+      c()  == 1
+      c()  == 2
+      c()  == 3
+
+  Two counters made by separate calls to makeCounter count
+  independently:
+
+      a := makeCounter()
+      b := makeCounter()
+      a()  == 1
+      a()  == 2
+      b()  == 1
+template: |
+  package puzzle
+
+  func makeCounter() func() int {
+  	// TODO
+  }
+test_code: |
+  package puzzle
+
+  import "testing"
+
+  func TestMakeCounter(t *testing.T) {
+  	c := makeCounter()
+  	for i := 1; i <= 3; i++ {
+  		if got := c(); got != i {
+  			t.Errorf("call %d: got %d, want %d", i, got, i)
+  		}
+  	}
+
+  	a := makeCounter()
+  	b := makeCounter()
+  	if got := a(); got != 1 {
+  		t.Errorf("a first: got %d, want 1", got)
+  	}
+  	if got := a(); got != 2 {
+  		t.Errorf("a second: got %d, want 2", got)
+  	}
+  	if got := b(); got != 1 {
+  		t.Errorf("b first (must be independent of a): got %d, want 1", got)
+  	}
+  }
+hint: "Declare a counter variable in makeCounter, BEFORE the returned function. The returned closure captures that variable itself (not a copy), so it survives after makeCounter returns and persists between calls. Increment it inside the closure."
+solution: |
+  package puzzle
+
+  func makeCounter() func() int {
+  	count := 0
+  	return func() int {
+  		count++
+  		return count
+  	}
+  }
+explanation: |
+  The variable `count` is declared in `makeCounter`'s body. The
+  returned anonymous function closes over it — it captures the
+  variable itself, not a snapshot of its value. So `count` lives on
+  after `makeCounter` returns, kept alive by the closure, and each
+  call increments the same `count`.
+
+  Because `count` is a fresh local on every call to `makeCounter`, two
+  counters get two independent variables and don't interfere. This is
+  closures as a unit of private, persistent state — the same mechanism
+  behind stateful iterators, memoisation, and rate limiters.
+
+  One Go-specific detail: `count++` is a statement, not an expression,
+  so you can't write `return count++`. Increment first, then return.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch05.html#id66"

@@ -1,0 +1,41 @@
+id: "lg-review-008"
+title: "Powers of Two by iota"
+concept: "constants"
+kind: "quiz"
+description: |
+  This constant block uses `iota` together with a bit shift, and the
+  expression is written out only once — the later constants repeat it
+  implicitly.
+
+      const (
+      	_  = iota
+      	KB = 1 << (10 * iota)
+      	MB
+      	GB
+      )
+question: "What is the value of MB?"
+choices:
+  - "1048576 (which is 1 << 20)"
+  - "1024 (which is 1 << 10)"
+  - "2048 (KB doubled)"
+  - "1000000 (one million)"
+answer: "1048576 (which is 1 << 20)"
+hint: "iota is the line's index within the const block, starting at 0. Each unwritten constant repeats the previous expression with iota updated. Which line is MB, and what is iota there?"
+explanation: |
+  Inside a `const` block, `iota` is the zero-based index of each line:
+
+  - line 0: `_ = iota` -> iota is 0 (discarded)
+  - line 1: `KB = 1 << (10 * iota)` -> iota is 1, so `1 << 10` = 1024
+  - line 2: `MB` repeats the expression -> iota is 2, so `1 << 20` =
+    1048576
+  - line 3: `GB` -> iota is 3, so `1 << 30` = 1073741824
+
+  When a constant in the block has no `= expression`, it reuses the
+  previous line's expression verbatim — but `iota` has advanced, so
+  each line computes a different power of two. That's the whole trick
+  behind this classic size-constant idiom.
+
+  The wrong answers correspond to common misreadings: that `iota`
+  stays 1 (1024), that MB is just `KB * 2` (2048), or that these are
+  decimal SI units (1000000) rather than binary `1 << 20`.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch02.html#goliterals"

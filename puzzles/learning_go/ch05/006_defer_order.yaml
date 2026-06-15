@@ -1,0 +1,44 @@
+id: "lg-ch05-006"
+title: "Deferred and Confused"
+concept: "defer"
+kind: "quiz"
+description: |
+  Trace this function carefully. The deferred calls take `a` as an
+  argument, and `a` changes between them.
+
+      func deferExample() {
+      	a := 10
+      	defer func(val int) { fmt.Println("first:", val) }(a)
+      	a = 20
+      	defer func(val int) { fmt.Println("second:", val) }(a)
+      	a = 30
+      	fmt.Println("exiting:", a)
+      }
+
+  (Lines below are written with " / " standing in for a newline.)
+question: "What does deferExample() print?"
+choices:
+  - "exiting: 30 / second: 20 / first: 10"
+  - "exiting: 30 / first: 10 / second: 20"
+  - "exiting: 30 / second: 30 / first: 30"
+  - "first: 10 / second: 20 / exiting: 30"
+answer: "exiting: 30 / second: 20 / first: 10"
+hint: "Two rules combine here: deferred calls run last-in-first-out, AND a defer's arguments are evaluated immediately when the defer is registered, not when it finally runs."
+explanation: |
+  Two properties of `defer` decide the output:
+
+  1. **Arguments are evaluated when the defer is registered, not when
+     it runs.** The first defer captures `a`'s value at that moment
+     (10); the second captures the value after `a = 20`. Later
+     reassigning `a` to 30 doesn't change the already-evaluated
+     arguments. That rules out the option where both print 30.
+  2. **Deferred calls run in LIFO order.** The body runs first
+     (`exiting: 30`), then the deferred calls unwind in reverse
+     registration order: `second: 20`, then `first: 10`.
+
+  So the order is `exiting: 30`, `second: 20`, `first: 10`. If you
+  expected the defers to run before the body, or in registration
+  (FIFO) order, those are the traps to remember. Note this is the
+  opposite of a closure that captures `a` by reference with no
+  argument — that one WOULD see the final value 30.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch05.html#id69"

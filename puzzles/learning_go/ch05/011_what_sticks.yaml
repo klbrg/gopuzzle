@@ -1,0 +1,40 @@
+id: "lg-ch05-011"
+title: "What Sticks?"
+concept: "call by value"
+kind: "quiz"
+description: |
+  Four functions each receive a value and mutate it. Which mutations
+  are visible to the CALLER after the call returns?
+
+      modMap(m)    // m[2] = "x"; delete(m, 1)
+      modSlice(s)  // s[0] = 99          (writes an existing index)
+      growSlice(s) // s = append(s, 7)
+      modStruct(p) // p.Name = "Bob"     (p is a struct, not a pointer)
+question: "Which of the four mutations are visible to the caller afterward?"
+choices:
+  - "modMap and modSlice — the in-place writes through the shared data; not growSlice or modStruct."
+  - "All four — passing any composite type lets the function mutate the caller's copy."
+  - "None — Go is call by value, so every function works on a private copy."
+  - "Only modMap — the map is the single reference type in Go."
+answer: "modMap and modSlice — the in-place writes through the shared data; not growSlice or modStruct."
+hint: "Maps and slices hold an internal pointer, so writing to existing contents reaches the caller. But appending can reallocate and only relengthens the local copy, and a struct is copied wholesale."
+explanation: |
+  Go copies every argument. What matters is whether the copy still
+  points at the caller's data:
+
+  - **modMap** — a map value holds a pointer to the underlying hash
+    table. Setting and deleting keys mutate the shared table, so the
+    caller sees the changes. VISIBLE.
+  - **modSlice** — writing an existing index (`s[0] = 99`) goes
+    through the shared backing array. VISIBLE.
+  - **growSlice** — `append` reassigns the local slice header's length
+    (and may reallocate). The caller's header is unchanged, so the new
+    element is invisible. NOT visible.
+  - **modStruct** — a struct is copied field by field. Setting
+    `p.Name` mutates the copy; the caller's struct is untouched. NOT
+    visible. (You'd need a pointer, covered in the next chapter.)
+
+  Rule of thumb: you can mutate the CONTENTS that maps and slices
+  point at, but you cannot grow a caller's slice or change a struct
+  passed by value.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch05.html#call_value"

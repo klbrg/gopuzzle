@@ -1,0 +1,82 @@
+id: "lg-ch05-016"
+title: "Calculator by Lookup"
+concept: "functions as values"
+description: |
+  Implement `apply(a, b int, op string) (int, bool)`. It applies the
+  operator named by `op` to `a` and `b` using a MAP of functions —
+  not a switch or if/else chain. Support `"+"`, `"-"`, `"*"`, `"/"`.
+  Return the result and `true` for a known operator; for any unknown
+  operator, return `0, false`.
+
+      apply(6, 2, "+")  == 8,  true
+      apply(6, 2, "-")  == 4,  true
+      apply(6, 2, "*")  == 12, true
+      apply(6, 2, "/")  == 3,  true
+      apply(6, 2, "%")  == 0,  false
+template: |
+  package puzzle
+
+  func apply(a, b int, op string) (int, bool) {
+  	// TODO
+  }
+test_code: |
+  package puzzle
+
+  import "testing"
+
+  func TestApply(t *testing.T) {
+  	cases := []struct {
+  		op     string
+  		want   int
+  		wantOK bool
+  	}{
+  		{"+", 8, true},
+  		{"-", 4, true},
+  		{"*", 12, true},
+  		{"/", 3, true},
+  		{"%", 0, false},
+  		{"^", 0, false},
+  		{"", 0, false},
+  	}
+  	for _, c := range cases {
+  		got, ok := apply(6, 2, c.op)
+  		if got != c.want || ok != c.wantOK {
+  			t.Errorf("apply(6, 2, %q) = (%d, %v), want (%d, %v)",
+  				c.op, got, ok, c.want, c.wantOK)
+  		}
+  	}
+  }
+hint: "Build a `map[string]func(int, int) int` whose values are the four operations. Look up `op` with the comma-ok form: `f, ok := ops[op]`. If `ok` is false the key was missing (and `f` is a nil function — don't call it); return `0, false`. Otherwise call `f(a, b)`."
+solution: |
+  package puzzle
+
+  func apply(a, b int, op string) (int, bool) {
+  	ops := map[string]func(int, int) int{
+  		"+": func(x, y int) int { return x + y },
+  		"-": func(x, y int) int { return x - y },
+  		"*": func(x, y int) int { return x * y },
+  		"/": func(x, y int) int { return x / y },
+  	}
+  	f, ok := ops[op]
+  	if !ok {
+  		return 0, false
+  	}
+  	return f(a, b), true
+  }
+explanation: |
+  Because functions are values, you can store them in a map and pick
+  one at runtime by key. That turns a four-way `switch` into a data
+  structure: `map[string]func(int, int) int` maps each operator string
+  to the function that implements it.
+
+  The comma-ok lookup is what makes this safe. `f, ok := ops[op]`
+  returns the zero value for a missing key — and the zero value of a
+  function type is `nil`. If you skipped the `ok` check and called `f`
+  for an unknown operator, you'd invoke a nil function and panic. So
+  you check `ok` first and report the unknown operator instead.
+
+  This dispatch-table pattern scales better than a long switch: adding
+  an operator is one more map entry, and the table can even be built
+  or extended at runtime. It's the same shape as the calculator in the
+  chapter, and the comma-ok-then-call guard is the idiom to remember.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch05.html#id64"

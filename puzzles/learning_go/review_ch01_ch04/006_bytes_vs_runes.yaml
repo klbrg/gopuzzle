@@ -1,0 +1,37 @@
+id: "lg-review-006"
+title: "Length Disagreement"
+concept: "strings + runes"
+kind: "predict_output"
+description: |
+  Two ways of measuring the "length" of a string can disagree. Predict
+  what this prints for a word containing an accented character.
+snippet: |
+  package main
+
+  import (
+  	"fmt"
+  	"unicode/utf8"
+  )
+
+  func main() {
+  	s := "naïve"
+  	fmt.Println(len(s), utf8.RuneCountInString(s))
+  }
+expected_output: |
+  6 5
+hint: "`len` on a string counts BYTES, not characters. How many bytes does the accented 'ï' take in UTF-8, versus a plain ASCII letter? `RuneCountInString` counts characters."
+explanation: |
+  A Go string is a sequence of bytes, and `len(s)` returns the number
+  of BYTES. The word `naïve` has five characters, but the `ï`
+  (U+00EF) encodes to TWO bytes in UTF-8, while `n`, `a`, `v`, and `e`
+  are one byte each. So `len(s)` is 4*1 + 2 = 6.
+
+  `utf8.RuneCountInString(s)` decodes the UTF-8 and counts code points
+  (runes), giving 5 — the number of characters you'd actually see.
+
+  Hence `6 5`. This is why indexing a string with `s[i]` gives you a
+  byte (which can split a multibyte character), while ranging over a
+  string with `for i, r := range s` yields runes. Whenever "length"
+  needs to mean "number of characters," reach for rune counting, not
+  `len`.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html#strings_runes_bytes"

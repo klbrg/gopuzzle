@@ -1,0 +1,40 @@
+id: "lg-ch05-009"
+title: "The Zero-Value Function"
+concept: "functions as values"
+kind: "quiz"
+description: |
+  A function is a value in Go, so a function-typed variable has a zero
+  value like anything else. Consider:
+
+      var op func(int, int) int
+      fmt.Println(op(2, 3))
+
+  What happens when this runs?
+question: "What is the result of calling op(2, 3) above?"
+choices:
+  - "It panics at runtime: the zero value of a function type is nil, and calling nil panics."
+  - "It prints 0 — the call returns the zero value of the return type."
+  - "It fails to compile — you can't call a variable that was never assigned a function."
+  - "It prints 5 — Go supplies a default identity-like implementation."
+answer: "It panics at runtime: the zero value of a function type is nil, and calling nil panics."
+hint: "What is the zero value of a function type? The code compiles fine — op is a declared variable of the right type. Think about what calling that zero value does at runtime."
+explanation: |
+  The zero value of any function type is `nil`. Declaring `var op
+  func(int, int) int` without assigning gives you a nil function. The
+  code compiles — `op` is a perfectly valid variable of function type
+  — but invoking a nil function panics at runtime ("invalid memory
+  address or nil pointer dereference").
+
+  This mirrors other nil-able types: reading a nil map is fine but
+  writing to one panics; calling a nil function panics. Guard with a
+  nil check, or make sure the variable holds a real function before
+  you call it:
+
+      if op != nil {
+      	fmt.Println(op(2, 3))
+      }
+
+  It's the reason a map of operations (`map[string]func(int,int)int`)
+  needs the comma-ok check before calling the looked-up function — a
+  missing key yields the nil zero value.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch05.html#id64"

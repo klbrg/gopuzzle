@@ -1,0 +1,42 @@
+id: "lg-review-002"
+title: "Aliases Until They Aren't"
+concept: "slices"
+kind: "predict_output"
+description: |
+  `y` is assigned from `x`, so they start out sharing one backing
+  array. Then `x` is appended to. Trace each write carefully and
+  predict the final line.
+snippet: |
+  package main
+
+  import "fmt"
+
+  func main() {
+  	x := []int{1, 2, 3}
+  	y := x
+  	y[0] = 9
+  	x = append(x, 4)
+  	y[1] = 8
+  	fmt.Println(x[0], x[1], len(x), len(y))
+  }
+expected_output: |
+  9 2 4 3
+hint: "x starts with length 3 AND capacity 3 — it's full. What must append do when there's no spare capacity, and what does that do to the array y is still pointing at?"
+explanation: |
+  `x` is created with length 3 and capacity 3, so it's full.
+
+  - `y := x` copies the slice header: `y` shares `x`'s backing array.
+  - `y[0] = 9` writes through the shared array, so `x[0]` becomes 9
+    too.
+  - `x = append(x, 4)` has no spare capacity, so it ALLOCATES A NEW
+    backing array, copies `[9 2 3]` into it, adds 4, and points `x`
+    at the new array (length 4). `y` still points at the OLD array
+    `[9 2 3]`.
+  - `y[1] = 8` now writes only to the old array. `x`'s array is
+    unaffected, so `x[1]` stays 2.
+
+  Final: `x[0]` is 9, `x[1]` is 2, `len(x)` is 4, `len(y)` is 3 —
+  printed as `9 2 4 3`. The lesson: two slices alias only until an
+  append forces one of them to reallocate. After that, writes diverge
+  silently.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html#slice_info"

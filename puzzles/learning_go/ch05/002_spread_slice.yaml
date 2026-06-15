@@ -1,0 +1,41 @@
+id: "lg-ch05-002"
+title: "Spreading a Slice"
+concept: "variadic functions"
+kind: "predict_output"
+description: |
+  `addTo` adds its base to every value it receives and returns the
+  results as a slice. Predict what the spread call prints.
+snippet: |
+  package main
+
+  import "fmt"
+
+  func addTo(base int, vals ...int) []int {
+  	out := make([]int, 0, len(vals))
+  	for _, v := range vals {
+  		out = append(out, base+v)
+  	}
+  	return out
+  }
+
+  func main() {
+  	a := []int{4, 3}
+  	fmt.Println(addTo(3, a...))
+  }
+expected_output: |
+  [7 6]
+hint: "`a...` spreads the slice's elements into the variadic parameter, so `vals` becomes 4, 3 in that order. What does base + each give?"
+explanation: |
+  The `...` after `a` is the spread operator: it passes each element
+  of the slice as a separate variadic argument, so inside `addTo`,
+  `vals` is `[]int{4, 3}`. The function returns `[3+4, 3+3]`, which
+  prints as `[7 6]`.
+
+  Two things worth remembering:
+
+  - You can only feed a slice into a variadic parameter with the
+    trailing `...`. Passing `a` without it (`addTo(3, a)`) is a
+    compile-time error — the types don't match (`[]int` vs `int`).
+  - The order of the spread elements is preserved, so the output is
+    `[7 6]`, not `[6 7]`.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch05.html#vararg"

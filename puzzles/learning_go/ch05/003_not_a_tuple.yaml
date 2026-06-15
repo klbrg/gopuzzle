@@ -1,0 +1,36 @@
+id: "lg-ch05-003"
+title: "Not a Tuple"
+concept: "multiple returns"
+kind: "quiz"
+description: |
+  A Go function with multiple return values is NOT returning a single
+  bundled object the way Python returns a tuple. Given:
+
+      func divmod(a, b int) (int, int) {
+      	return a / b, a % b
+      }
+
+  Which statement about calling it is true?
+question: "Which is the only valid way to capture both results of divmod(5, 2)?"
+choices:
+  - "v := divmod(5, 2), then read v[0] and v[1] like a slice."
+  - "q, r := divmod(5, 2) — you must assign each returned value to its own variable."
+  - "v := divmod(5, 2), where v is a 2-tuple you can destructure later."
+  - "var v [2]int = divmod(5, 2), capturing both into an array."
+answer: "q, r := divmod(5, 2) — you must assign each returned value to its own variable."
+hint: "Go has no tuple type. Multiple return values are multiple distinct values, not one packaged thing. How many variables must be on the left?"
+explanation: |
+  Unlike Python, where a function returns a single tuple that you can
+  optionally destructure, Go's multiple return values are genuinely
+  separate values. You must assign each one to its own variable (or to
+  `_`):
+
+      q, r := divmod(5, 2)   // ok
+      _, r := divmod(5, 2)   // ok, ignore the quotient
+      v := divmod(5, 2)      // compile error: 2 values, 1 variable
+
+  There is no tuple, slice, or array produced — so you can't index
+  into the result or capture it in a single variable. This is why you
+  see the `result, remainder, err :=` idiom everywhere in Go: the
+  error is just one more value in the list, conventionally last.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch05.html#id280"

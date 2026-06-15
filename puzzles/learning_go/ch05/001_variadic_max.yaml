@@ -1,0 +1,74 @@
+id: "lg-ch05-001"
+title: "Max of Many"
+concept: "variadic functions"
+description: |
+  Implement `maxOf(first int, rest ...int) int` that returns the
+  largest of all the arguments it is given. There is always at least
+  one argument (`first`); `rest` may be empty.
+
+      maxOf(5)               == 5
+      maxOf(3, 9, 2)         == 9
+      maxOf(-4, -10, -2, -7) == -2
+      maxOf(7, 7, 7)         == 7
+
+  The signature is fixed — don't change it.
+template: |
+  package puzzle
+
+  func maxOf(first int, rest ...int) int {
+  	// TODO
+  }
+test_code: |
+  package puzzle
+
+  import "testing"
+
+  func TestMaxOf(t *testing.T) {
+  	cases := []struct {
+  		name string
+  		got  int
+  		want int
+  	}{
+  		{"single", maxOf(5), 5},
+  		{"three", maxOf(3, 9, 2), 9},
+  		{"all negative", maxOf(-4, -10, -2, -7), -2},
+  		{"duplicates", maxOf(7, 7, 7), 7},
+  		{"max is first", maxOf(100, 1, 2, 3), 100},
+  		{"max is last", maxOf(1, 2, 3, 100), 100},
+  	}
+  	for _, c := range cases {
+  		if c.got != c.want {
+  			t.Errorf("%s: got %d, want %d", c.name, c.got, c.want)
+  		}
+  	}
+  }
+hint: "`rest` is an ordinary `[]int` inside the function, and it can be empty. Seed your answer with `first` — the one value you're guaranteed to have — then range over `rest` and keep the larger."
+solution: |
+  package puzzle
+
+  func maxOf(first int, rest ...int) int {
+  	max := first
+  	for _, v := range rest {
+  		if v > max {
+  			max = v
+  		}
+  	}
+  	return max
+  }
+explanation: |
+  A variadic parameter is just a slice inside the function — here
+  `rest` has type `[]int`. The caller can pass zero or more trailing
+  ints, or spread an existing slice with `someSlice...`.
+
+  The reason the signature splits out `first` instead of taking a
+  single `nums ...int` is to make "at least one argument" a
+  compile-time guarantee. If you wrote `maxOf(nums ...int)`, callers
+  could write `maxOf()` with no arguments and you'd have no sensible
+  value to return — you'd need a runtime check or a second return
+  value. Pulling the first element into its own required parameter
+  encodes the precondition in the type.
+
+  Seed the running max with `first`, then fold the rest in. This is
+  the same scan pattern behind reductions generally, and it's why a
+  guaranteed-non-empty input lets you skip the "empty?" branch.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch05.html#vararg"

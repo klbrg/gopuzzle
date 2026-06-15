@@ -1,0 +1,84 @@
+id: "lg-ch05-012"
+title: "Apply to Each"
+concept: "functions as values"
+description: |
+  Implement `transform(nums []int, f func(int) int) []int`. It returns
+  a NEW slice the same length as `nums`, where each element is `f`
+  applied to the corresponding input element. Don't modify `nums`.
+
+      transform([]int{1, 2, 3}, square)  == []int{1, 4, 9}    // square(n) = n*n
+      transform([]int{1, 2, 3}, addTen)  == []int{11, 12, 13} // addTen(n) = n+10
+      transform([]int{}, square)         == []int{}
+
+  Return an empty (non-nil) slice for empty input.
+template: |
+  package puzzle
+
+  func transform(nums []int, f func(int) int) []int {
+  	// TODO
+  }
+test_code: |
+  package puzzle
+
+  import (
+  	"slices"
+  	"testing"
+  )
+
+  func TestTransform(t *testing.T) {
+  	square := func(n int) int { return n * n }
+  	addTen := func(n int) int { return n + 10 }
+  	cases := []struct {
+  		name string
+  		in   []int
+  		f    func(int) int
+  		want []int
+  	}{
+  		{"square", []int{1, 2, 3}, square, []int{1, 4, 9}},
+  		{"add ten", []int{1, 2, 3}, addTen, []int{11, 12, 13}},
+  		{"single", []int{5}, square, []int{25}},
+  		{"empty", []int{}, square, []int{}},
+  	}
+  	for _, c := range cases {
+  		got := transform(c.in, c.f)
+  		if got == nil {
+  			t.Errorf("%s: returned nil; want non-nil", c.name)
+  			continue
+  		}
+  		if !slices.Equal(got, c.want) {
+  			t.Errorf("%s: got %v, want %v", c.name, got, c.want)
+  		}
+  	}
+
+  	in := []int{1, 2, 3}
+  	_ = transform(in, square)
+  	if !slices.Equal(in, []int{1, 2, 3}) {
+  		t.Errorf("input slice was modified: %v", in)
+  	}
+  }
+hint: "`f` is an ordinary parameter you can call like any function: `f(nums[i])`. Pre-size the result with `make([]int, len(nums))` so the empty-input case yields an empty, non-nil slice for free."
+solution: |
+  package puzzle
+
+  func transform(nums []int, f func(int) int) []int {
+  	result := make([]int, len(nums))
+  	for i, n := range nums {
+  		result[i] = f(n)
+  	}
+  	return result
+  }
+explanation: |
+  Because functions are values, `f func(int) int` is just another
+  parameter — you call it with `f(n)` exactly like a named function.
+  Passing behaviour as data lets one function (`transform`) perform
+  arbitrarily different operations on the same data, chosen by the
+  caller. This is the classic "map" higher-order function, and the
+  same idea powers `sort.Slice`, `slices.SortFunc`, and HTTP
+  middleware.
+
+  `make([]int, len(nums))` sizes the result correctly up front, which
+  also yields `[]int{}` (not nil) for empty input without a special
+  case. Building a fresh slice instead of overwriting `nums` keeps the
+  function free of side effects on its caller's data — the test checks
+  exactly that.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch05.html#func_param"

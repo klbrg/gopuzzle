@@ -1,0 +1,63 @@
+id: "lg-ch05-005"
+title: "The Vanishing Round-Up"
+concept: "named returns"
+kind: "fix"
+description: |
+  `ceilDiv` should return the ceiling of `a / b` (integer division
+  rounded UP). For `ceilDiv(7, 2)` the answer should be 4, but the
+  program prints the wrong number. Run it, find out why, and fix it so
+  it prints 4.
+template: |
+  package main
+
+  import "fmt"
+
+  func ceilDiv(a, b int) (result int) {
+  	result = a / b
+  	if a%b != 0 {
+  		// BUG
+  		result := result + 1
+  		_ = result
+  	}
+  	return
+  }
+
+  func main() {
+  	fmt.Println(ceilDiv(7, 2))
+  }
+expected_output: |
+  4
+hint: "Look at the operator inside the if block. Does `:=` assign to the named return value `result`, or create a brand-new variable that disappears at the closing brace?"
+solution: |
+  package main
+
+  import "fmt"
+
+  func ceilDiv(a, b int) (result int) {
+  	result = a / b
+  	if a%b != 0 {
+  		result = result + 1
+  	}
+  	return
+  }
+
+  func main() {
+  	fmt.Println(ceilDiv(7, 2))
+  }
+explanation: |
+  `result` is a named return value — a variable predeclared in the
+  function signature. Inside the `if` block, `result := result + 1`
+  uses `:=`, which DECLARES A NEW `result` scoped to that block. It's
+  set to `7/2 + 1 = 4`, then immediately goes unused (hence the
+  `_ = result` the broken version needs to compile). The outer named
+  return is never touched, so the blank `return` hands back `7/2 = 3`.
+
+  Switching to `=` assigns to the existing named return value, so the
+  round-up sticks and the function returns 4.
+
+  This is the shadowing trap the chapter warns about specifically for
+  named return values: because they're ordinary variables, a stray
+  `:=` in a nested block silently shadows them, and a blank `return`
+  then ships the un-updated value. Mixing named returns with blank
+  returns is exactly the combination that makes this hard to spot.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch05.html#id231"

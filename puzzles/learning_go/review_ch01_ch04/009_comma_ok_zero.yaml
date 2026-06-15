@@ -1,0 +1,39 @@
+id: "lg-review-009"
+title: "Zero or Absent?"
+concept: "maps"
+kind: "predict_output"
+description: |
+  The map has a key whose value happens to be 0, and we also look up a
+  key that isn't there. Predict the output of the two comma-ok
+  lookups.
+snippet: |
+  package main
+
+  import "fmt"
+
+  func main() {
+  	m := map[string]int{"a": 0}
+  	v1, ok1 := m["a"]
+  	v2, ok2 := m["b"]
+  	fmt.Println(v1, ok1, v2, ok2)
+  }
+expected_output: |
+  0 true 0 false
+hint: "Both values come back as 0 — but for different reasons. One key is present with the value 0; the other is missing and yields the value type's zero value. What does the second return (the ok boolean) tell you that the value alone cannot?"
+explanation: |
+  Reading a map always succeeds: a missing key returns the value
+  type's zero value rather than an error. So both `v1` and `v2` are 0,
+  and from the value alone you cannot tell "stored zero" from "not
+  there."
+
+  That's exactly what the comma-ok form resolves. The second return is
+  a boolean that's true only when the key was actually present:
+
+  - `m["a"]` -> value 0, `ok1` true (the key exists, value is 0)
+  - `m["b"]` -> value 0, `ok2` false (the key is absent)
+
+  So the line prints `0 true 0 false`. Whenever a zero value is a
+  legitimate stored value, you MUST use comma-ok to distinguish
+  presence from absence — checking `if m[k] == 0` would conflate the
+  two.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html#comma_ok_section"

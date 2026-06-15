@@ -1,0 +1,40 @@
+id: "lg-ch05-004"
+title: "Named Returns Don't Bind"
+concept: "named returns"
+kind: "predict_output"
+description: |
+  This function declares named return values `result` and
+  `remainder`, assigns 20 and 30 to them, and then returns DIFFERENT
+  expressions. Predict what main prints.
+snippet: |
+  package main
+
+  import "fmt"
+
+  func divAndRemainder(num, denom int) (result int, remainder int) {
+  	result, remainder = 20, 30
+  	return num / denom, num % denom
+  }
+
+  func main() {
+  	fmt.Println(divAndRemainder(5, 2))
+  }
+expected_output: |
+  2 1
+hint: "Named return values are just predeclared variables. When a return statement lists explicit expressions, what actually gets returned — the named variables, or the listed expressions?"
+explanation: |
+  Naming your return values predeclares `result` and `remainder` as
+  variables, but it does NOT force `return` to use them. When a return
+  statement supplies explicit values (`return num/denom, num%denom`),
+  the compiler assigns those values to the return parameters right
+  before exiting — overwriting the 20 and 30 you put there earlier.
+
+  So `divAndRemainder(5, 2)` returns `5/2, 5%2`, which prints `2 1`,
+  and the earlier assignment is dead code.
+
+  This is exactly why the book calls named returns a feature "of
+  limited value": they look like they document intent, but the names
+  don't actually bind anything unless you use a blank `return`. The
+  one place they earn their keep is letting a deferred closure read
+  and modify the value the function is about to return.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch05.html#id231"

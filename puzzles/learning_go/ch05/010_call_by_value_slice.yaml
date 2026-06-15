@@ -1,0 +1,45 @@
+id: "lg-ch05-010"
+title: "Half Modified"
+concept: "call by value"
+kind: "predict_output"
+description: |
+  `modSlice` does two things to the slice it receives: it doubles
+  every element, then appends a new element. Predict what main prints
+  AFTER the call.
+snippet: |
+  package main
+
+  import "fmt"
+
+  func modSlice(s []int) {
+  	for k, v := range s {
+  		s[k] = v * 2
+  	}
+  	s = append(s, 10)
+  }
+
+  func main() {
+  	s := []int{1, 2, 3}
+  	modSlice(s)
+  	fmt.Println(s)
+  }
+expected_output: |
+  [2 4 6]
+hint: "Go is call by value: the function gets a COPY of the slice header. Writing to existing elements goes through to the shared backing array. But does appending — which reassigns the local copy and may reallocate — reach the caller?"
+explanation: |
+  Go is call by value, and a slice value is a small header: a pointer
+  to a backing array, plus a length and capacity. `modSlice` gets a
+  COPY of that header, but the copy points at the SAME backing array.
+
+  - `s[k] = v * 2` writes through the shared pointer, so the doubling
+    is visible to the caller: `[2 4 6]`.
+  - `s = append(s, 10)` reassigns the LOCAL copy of the header (and
+    may even allocate a brand-new backing array). Either way it only
+    changes the callee's header — the caller's `s` still has length 3,
+    so the appended 10 is lost.
+
+  So you can modify a slice's existing elements through a function,
+  but you can't lengthen the caller's slice by appending inside the
+  function. This is the subtlety behind "every type in Go is a value
+  type — it's just that sometimes the value is a pointer."
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch05.html#call_value"

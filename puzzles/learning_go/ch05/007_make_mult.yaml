@@ -1,0 +1,69 @@
+id: "lg-ch05-007"
+title: "Function Factory"
+concept: "closures"
+description: |
+  Implement `makeMult(base int) func(int) int`. It returns a NEW
+  function. The returned function takes a `factor` and returns
+  `base * factor`.
+
+      double := makeMult(2)
+      double(5)  == 10
+      double(0)  == 0
+      triple := makeMult(3)
+      triple(5)  == 15
+      double(5)  == 10   // double is unaffected by triple
+
+  Each call to makeMult must produce an independent function.
+template: |
+  package puzzle
+
+  func makeMult(base int) func(int) int {
+  	// TODO
+  }
+test_code: |
+  package puzzle
+
+  import "testing"
+
+  func TestMakeMult(t *testing.T) {
+  	double := makeMult(2)
+  	triple := makeMult(3)
+  	cases := []struct {
+  		name string
+  		got  int
+  		want int
+  	}{
+  		{"double 5", double(5), 10},
+  		{"double 0", double(0), 0},
+  		{"triple 5", triple(5), 15},
+  		{"triple 4", triple(4), 12},
+  		{"double still 5 after triple", double(5), 10},
+  	}
+  	for _, c := range cases {
+  		if c.got != c.want {
+  			t.Errorf("%s: got %d, want %d", c.name, c.got, c.want)
+  		}
+  	}
+  }
+hint: "Return an anonymous function — `func(factor int) int { ... }` — directly. Because it's a closure, it can still see `base` from the enclosing call even after makeMult has returned."
+solution: |
+  package puzzle
+
+  func makeMult(base int) func(int) int {
+  	return func(factor int) int {
+  		return base * factor
+  	}
+  }
+explanation: |
+  `makeMult` returns an anonymous function that closes over `base`.
+  The returned closure keeps a live reference to the `base` from the
+  specific `makeMult` call that produced it, so `makeMult(2)` and
+  `makeMult(3)` hand back two functions bound to two different bases.
+
+  Because functions are values, you can return them just like any
+  other value. Returning a configured closure is how you build
+  "function factories": one definition, many specialised behaviours
+  decided at the time you call the factory. The standard library uses
+  the same idea — e.g. middleware constructors that wrap a handler and
+  return a new handler.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch05.html#id68"

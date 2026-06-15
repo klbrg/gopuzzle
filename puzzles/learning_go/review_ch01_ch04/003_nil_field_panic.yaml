@@ -1,0 +1,41 @@
+id: "lg-review-003"
+title: "Which Nil Bites?"
+concept: "zero values"
+kind: "quiz"
+description: |
+  A struct's fields take their zero values when the struct itself is
+  zero-valued. Here both a slice field and a map field start out nil:
+
+      type Account struct {
+      	Tags    []string
+      	Balance map[string]int
+      }
+
+      var a Account
+
+  Each option below is run on this fresh `a`.
+question: "Which single line panics at runtime?"
+choices:
+  - "a.Balance[\"USD\"] = 100 — writing to a nil map panics."
+  - "a.Tags = append(a.Tags, \"vip\") — appending to a nil slice panics."
+  - "n := len(a.Tags) — taking len of a nil slice panics."
+  - "v := a.Balance[\"USD\"] — reading a missing key from a nil map panics."
+answer: "a.Balance[\"USD\"] = 100 — writing to a nil map panics."
+hint: "Nil slices and nil maps are NOT symmetric. One of them is safe to read and even to append/len; the other is safe to read but explodes the moment you write to it."
+explanation: |
+  The zero value of a slice is nil, and the zero value of a map is
+  also nil — but they behave very differently:
+
+  - **nil slice**: `len` is 0, ranging does nothing, and `append`
+    works fine (append allocates a new backing array as needed). So
+    `append(a.Tags, "vip")` and `len(a.Tags)` are both safe.
+  - **nil map**: reading is safe and returns the value type's zero
+    value (`a.Balance["USD"]` gives 0, no panic). But WRITING to a nil
+    map panics — there's no hash table allocated to write into.
+
+  So only `a.Balance["USD"] = 100` panics. To fix it you must
+  initialise the map first: `a.Balance = map[string]int{}` (or
+  `make(...)`). Slices forgive you; maps don't. This asymmetry is one
+  of the most common early Go bugs, and it hides easily inside a
+  zero-valued struct.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html#struct_first_look"

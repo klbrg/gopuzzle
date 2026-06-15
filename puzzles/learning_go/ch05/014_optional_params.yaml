@@ -1,0 +1,44 @@
+id: "lg-ch05-014"
+title: "Optional, the Go Way"
+concept: "functions"
+kind: "quiz"
+description: |
+  Go functions have no named arguments and no default/optional
+  parameters — every call must supply every parameter, in order. When
+  you genuinely need optional or named-style configuration, what does
+  the book recommend?
+question: "What's the idiomatic Go way to simulate named and optional parameters?"
+choices:
+  - "Define a struct whose fields are the parameters and pass a value of it; unset fields take their zero values."
+  - "Declare several overloaded versions of the function with different parameter lists."
+  - "Use a variadic `...any` parameter and type-switch on what was passed."
+  - "Give defaults in the signature, e.g. `func f(x int = 0)`."
+answer: "Define a struct whose fields are the parameters and pass a value of it; unset fields take their zero values."
+hint: "Go has no function overloading and no default-value syntax in signatures. Which language feature lets you omit fields and have them fall back to zero values?"
+explanation: |
+  The idiomatic pattern is an options struct: declare a struct whose
+  fields are the would-be parameters, and have the function take that
+  struct. Callers set only the fields they care about; the rest get
+  their zero values, giving you optional-and-named ergonomics:
+
+      type FuncOpts struct {
+      	FirstName string
+      	LastName  string
+      	Age       int
+      }
+
+      func MyFunc(opts FuncOpts) error { ... }
+
+      MyFunc(FuncOpts{LastName: "Patel", Age: 50})
+
+  Why the others are wrong:
+  - Go has no function overloading — you can't declare two functions
+    with the same name and different parameter lists.
+  - There's no default-value syntax in a signature; `x int = 0` is not
+    legal Go.
+  - A variadic `...any` works mechanically but throws away type safety
+    and readability, and the book doesn't recommend it.
+
+  The book also notes that needing many optional parameters is often a
+  sign the function is doing too much.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch05.html#id61"

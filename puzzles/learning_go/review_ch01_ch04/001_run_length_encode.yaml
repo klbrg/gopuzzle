@@ -1,0 +1,85 @@
+id: "lg-review-001"
+title: "Run-Length Encode"
+concept: "strings + loops"
+description: |
+  Implement `compress(s string) string`. Replace each run of one or
+  more identical characters with that character followed by the run
+  length.
+
+      compress("aaabb")  == "a3b2"
+      compress("abc")    == "a1b1c1"
+      compress("aabbaa") == "a2b2a2"
+      compress("")       == ""
+
+  A "run" resets whenever the character changes, so `aabbaa` is three
+  runs, not two.
+template: |
+  package puzzle
+
+  func compress(s string) string {
+  	// TODO
+  }
+test_code: |
+  package puzzle
+
+  import "testing"
+
+  func TestCompress(t *testing.T) {
+  	cases := []struct {
+  		in   string
+  		want string
+  	}{
+  		{"aaabb", "a3b2"},
+  		{"abc", "a1b1c1"},
+  		{"aabbaa", "a2b2a2"},
+  		{"a", "a1"},
+  		{"aaaa", "a4"},
+  		{"", ""},
+  	}
+  	for _, c := range cases {
+  		if got := compress(c.in); got != c.want {
+  			t.Errorf("compress(%q) = %q, want %q", c.in, got, c.want)
+  		}
+  	}
+  }
+hint: "Walk the characters and count how long the current run lasts before the character changes. Turn the count into text with `strconv.Itoa`, and assemble the answer with a `strings.Builder` (or plain string concatenation). Range over runes, not bytes, so multibyte characters stay intact."
+solution: |
+  package puzzle
+
+  import (
+  	"strconv"
+  	"strings"
+  )
+
+  func compress(s string) string {
+  	var b strings.Builder
+  	runes := []rune(s)
+  	for i := 0; i < len(runes); {
+  		j := i
+  		for j < len(runes) && runes[j] == runes[i] {
+  			j++
+  		}
+  		b.WriteRune(runes[i])
+  		b.WriteString(strconv.Itoa(j - i))
+  		i = j
+  	}
+  	return b.String()
+  }
+explanation: |
+  This pulls together several early-chapter ideas at once:
+
+  - **Runes over bytes** (Ch3): converting to `[]rune` means each
+    index is a whole character, so the comparison `runes[j] ==
+    runes[i]` works even for multibyte input.
+  - **A two-pointer scan** (Ch4): the inner loop advances `j` to the
+    end of the current run, then `i = j` jumps the outer loop past it.
+    No nested re-counting.
+  - **int-to-string conversion** (Ch2/Ch3): `strconv.Itoa(j-i)` turns
+    the run length into text. Note this is NOT `string(j-i)`, which
+    would convert the number to a single Unicode code point.
+  - **Efficient building**: `strings.Builder` avoids the O(n^2) cost
+    of repeated string concatenation.
+
+  The empty-string case falls out for free: the outer loop never runs,
+  and the builder yields "".
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html#strings_runes_bytes"

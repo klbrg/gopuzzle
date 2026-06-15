@@ -1,0 +1,79 @@
+id: "lg-review-010"
+title: "Count the Votes"
+concept: "maps + loops"
+description: |
+  Implement `winner(votes []string) string`. Tally how many times each
+  name appears and return the name with the most votes. If several
+  names tie for the most, return the one that is smallest
+  alphabetically. For no votes at all, return "".
+
+      winner([]string{"a", "b", "a"})           == "a"
+      winner([]string{"x", "y", "y", "x"})      == "x"   // 2-2 tie, "x" < "y"
+      winner([]string{"c", "c", "a", "a", "b"}) == "a"   // 2-2 tie, "a" < "c"
+      winner([]string{})                        == ""
+template: |
+  package puzzle
+
+  func winner(votes []string) string {
+  	// TODO
+  }
+test_code: |
+  package puzzle
+
+  import "testing"
+
+  func TestWinner(t *testing.T) {
+  	cases := []struct {
+  		name  string
+  		votes []string
+  		want  string
+  	}{
+  		{"clear winner", []string{"a", "b", "a"}, "a"},
+  		{"tie broken by name", []string{"x", "y", "y", "x"}, "x"},
+  		{"tie among top two", []string{"c", "c", "a", "a", "b"}, "a"},
+  		{"single", []string{"solo"}, "solo"},
+  		{"empty", []string{}, ""},
+  	}
+  	for _, c := range cases {
+  		if got := winner(c.votes); got != c.want {
+  			t.Errorf("%s: winner(%v) = %q, want %q", c.name, c.votes, got, c.want)
+  		}
+  	}
+  }
+hint: "First build a `map[string]int` of name -> count with one pass. Then scan the map for the best entry. Because map iteration order is random, your 'is this better?' test must be order-independent: take a higher count, and on an EQUAL count take the alphabetically smaller name. Start from count 0 and name \"\"."
+solution: |
+  package puzzle
+
+  func winner(votes []string) string {
+  	counts := map[string]int{}
+  	for _, v := range votes {
+  		counts[v]++
+  	}
+  	best := ""
+  	bestCount := 0
+  	for name, c := range counts {
+  		if c > bestCount || (c == bestCount && name < best) {
+  			best = name
+  			bestCount = c
+  		}
+  	}
+  	return best
+  }
+explanation: |
+  Two stages, each leaning on an early-chapter idea:
+
+  - **Tally with a map** (Ch3): `counts[v]++` works even the first
+    time a name appears, because reading a missing key yields 0 (the
+    zero value), then the increment stores 1. No initialisation per
+    key needed.
+  - **Order-independent selection** (Ch4): map iteration order is
+    randomised on purpose, so the comparison must give the same answer
+    regardless of order. `c > bestCount || (c == bestCount && name <
+    best)` does that — a strictly higher count always wins, and ties
+    are resolved deterministically by the smaller name.
+
+  The empty-input case returns "" for free: with no votes the map is
+  empty, the selection loop never runs, and `best` stays "". A subtle
+  point: because the tie-break only triggers once `bestCount` is
+  already above 0, the initial `best == ""` never wrongly wins a tie.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch04.html#for_range"

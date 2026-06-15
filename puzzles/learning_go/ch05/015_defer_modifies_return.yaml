@@ -1,0 +1,48 @@
+id: "lg-ch05-015"
+title: "The Deferred Edit"
+concept: "named returns"
+kind: "predict_output"
+description: |
+  This function returns a named value `result`, and a deferred closure
+  runs after the `return` statement. Predict what main prints.
+snippet: |
+  package main
+
+  import "fmt"
+
+  func compute() (result int) {
+  	defer func() {
+  		result *= 2
+  	}()
+  	result = 5
+  	return result
+  }
+
+  func main() {
+  	fmt.Println(compute())
+  }
+expected_output: |
+  10
+hint: "The deferred closure references the named return value `result` directly (no argument). Deferred functions run AFTER the return statement sets the return value but BEFORE the caller receives it. What does it do to `result`?"
+explanation: |
+  The order of events when `compute` returns is the key:
+
+  1. `return result` assigns 5 to the named return value `result`.
+  2. The function is about to exit, so its deferred functions run now
+     — after the return value is set, but before control goes back to
+     the caller.
+  3. The deferred closure captured `result` by reference (it has no
+     parameter), so `result *= 2` mutates the actual return value,
+     turning 5 into 10.
+  4. The caller receives 10.
+
+  This is the one situation the chapter calls out as the real reason
+  named return values exist: a deferred closure can inspect and modify
+  what the function is about to return. The classic use is wrapping an
+  error — a `defer` that checks the named `err` and, on success, runs
+  `tx.Commit()` (which may itself set `err`), otherwise `tx.Rollback()`.
+
+  Contrast this with passing the value as a defer argument
+  (`defer f(result)`): that copies the value at registration time and
+  could not change what's returned.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch05.html#id69"

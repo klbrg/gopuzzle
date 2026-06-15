@@ -1,0 +1,79 @@
+id: "lg-review-004"
+title: "Two That Add Up"
+concept: "maps + loops"
+description: |
+  Implement `hasPairSum(nums []int, target int) bool`. Return true if
+  any TWO DISTINCT positions in `nums` hold values that sum to
+  `target`, and false otherwise.
+
+      hasPairSum([]int{2, 7, 11, 15}, 9)  == true   // 2 + 7
+      hasPairSum([]int{1, 2, 3}, 7)       == false
+      hasPairSum([]int{3, 3}, 6)          == true   // the two 3s
+      hasPairSum([]int{5}, 10)            == false  // needs two elements
+
+  Aim for a single pass — don't compare every pair against every other
+  pair.
+template: |
+  package puzzle
+
+  func hasPairSum(nums []int, target int) bool {
+  	// TODO
+  }
+test_code: |
+  package puzzle
+
+  import "testing"
+
+  func TestHasPairSum(t *testing.T) {
+  	cases := []struct {
+  		name   string
+  		nums   []int
+  		target int
+  		want   bool
+  	}{
+  		{"classic", []int{2, 7, 11, 15}, 9, true},
+  		{"none", []int{1, 2, 3}, 7, false},
+  		{"duplicate pair", []int{3, 3}, 6, true},
+  		{"single element no pair", []int{5}, 10, false},
+  		{"empty", []int{}, 0, false},
+  		{"uses negatives", []int{-2, 5, 3}, 1, true},
+  		{"zero pair", []int{0, 0}, 0, true},
+  	}
+  	for _, c := range cases {
+  		if got := hasPairSum(c.nums, c.target); got != c.want {
+  			t.Errorf("%s: hasPairSum(%v, %d) = %v, want %v",
+  				c.name, c.nums, c.target, got, c.want)
+  		}
+  	}
+  }
+hint: "As you scan each value `n`, the partner you'd need is `target - n`. Keep a set of values you've ALREADY seen (a `map[int]bool`); if the needed partner is in that set, you've found a pair. Add `n` to the set AFTER checking, so a lone element can't pair with itself."
+solution: |
+  package puzzle
+
+  func hasPairSum(nums []int, target int) bool {
+  	seen := map[int]bool{}
+  	for _, n := range nums {
+  		if seen[target-n] {
+  			return true
+  		}
+  		seen[n] = true
+  	}
+  	return false
+  }
+explanation: |
+  The naive approach compares every element with every other —
+  O(n^2). The map turns it into one pass:
+
+  - For the current value `n`, its required partner is `target - n`.
+  - A `map[int]bool` used as a set records every value seen so far.
+    Reading a missing key returns false (the zero value of bool), so
+    `seen[target-n]` is a clean membership test with no comma-ok
+    needed.
+  - Crucially, you check `seen` BEFORE inserting `n`. That guarantees
+    the partner came from a DIFFERENT position — otherwise
+    `hasPairSum([]int{5}, 10)` would wrongly pair 5 with itself.
+
+  Note the duplicate case `[]int{3, 3}` with target 6 returns true:
+  the first 3 is inserted, then the second 3 finds it. This combines
+  the Ch3 map-as-set idiom with a Ch4 single-pass loop.
+reference: "https://learning.oreilly.com/library/view/learning-go-2nd/9781098139285/ch03.html#comma_ok_section"
